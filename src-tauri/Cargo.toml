@@ -1,0 +1,23 @@
+[package]
+name = "lanius-desktop"
+version = "0.1.0"
+description = "Lanius Desktop 桌面壳（无业务逻辑，见 docs/ARCHITECTURE.md）"
+edition = "2021"
+rust-version = "1.83"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["process", "io-util", "sync", "time"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+ulid = "1"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    "rust-lang.rust-analyzer",
+    "charliermarsh.ruff",
+    "tauri-apps.tauri-vscode"
+  ]
+}

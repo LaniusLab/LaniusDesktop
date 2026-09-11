@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "lanius-engine"
+version = "0.1.0"
+description = "Lanius Desktop 执行引擎 sidecar"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.7",
+  "structlog>=24.1",
+  "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+
+[project.scripts]
+lanius-engine = "lanius_engine.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lanius_engine"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+src = ["src"]
+# 中文文档字符串在 88 列下不可行；代码行仍以 100 列为上限
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "T201", "ASYNC", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["T201"]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = "src"
+strict = true
+packages = ["lanius_engine"]

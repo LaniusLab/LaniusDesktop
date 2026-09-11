@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/error.schema.json",
+  "title": "EngineError",
+  "description": "统一错误模型（ADR-0008，docs/PROTOCOL.md §4）",
+  "type": "object",
+  "required": ["code", "message", "severity", "source", "traceId"],
+  "properties": {
+    "code": {
+      "type": "string",
+      "description": "层.领域.原因，如 engine.flow.validationFailed",
+      "pattern": "^(ui|shell|engine)\\.[a-z][a-zA-Z]*\\.[a-z][a-zA-Z]*$"
+    },
+    "message": { "type": "string", "description": "面向用户的消息，可本地化" },
+    "severity": { "type": "string", "enum": ["info", "warning", "error", "fatal"] },
+    "source": { "type": "string", "enum": ["ui", "shell", "engine"] },
+    "nodeId": { "type": "string", "description": "关联的流程节点" },
+    "traceId": { "type": "string", "description": "三层贯穿的追踪 id（ULID）" },
+    "details": { "type": "object", "description": "结构化上下文" },
+    "retryable": { "type": "boolean", "default": false }
+  },
+  "additionalProperties": false
+}

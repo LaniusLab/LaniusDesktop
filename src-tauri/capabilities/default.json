@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "默认窗口能力集。最小化原则：新增权限需过 review 并记录理由（docs/SECURITY.md §2）。",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

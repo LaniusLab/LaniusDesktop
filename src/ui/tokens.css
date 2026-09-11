@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+/*
+ * 设计 token 唯一真源。业务代码只允许使用这里映射出的语义化 utility
+ * （bg-bg / bg-surface / text-fg / text-fg-muted / border-line / bg-accent …），
+ * 禁止写死颜色。dark-first：:root 即深色，亮色经 data-theme 覆盖。
+ */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-faint: var(--fg-faint);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-info: var(--info);
+
+  --font-sans:
+    ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+    sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+:root {
+  --bg: #0b0d10;
+  --surface: #12151a;
+  --surface-raised: #1a1e25;
+  --line: #262b33;
+  --fg: #e8e6e1;
+  --fg-muted: #9b978e;
+  --fg-faint: #63605a;
+  --accent: #d4a24e;
+  --accent-hover: #e0b465;
+  --accent-fg: #17130a;
+  --danger: #e0655f;
+  --warning: #d4a24e;
+  --success: #6fae7c;
+  --info: #6b9fd4;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #f7f6f3;
+  --surface: #ffffff;
+  --surface-raised: #f0efeb;
+  --line: #e2e0da;
+  --fg: #23211d;
+  --fg-muted: #6f6b63;
+  --fg-faint: #a8a49b;
+  --accent: #a87c2a;
+  --accent-hover: #8f6820;
+  --accent-fg: #ffffff;
+  --danger: #c2403a;
+  --warning: #a87c2a;
+  --success: #3f7d4e;
+  --info: #3a6ea8;
+  color-scheme: light;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
