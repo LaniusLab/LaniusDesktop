@@ -19,7 +19,9 @@
     "version:sync:check": "node scripts/sync-version.mjs --check",
     "engine:test": "pytest engine/tests",
     "engine:lint": "ruff check engine && mypy engine/src",
-    "check": "pnpm codegen:check && pnpm lint && pnpm typecheck && pnpm test"
+    "check": "pnpm codegen:check && pnpm lint && pnpm typecheck && pnpm test",
+    "verify": "pnpm check && pnpm engine:lint && pnpm engine:test",
+    "verify:shell": "cargo check --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

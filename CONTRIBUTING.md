@@ -1,6 +1,14 @@
 # 开发规范
 
-> 本文档是贡献代码前必须读完的规范全集。AI 编码代理另有硬约束见 [AGENTS.md](AGENTS.md)。
+> 本文档是贡献代码前必须读完的规范全集。AI 编码代理另有硬约束见 [AGENTS.md](AGENTS.md)。日常「改哪一层、按什么顺序、改完怎么验」见 [docs/WORKFLOW.md](docs/WORKFLOW.md)。
+
+## 打开仓库
+
+用官方 Workspace 打开：
+
+- 文件：[`lanius-desktop.code-workspace`](lanius-desktop.code-workspace)
+- 会加载 `.vscode/` 中的设置、任务、调试配置与推荐扩展
+- Python 解释器应指向 `engine/.venv`（Windows：`engine\.venv\Scripts\python.exe`）
 
 ## 环境准备
 
@@ -14,8 +22,11 @@
 
 ```bash
 pnpm install                                    # 前端依赖
-python3 -m venv engine/.venv                    # 引擎虚拟环境
-engine/.venv/bin/pip install -e "engine[dev]"   # 引擎依赖（含 dev 工具）
+python3 -m venv engine/.venv                    # 引擎虚拟环境（Windows 可用 py -3.11）
+# Unix / macOS：
+engine/.venv/bin/pip install -e "engine[dev]"
+# Windows：
+# engine\.venv\Scripts\python -m pip install -e "engine[dev]"
 ```
 
 ## 日常命令
@@ -28,7 +39,11 @@ engine/.venv/bin/pip install -e "engine[dev]"   # 引擎依赖（含 dev 工具�
 | `pnpm engine:test` / `pnpm engine:lint` | 引擎测试与 ruff+mypy |
 | `pnpm codegen` / `pnpm codegen:check` | schema 代码生成 / CI 校验 |
 | `pnpm version:sync` | 版本号三端同步 |
-| `pnpm check` | 上述全部检查的总和（提交前必跑） |
+| `pnpm check` | `codegen:check` + 前端 lint/typecheck/test（**不含**引擎与 cargo） |
+| `pnpm verify` | 外环：`check` + 引擎 lint/test |
+| `pnpm verify:shell` | `cargo check`（环境允许时） |
+
+提交前完整验证见 [docs/WORKFLOW.md](docs/WORKFLOW.md) §7 与 [AGENTS.md](AGENTS.md)「提交前验证清单」。跨层改动不要只跑 `pnpm check`。CI 使用 Python **3.12**；本地开发要求 **3.11+**（与 `pyproject.toml` / mypy 一致即可）。
 
 ## 命名规范
 
@@ -128,7 +143,7 @@ const ordered = serializeParallelBranches(graph);
 
 ## 依赖管理
 
-新增依赖前自问：维护活跃度？包体/体积代价？与现有选型重叠？安全记录？答案写进 PR 描述。运行时依赖升级随 PR；dev 依赖每月集中升级一次。
+新增依赖前自问：维护活跃度？包体/体积代价？与现有技术栈重叠？安全记录？答案写进 PR 描述。运行时依赖升级随 PR；dev 依赖每月集中升级一次。
 
 ## 性能预算
 
@@ -139,6 +154,6 @@ const ordered = serializeParallelBranches(graph);
 ## 发布流程
 
 1. 根 `package.json` 改版本 → `pnpm version:sync`
-2. 更新 CHANGELOG（Keep a Changelog 格式）
-3. `git tag vX.Y.Z` 触发打包流水线（三平台 + 引擎 PyInstaller + 签名）
+2. 更新发布说明（M5 起维护根目录 `CHANGELOG.md`，Keep a Changelog；此前可用 GitHub Release 正文）
+3. `git tag vX.Y.Z` 触发打包流水线（三平台 + 引擎 PyInstaller + 签名；流水线属 M5）
 4. 发布页附校验和与 SBOM（M5 起）

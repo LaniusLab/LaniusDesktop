@@ -11,7 +11,7 @@ interface EmptyStateProps {
 /** 列表/页面无数据时的标准空态 */
 export function EmptyState({ title, description, icon, action }: EmptyStateProps) {
   return (
-    <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 p-8 text-center">
+    <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 p-8 text-center animate-pop">
       <div className="flex size-12 items-center justify-center rounded-full bg-surface-raised text-fg-faint">
         {icon ?? <Inbox className="size-6" />}
       </div>

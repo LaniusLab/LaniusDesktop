@@ -23,6 +23,12 @@ pub enum ShellError {
 
     #[error("方法不在允许清单内: {0}")]
     MethodNotAllowed(String),
+
+    #[error("读写本机文件失败: {0}")]
+    Io(String),
+
+    #[error("偏好不合法: {0}")]
+    InvalidPrefs(String),
 }
 
 #[derive(Serialize)]
@@ -45,6 +51,8 @@ impl ShellError {
             ShellError::EngineError(_) => "shell.engine.returnedError",
             ShellError::Protocol(_) => "shell.transport.protocolError",
             ShellError::MethodNotAllowed(_) => "shell.rpc.methodNotAllowed",
+            ShellError::Io(_) => "shell.io.failed",
+            ShellError::InvalidPrefs(_) => "shell.prefs.invalid",
         }
     }
 
@@ -72,6 +80,8 @@ impl Serialize for TracedError {
             ShellError::EngineError(_) => ("error", false),
             ShellError::Protocol(_) => ("error", false),
             ShellError::MethodNotAllowed(_) => ("warning", false),
+            ShellError::Io(_) => ("error", true),
+            ShellError::InvalidPrefs(_) => ("warning", false),
         };
         ErrorPayload {
             code: self.error.code().to_string(),

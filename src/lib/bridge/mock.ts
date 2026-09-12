@@ -1,3 +1,7 @@
+import { DEFAULT_PREFS, mergePrefs } from "@/lib/prefs";
+import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
+import type { ShellPrefs } from "@/lib/gen/shell-prefs";
+
 import type { Bridge, EngineEvent, EngineInfo } from "./types";
 
 /*
@@ -13,9 +17,25 @@ const MOCK_INFO: EngineInfo = {
   nodeTypes: ["core.log", "core.wait", "mouse.click", "keyboard.type", "window.find"],
 };
 
+const MOCK_DEBUG: ShellDebugInfo = {
+  appVersion: "0.1.0",
+  os: "browser",
+  arch: "unknown",
+  family: "unknown",
+  autostartSupported: false,
+  paths: {
+    configDir: "(browser)",
+    dataDir: "(browser)",
+    logDir: "(browser)",
+    logFile: "(browser)",
+    exePath: "(browser)",
+  },
+};
+
 export function createMockBridge(): Bridge {
   const handlers = new Set<(event: EngineEvent) => void>();
   const emit = (event: EngineEvent) => handlers.forEach((h) => h(event));
+  let prefs: ShellPrefs = { ...DEFAULT_PREFS };
 
   let uptime = 0;
   let traceSeq = 0;
@@ -37,9 +57,18 @@ export function createMockBridge(): Bridge {
       const steps: Array<[number, EngineEvent]> = [
         [0, { kind: "execution", executionId, phase: "validating", traceId }],
         [300, { kind: "execution", executionId, phase: "running", traceId }],
-        [500, { kind: "log", executionId, traceId, message: `[${mode}] core.log: 你好，Lanius` }],
-        [900, { kind: "log", executionId, traceId, message: `[${mode}] core.wait: 等待 100ms` }],
+        [
+          500,
+          {
+            kind: "log",
+            executionId,
+            traceId,
+            message: mode === "dryRun" ? "演练：记下完成" : "记下：你好，Lanius",
+          },
+        ],
+        [900, { kind: "log", executionId, traceId, message: "等了一小会" }],
         [1400, { kind: "execution", executionId, phase: "done", traceId }],
+        [1800, { kind: "execution", executionId, phase: "idle", traceId }],
       ];
       for (const [delay, event] of steps) {
         setTimeout(() => emit(event), delay);
@@ -56,5 +85,37 @@ export function createMockBridge(): Bridge {
       handler({ kind: "status", status: "starting" });
       return () => handlers.delete(handler);
     },
+
+    async prefsGet() {
+      return prefs;
+    },
+
+    async prefsSet(next) {
+      prefs = mergePrefs(next);
+      return prefs;
+    },
+
+    async debugInfo() {
+      return MOCK_DEBUG;
+    },
+
+    async logsTail() {
+      return "";
+    },
+
+    async updaterCheck() {
+      return {
+        status: "unavailable",
+        currentVersion: "0.1.0",
+        message: "updater.notConfigured",
+      };
+    },
+
+    async windowMinimize() {},
+    async windowToggleMaximize() {},
+    async windowIsMaximized() {
+      return false;
+    },
+    async windowClose() {},
   };
 }

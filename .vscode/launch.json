@@ -1,0 +1,64 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "UI: 调试 Vite",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:43191",
+      "webRoot": "${workspaceFolder}/src",
+      "preLaunchTask": "UI: 开发服务器"
+    },
+    {
+      "name": "UI: 调试当前 Vitest",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": ["run", "${relativeFile}"],
+      "cwd": "${workspaceFolder}",
+      "autoAttachChildProcesses": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "引擎: 调试当前 pytest",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["${file}"],
+      "cwd": "${workspaceFolder}/engine",
+      "python": "${command:python.interpreterPath}",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/engine/src"
+      }
+    },
+    {
+      "name": "引擎: stdio RPC",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "lanius_engine",
+      "cwd": "${workspaceFolder}/engine",
+      "python": "${command:python.interpreterPath}",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/engine/src"
+      }
+    },
+    {
+      "name": "壳: 调试开发构建",
+      "type": "lldb",
+      "request": "launch",
+      "cargo": {
+        "args": [
+          "build",
+          "--manifest-path=${workspaceFolder}/src-tauri/Cargo.toml",
+          "--no-default-features"
+        ]
+      },
+      "preLaunchTask": "UI: 开发服务器"
+    }
+  ]
+}

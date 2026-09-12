@@ -30,14 +30,18 @@ pnpm engine:lint && pnpm engine:test              # 引擎
 cargo check --manifest-path src-tauri/Cargo.toml  # 壳（环境允许时）
 ```
 
+等价：`pnpm verify`（codegen + 前端 + 引擎）与可选 `pnpm verify:shell`。不要把 `pnpm check` 当成提交门禁——它不含引擎。回路说明见 [docs/WORKFLOW.md](docs/WORKFLOW.md)。
+
 ## 上下文入口
 
 开始任何任务前先读：
 
-1. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §6 架构红线
-2. [docs/PROTOCOL.md](docs/PROTOCOL.md)（涉及跨层通信时）
-3. [docs/adr/](docs/adr/README.md) 中与本任务相关的决策
-4. [docs/ROADMAP.md](docs/ROADMAP.md) 确认当前里程碑范围——不实现超出当前里程碑的功能
+1. [docs/README.md](docs/README.md)（文档约定与索引）
+2. [docs/WORKFLOW.md](docs/WORKFLOW.md)（判定变更类型与回路）
+3. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) §6 架构红线
+4. [docs/PROTOCOL.md](docs/PROTOCOL.md)（涉及跨层通信时）
+5. [docs/adr/](docs/adr/README.md) 中与本任务相关的决策
+6. [docs/ROADMAP.md](docs/ROADMAP.md) 确认当前里程碑范围——不实现超出当前里程碑的功能
 
 ## 禁止事项
 

@@ -4,13 +4,15 @@
 use std::sync::Arc;
 
 use serde_json::{json, Value};
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use crate::error::{ShellError, TracedError};
+use crate::prefs::{self, ShellPrefs};
 use crate::sidecar::EngineClient;
 
 pub struct ShellState {
     pub engine: tokio::sync::Mutex<Option<Arc<EngineClient>>>,
+    pub prefs: std::sync::Mutex<ShellPrefs>,
 }
 
 fn new_trace_id() -> String {
@@ -112,6 +114,57 @@ pub async fn flow_cancel(
         )
         .await
         .map_err(|e| e.with_trace(trace_id))
+}
+
+fn lock_prefs(state: &ShellState) -> std::sync::MutexGuard<'_, ShellPrefs> {
+    state.prefs.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+#[tauri::command]
+pub async fn prefs_get(state: State<'_, ShellState>) -> Result<Value, TracedError> {
+    let prefs = lock_prefs(&state).clone();
+    serde_json::to_value(prefs)
+        .map_err(|e| ShellError::Io(e.to_string()).with_trace(new_trace_id()))
+}
+
+#[tauri::command]
+pub async fn prefs_set(
+    app: AppHandle,
+    state: State<'_, ShellState>,
+    prefs: Value,
+) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    let parsed = prefs::parse_prefs(prefs).map_err(|e| e.with_trace(trace_id.clone()))?;
+    prefs::save(&app, &parsed).map_err(|e| e.with_trace(trace_id.clone()))?;
+    if let Err(err) = prefs::apply_autostart(&app, parsed.autostart) {
+        tracing::warn!(target: "shell", "开机自启未写入: {err}");
+        prefs::append_log(&app, &format!("autostart apply failed: {err}"));
+    }
+    *lock_prefs(&state) = parsed.clone();
+    prefs::append_log(&app, "prefs saved");
+    serde_json::to_value(parsed).map_err(|e| ShellError::Io(e.to_string()).with_trace(trace_id))
+}
+
+#[tauri::command]
+pub async fn shell_debug_info(app: AppHandle) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    prefs::debug_info(&app).map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+pub async fn logs_tail(app: AppHandle) -> Result<String, TracedError> {
+    let trace_id = new_trace_id();
+    prefs::tail_log(&app).map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+pub async fn updater_check(app: AppHandle) -> Result<Value, TracedError> {
+    prefs::append_log(&app, "updater.check skipped: channel not configured");
+    Ok(json!({
+        "status": "unavailable",
+        "currentVersion": env!("CARGO_PKG_VERSION"),
+        "message": "updater.notConfigured",
+    }))
 }
 
 fn demo_flow() -> Value {

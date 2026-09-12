@@ -1,0 +1,26 @@
+{
+  "folders": [
+    {
+      "name": "Lanius Desktop",
+      "path": "."
+    }
+  ],
+  "settings": {},
+  "extensions": {
+    "recommendations": [
+      "dbaeumer.vscode-eslint",
+      "bradlc.vscode-tailwindcss",
+      "rust-lang.rust-analyzer",
+      "charliermarsh.ruff",
+      "tauri-apps.tauri-vscode",
+      "ms-python.python",
+      "ms-python.debugpy",
+      "ms-python.vscode-pylance",
+      "vadimcn.vscode-lldb",
+      "tamasfe.even-better-toml",
+      "EditorConfig.EditorConfig",
+      "vitest.explorer",
+      "redhat.vscode-yaml"
+    ]
+  }
+}

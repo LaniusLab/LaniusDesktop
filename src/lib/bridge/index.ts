@@ -8,4 +8,12 @@ const isTauri = "__TAURI_INTERNALS__" in window;
 export const bridge: Bridge = isTauri ? createTauriBridge() : createMockBridge();
 
 export { isTauri };
-export type { Bridge, EngineEvent, EngineInfo, EngineStatus, ExecutionPhase } from "./types";
+export type {
+  Bridge,
+  EngineEvent,
+  EngineInfo,
+  EngineStatus,
+  ExecutionPhase,
+  UpdaterResult,
+  UpdaterStatus,
+} from "./types";

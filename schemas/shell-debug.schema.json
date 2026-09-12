@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/shell-debug.schema.json",
+  "title": "ShellDebugInfo",
+  "description": "设置页调试信息：系统、路径、更新通道状态",
+  "type": "object",
+  "required": ["appVersion", "os", "arch", "family", "autostartSupported", "paths"],
+  "properties": {
+    "appVersion": { "type": "string", "description": "应用版本" },
+    "os": { "type": "string", "description": "操作系统标识" },
+    "arch": { "type": "string", "description": "CPU 架构" },
+    "family": { "type": "string", "description": "unix / windows" },
+    "autostartSupported": { "type": "boolean", "description": "当前平台是否支持写入开机自启" },
+    "paths": {
+      "type": "object",
+      "required": ["configDir", "dataDir", "logDir", "logFile", "exePath"],
+      "properties": {
+        "configDir": { "type": "string" },
+        "dataDir": { "type": "string" },
+        "logDir": { "type": "string" },
+        "logFile": { "type": "string" },
+        "exePath": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

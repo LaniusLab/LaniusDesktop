@@ -17,19 +17,19 @@ const DEMO_NODES: Node[] = [
     id: "open_app",
     type: "default",
     position: { x: 80, y: 120 },
-    data: { label: "window.find · 定位记事本" },
+    data: { label: "定位记事本" },
   },
   {
     id: "type_text",
     type: "default",
     position: { x: 380, y: 120 },
-    data: { label: "keyboard.type · 输入内容" },
+    data: { label: "输入内容" },
   },
   {
     id: "log_done",
     type: "default",
     position: { x: 680, y: 120 },
-    data: { label: "core.log · 记录完成" },
+    data: { label: "记下完成" },
   },
 ];
 

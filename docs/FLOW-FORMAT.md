@@ -1,6 +1,6 @@
 # 流程文件格式（`*.flow.json`）
 
-> 状态：已评审 · 最后更新：2026-09-11
+> 状态：已评审 · 最后更新：2026-09-12
 > 真源 schema：[`schemas/flow.schema.json`](../schemas/flow.schema.json)
 
 ## 1. 设计目标
@@ -73,7 +73,7 @@
 ```
 
 - `kind: "control"`：执行顺序（拓扑排序的输入）。
-- `kind: "data"` 不存在——数据依赖经 `inputs.*.from` 显式声明，执行器把数据依赖并入拓扑约束。这样连线只有一种语义，画布不会长出第二张隐式图。
+- 数据依赖只通过 `inputs.*.from` 声明；执行器把数据依赖并入拓扑约束。连线只有 `control` 一种语义。
 - 分支：`flow.if` 节点有命名出口（`then`/`else`），连线上带 `branch: "then"`。
 
 ## 5. 版本迁移链

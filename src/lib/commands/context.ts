@@ -21,6 +21,9 @@ export function currentContext(): CommandContext {
     execution: { phase: useExecutionStore.getState().phase },
     editor: { dirty: useEditorStore.getState().dirty },
     navigate: (to) => navigateFn(to),
-    ui: { toggleTheme: () => useUiStore.getState().toggleTheme() },
+    ui: {
+      toggleTheme: () => useUiStore.getState().toggleTheme(),
+      setSearchOpen: (open) => useUiStore.getState().setSearchOpen(open),
+    },
   };
 }

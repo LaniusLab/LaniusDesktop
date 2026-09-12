@@ -1,0 +1,107 @@
+{
+  "npm.packageManager": "pnpm",
+  "npm.scriptRunner": "pnpm",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/src-tauri/target": true,
+    "**/src-tauri/gen": true,
+    "**/.venv": true,
+    "**/.pytest_cache": true,
+    "**/.mypy_cache": true,
+    "**/.ruff_cache": true,
+    "**/__pycache__": true,
+    "**/*.egg-info": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/src-tauri/target": true,
+    "**/src-tauri/gen": true,
+    "**/src/lib/gen": true,
+    "**/.venv": true,
+    "**/coverage": true,
+    "**/pnpm-lock.yaml": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/src-tauri/target/**": true,
+    "**/.venv/**": true
+  },
+  "files.associations": {
+    "*.flow.json": "json"
+  },
+  "json.schemas": [
+    {
+      "fileMatch": ["**/*.flow.json"],
+      "url": "./schemas/flow.schema.json"
+    }
+  ],
+  "editor.formatOnSave": true,
+  "eslint.useFlatConfig": true,
+  "eslint.format.enable": true,
+  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "tailwindCSS.experimental.configFile": "src/ui/tokens.css",
+  "css.lint.unknownAtRules": "ignore",
+  "python.defaultInterpreterPath": "${workspaceFolder}/engine/.venv/Scripts/python.exe",
+  "python.terminal.activateEnvironment": true,
+  "python.analysis.extraPaths": ["${workspaceFolder}/engine/src"],
+  "python.analysis.diagnosticMode": "workspace",
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": ["engine/tests"],
+  "python.analysis.typeCheckingMode": "off",
+  "ruff.nativeServer": "on",
+  "rust-analyzer.linkedProjects": ["${workspaceFolder}/src-tauri/Cargo.toml"],
+  "rust-analyzer.check.command": "clippy",
+  "[typescript]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    }
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    }
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  },
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "vscode.json-language-features"
+  },
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml"
+  },
+  "terminal.integrated.env.windows": {
+    "LANIUS_ENGINE_CMD": "${workspaceFolder}/engine/.venv/Scripts/python.exe -m lanius_engine",
+    "PYTHONPATH": "${workspaceFolder}/engine/src"
+  },
+  "terminal.integrated.env.osx": {
+    "LANIUS_ENGINE_CMD": "${workspaceFolder}/engine/.venv/bin/python -m lanius_engine",
+    "PYTHONPATH": "${workspaceFolder}/engine/src"
+  },
+  "terminal.integrated.env.linux": {
+    "LANIUS_ENGINE_CMD": "${workspaceFolder}/engine/.venv/bin/python -m lanius_engine",
+    "PYTHONPATH": "${workspaceFolder}/engine/src"
+  }
+}

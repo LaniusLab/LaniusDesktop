@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
 /*
- * 设计 token 唯一真源。业务代码只允许使用这里映射出的语义化 utility
- * （bg-bg / bg-surface / text-fg / text-fg-muted / border-line / bg-accent …），
- * 禁止写死颜色。dark-first：:root 即深色，亮色经 data-theme 覆盖。
+ * 设计 token 唯一真源。业务代码只允许使用这里映射出的语义化 utility。
+ * light-first：:root 即浅色纸面；夜间 data-theme="dark"；强调色 data-accent；
+ * 字体 data-font；动效 data-motion。
  */
 @theme inline {
   --color-bg: var(--bg);
@@ -21,27 +21,78 @@
   --color-success: var(--success);
   --color-info: var(--info);
 
-  --font-sans:
-    ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
-    sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  --font-sans: var(--font-sans-stack);
+  --font-display: var(--font-display-stack);
+  --font-mono: var(--font-mono-stack);
 
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+
+  --shadow-soft: 0 1px 0 color-mix(in srgb, var(--fg) 6%, transparent);
+  --shadow-float: 0 18px 40px -16px color-mix(in srgb, var(--fg) 20%, transparent);
 }
 
 :root {
-  --bg: #0b0d10;
-  --surface: #12151a;
-  --surface-raised: #1a1e25;
-  --line: #262b33;
-  --fg: #e8e6e1;
-  --fg-muted: #9b978e;
-  --fg-faint: #63605a;
-  --accent: #d4a24e;
-  --accent-hover: #e0b465;
-  --accent-fg: #17130a;
+  --bg: #f4efe6;
+  --surface: #fbf7f0;
+  --surface-raised: #fffdf8;
+  --line: #e4d8c8;
+  --fg: #2a2118;
+  --fg-muted: #6d5e4f;
+  --fg-faint: #a39484;
+  --danger: #c2403a;
+  --warning: #c48a2a;
+  --success: #3d7a52;
+  --info: #3a6ea8;
+  --titlebar-h: 36px;
+  --duration-fast: 140ms;
+  --duration: 220ms;
+  --duration-slow: 380ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --font-sans-stack:
+    ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+    sans-serif;
+  --font-display-stack:
+    "Songti SC", STSong, SimSun, "Noto Serif SC", "Noto Serif CJK SC", "Palatino Linotype",
+    Palatino, serif;
+  --font-mono-stack: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  color-scheme: light;
+}
+
+:root,
+[data-accent="terracotta"] {
+  --accent: #c45c38;
+  --accent-hover: #a84c2d;
+  --accent-fg: #fffaf4;
+}
+
+[data-accent="ink"] {
+  --accent: #3a5a7a;
+  --accent-hover: #2c4763;
+  --accent-fg: #f4f7fb;
+}
+
+[data-accent="moss"] {
+  --accent: #4a7a58;
+  --accent-hover: #3b6247;
+  --accent-fg: #f4faf5;
+}
+
+[data-accent="dusk"] {
+  --accent: #7a4e6e;
+  --accent-hover: #623d57;
+  --accent-fg: #fbf4f8;
+}
+
+[data-theme="dark"] {
+  --bg: #16110d;
+  --surface: #1e1813;
+  --surface-raised: #2a221b;
+  --line: #3d342b;
+  --fg: #f3ebe2;
+  --fg-muted: #b4a494;
+  --fg-faint: #7a6d61;
   --danger: #e0655f;
   --warning: #d4a24e;
   --success: #6fae7c;
@@ -49,22 +100,40 @@
   color-scheme: dark;
 }
 
-[data-theme="light"] {
-  --bg: #f7f6f3;
-  --surface: #ffffff;
-  --surface-raised: #f0efeb;
-  --line: #e2e0da;
-  --fg: #23211d;
-  --fg-muted: #6f6b63;
-  --fg-faint: #a8a49b;
-  --accent: #a87c2a;
-  --accent-hover: #8f6820;
-  --accent-fg: #ffffff;
-  --danger: #c2403a;
-  --warning: #a87c2a;
-  --success: #3f7d4e;
-  --info: #3a6ea8;
-  color-scheme: light;
+[data-theme="dark"][data-accent="terracotta"],
+[data-theme="dark"]:not([data-accent]) {
+  --accent: #e07a54;
+  --accent-hover: #f08a64;
+  --accent-fg: #1a100c;
+}
+
+[data-theme="dark"][data-accent="ink"] {
+  --accent: #7aa3c9;
+  --accent-hover: #93b6d6;
+  --accent-fg: #121820;
+}
+
+[data-theme="dark"][data-accent="moss"] {
+  --accent: #7db38c;
+  --accent-hover: #93c4a0;
+  --accent-fg: #121a14;
+}
+
+[data-theme="dark"][data-accent="dusk"] {
+  --accent: #c48aad;
+  --accent-hover: #d4a3c0;
+  --accent-fg: #1a1218;
+}
+
+[data-font="hei"] {
+  --font-display-stack:
+    ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC",
+    sans-serif;
+}
+
+[data-font="song"] {
+  --font-sans-stack:
+    "Songti SC", STSong, SimSun, "Noto Serif SC", "Source Han Serif SC", serif;
 }
 
 @layer base {
@@ -72,10 +141,27 @@
     border-color: var(--line);
   }
 
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
   body {
-    background: var(--bg);
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 42%),
+      radial-gradient(circle at 88% 0%, color-mix(in srgb, var(--fg) 6%, transparent), transparent 34%),
+      radial-gradient(circle at 70% 92%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 38%),
+      repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        color-mix(in srgb, var(--fg) 2.4%, transparent) 3px,
+        color-mix(in srgb, var(--fg) 2.4%, transparent) 4px
+      );
     color: var(--fg);
-    font-family: var(--font-sans);
+    font-family: var(--font-sans-stack);
     -webkit-font-smoothing: antialiased;
   }
 
@@ -90,5 +176,141 @@
       animation-duration: 0.01ms !important;
       transition-duration: 0.01ms !important;
     }
+  }
+}
+
+[data-motion="reduce"] *,
+[data-motion="reduce"] *::before,
+[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
+@layer utilities {
+  .app-drag {
+    -webkit-app-region: drag;
+    app-region: drag;
+  }
+
+  .app-no-drag {
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+
+  .animate-rise {
+    animation: lanius-rise var(--duration) var(--ease-out) both;
+  }
+
+  .animate-fade {
+    animation: lanius-fade var(--duration) var(--ease-out) both;
+  }
+
+  .animate-pop {
+    animation: lanius-pop var(--duration-slow) var(--ease-out) both;
+  }
+
+  .animate-page {
+    animation: lanius-page var(--duration-slow) var(--ease-out) both;
+  }
+
+  .animate-pulse-dot {
+    animation: lanius-pulse 1.2s ease-in-out infinite;
+  }
+
+  .animate-spin-ring {
+    animation: lanius-spin 0.8s linear infinite;
+  }
+
+  .hover-lift {
+    transition:
+      transform var(--duration) var(--ease-out),
+      box-shadow var(--duration) var(--ease-out),
+      border-color var(--duration) var(--ease-out),
+      background-color var(--duration) var(--ease-out);
+  }
+
+  .hover-lift:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-float);
+  }
+
+  .delay-1 {
+    animation-delay: 50ms;
+  }
+
+  .delay-2 {
+    animation-delay: 100ms;
+  }
+
+  .delay-3 {
+    animation-delay: 150ms;
+  }
+
+  .delay-4 {
+    animation-delay: 200ms;
+  }
+
+  .delay-5 {
+    animation-delay: 250ms;
+  }
+}
+
+@keyframes lanius-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lanius-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lanius-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lanius-page {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lanius-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.42;
+    transform: scale(0.86);
+  }
+}
+
+@keyframes lanius-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

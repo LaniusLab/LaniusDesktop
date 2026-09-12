@@ -105,6 +105,8 @@ function generate(schemaPath, outName, rootTypeName) {
 const outputs = [
   generate("schemas/error.schema.json", "error.ts", "EngineError"),
   generate("schemas/flow.schema.json", "flow.ts", "FlowFile"),
+  generate("schemas/shell-prefs.schema.json", "shell-prefs.ts", "ShellPrefs"),
+  generate("schemas/shell-debug.schema.json", "shell-debug.ts", "ShellDebugInfo"),
 ];
 
 mkdirSync(join(root, "src/lib/gen"), { recursive: true });

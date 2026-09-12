@@ -13,19 +13,19 @@ export const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-bg/70 backdrop-blur-sm" />
+    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-bg/70 backdrop-blur-sm animate-fade" />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
         "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2",
-        "rounded-lg border border-line bg-surface p-6 shadow-xl",
+        "rounded-lg border border-line bg-surface p-6 shadow-float animate-pop",
         "focus:outline-none",
         className,
       )}
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm text-fg-faint transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-accent">
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm text-fg-faint transition-colors duration-150 hover:text-fg focus-visible:outline-2 focus-visible:outline-accent">
         <X className="size-4" />
         <span className="sr-only">关闭</span>
       </DialogPrimitive.Close>

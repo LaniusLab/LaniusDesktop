@@ -9,6 +9,11 @@ describe("StatusBadge", () => {
     expect(screen.getByText("运行中")).toBeInTheDocument();
   });
 
+  it("空闲对人显示为就绪", () => {
+    render(<StatusBadge state="idle" />);
+    expect(screen.getByText("就绪")).toBeInTheDocument();
+  });
+
   it("覆盖状态机全部终态", () => {
     const { rerender } = render(<StatusBadge state="done" />);
     expect(screen.getByText("完成")).toBeInTheDocument();

@@ -10,12 +10,12 @@ function fakeContext(overrides: Partial<CommandContext> = {}): CommandContext {
       flowRun: vi.fn().mockResolvedValue({ executionId: "exec-1" }),
       flowCancel: vi.fn(),
       onEngineEvent: vi.fn(),
-    },
+    } as unknown as CommandContext["bridge"],
     engine: { status: "ready" },
     execution: { phase: "idle" },
     editor: { dirty: false },
     navigate: vi.fn(),
-    ui: { toggleTheme: vi.fn() },
+    ui: { toggleTheme: vi.fn(), setSearchOpen: vi.fn() },
     ...overrides,
   };
 }

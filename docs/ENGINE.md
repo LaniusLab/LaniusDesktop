@@ -1,7 +1,7 @@
 # Python 引擎设计
 
-> 状态：已评审 · 最后更新：2026-09-11
-> 关联决策：[ADR-0003](adr/0003-python-sidecar.md)
+> 状态：已评审 · 最后更新：2026-09-12
+> 实现进度：目标设计如下；模块树中标注 `（规划）` 的尚未落地。当前里程碑见 [ROADMAP.md](ROADMAP.md)（**M0**）。
 
 引擎（`lanius-engine`）是全部业务语义的所在：流程校验、执行、节点实现、平台自动化。它以 sidecar 形态运行，通过 stdio JSON-RPC 与壳通信（见 [PROTOCOL.md](PROTOCOL.md)）。
 
@@ -9,7 +9,7 @@
 
 1. **语义唯一真源**：流程怎么校验、怎么执行、怎么取消，只有这里说了算。
 2. **可测试**：driver 层有完整 mock 实现，CI 在无显示器的 Linux 容器里跑全量测试。
-3. **可观测**：structlog 结构化日志，traceId 贯穿，执行历史落 SQLite。
+3. **可观测**：structlog 结构化日志，traceId 贯穿，执行历史落 SQLite（历史落盘属 M1）。
 4. **可扩展**：新增节点 = 新增一个类 + 注册，不改执行器。
 
 ## 2. 模块划分
@@ -19,24 +19,24 @@ engine/src/lanius_engine/
 ├── __main__.py        # 入口：stdio 服务循环（NDJSON 帧）
 ├── rpc/
 │   ├── server.py      # JSON-RPC 解析/分发/错误映射
-│   └── methods.py     # 方法实现（@register 注册制）
+│   └── methods.py     # 方法实现（注册制）
 ├── nodes/
 │   ├── base.py        # Node 协议：inputs/outputs/config schema/execute
 │   ├── registry.py    # 节点注册表（type → 类）
-│   └── core/          # 内置节点：flow 控制、键鼠、窗口、文件、HTTP…
+│   └── core/          # 已落地：log、wait；（规划 · M1）flow/数据/fs/键鼠…
 ├── drivers/
 │   ├── base.py        # Driver 抽象接口
 │   ├── mock.py        # Mock driver（CI/测试/dry-run 用）
-│   ├── windows.py     # pywinauto 实现
-│   ├── macos.py       # pyobjc 实现
-│   └── linux.py       # pyatspi 实现
+│   ├── windows.py     # （规划 · M4）pywinauto
+│   ├── macos.py       # （规划 · M4）pyobjc
+│   └── linux.py       # （规划 · M4）pyatspi
 ├── runtime/
 │   ├── executor.py    # 执行器：拓扑调度 + 状态机
 │   ├── state.py       # 执行状态机定义
 │   ├── scope.py       # 变量作用域链
 │   └── cancel.py      # 协作式取消原语
-├── models/            # Pydantic v2 模型（对齐 schemas/，CI 校验漂移）
-├── history.py         # SQLite 执行历史
+├── models/            # Pydantic v2 模型（对齐 schemas/）
+├── history.py         # （规划 · M1）SQLite 执行历史
 └── logging.py         # structlog 配置（JSON、traceId 注入）
 ```
 
@@ -67,7 +67,7 @@ engine/src/lanius_engine/
 
 ### 3.3 Mock driver 契约
 
-mock 不是空实现：它维护一份内存中的"虚拟桌面"（窗口树、元素树、剪贴板），所有操作改变虚拟状态并可断言。测试用例据此验证节点行为而非"调用过某函数"。mock 还用于 dry-run 模式——dry-run 即"用 mock driver 跑完整流程"。
+mock 维护一份内存中的虚拟桌面（窗口树、元素树、剪贴板），操作会改变这份状态，测试断言状态变化。dry-run 即用 mock driver 跑完整流程。
 
 ## 4. 节点系统
 

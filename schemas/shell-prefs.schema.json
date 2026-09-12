@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/shell-prefs.schema.json",
+  "title": "ShellPrefs",
+  "description": "壳与 UI 共享的本机偏好（外观、关闭、自启、更新、快捷键）",
+  "type": "object",
+  "required": [
+    "theme",
+    "accent",
+    "font",
+    "motion",
+    "locale",
+    "closeBehavior",
+    "autostart",
+    "autoUpdate",
+    "shortcuts"
+  ],
+  "properties": {
+    "theme": {
+      "type": "string",
+      "enum": ["light", "dark", "system"],
+      "description": "颜色主题"
+    },
+    "accent": {
+      "type": "string",
+      "enum": ["terracotta", "ink", "moss", "dusk"],
+      "description": "强调色"
+    },
+    "font": {
+      "type": "string",
+      "enum": ["song", "hei", "mixed"],
+      "description": "字体预设"
+    },
+    "motion": {
+      "type": "string",
+      "enum": ["normal", "reduce"],
+      "description": "动效强度"
+    },
+    "locale": {
+      "type": "string",
+      "enum": ["zh-CN", "en"],
+      "description": "界面语言"
+    },
+    "closeBehavior": {
+      "type": "string",
+      "enum": ["quit", "minimize"],
+      "description": "关闭窗口时的行为"
+    },
+    "autostart": { "type": "boolean", "description": "登录后自动启动" },
+    "autoUpdate": { "type": "boolean", "description": "启动时检查更新" },
+    "shortcuts": {
+      "type": "object",
+      "description": "可改的应用内快捷键",
+      "required": ["palette", "run"],
+      "properties": {
+        "palette": { "type": "string", "description": "打开全局搜索" },
+        "run": { "type": "string", "description": "试一次" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,153 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "环境: 安装前端依赖",
+      "type": "shell",
+      "command": "pnpm install",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "shared", "group": "setup" },
+      "problemMatcher": []
+    },
+    {
+      "label": "环境: 安装引擎 venv",
+      "type": "shell",
+      "command": "python3 -m venv engine/.venv && engine/.venv/bin/python -m pip install -e \"engine[dev]\"",
+      "windows": {
+        "command": "py -3 -m venv engine/.venv; engine\\.venv\\Scripts\\python -m pip install -e \"engine[dev]\""
+      },
+      "osx": {
+        "command": "python3 -m venv engine/.venv && engine/.venv/bin/python -m pip install -e \"engine[dev]\""
+      },
+      "linux": {
+        "command": "python3 -m venv engine/.venv && engine/.venv/bin/python -m pip install -e \"engine[dev]\""
+      },
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "shared", "group": "setup" },
+      "problemMatcher": []
+    },
+    {
+      "label": "UI: 开发服务器",
+      "type": "npm",
+      "script": "dev",
+      "isBackground": true,
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "dev" },
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "43191"
+        }
+      }
+    },
+    {
+      "label": "应用: Tauri 开发",
+      "type": "shell",
+      "command": "pnpm tauri dev",
+      "isBackground": true,
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "dedicated", "group": "dev" },
+      "problemMatcher": {
+        "owner": "tauri",
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "(43191|Finished|running)"
+        }
+      }
+    },
+    {
+      "label": "协议: 重新生成类型",
+      "type": "npm",
+      "script": "codegen",
+      "presentation": { "reveal": "always", "panel": "shared", "group": "protocol" },
+      "problemMatcher": []
+    },
+    {
+      "label": "检验: 前端 check",
+      "type": "npm",
+      "script": "check",
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "shared", "group": "verify" },
+      "problemMatcher": []
+    },
+    {
+      "label": "检验: 引擎",
+      "type": "shell",
+      "command": "pnpm engine:lint && pnpm engine:test",
+      "windows": {
+        "options": {
+          "env": {
+            "PATH": "${workspaceFolder}/engine/.venv/Scripts;${env:PATH}"
+          }
+        }
+      },
+      "osx": {
+        "options": {
+          "env": {
+            "PATH": "${workspaceFolder}/engine/.venv/bin:${env:PATH}"
+          }
+        }
+      },
+      "linux": {
+        "options": {
+          "env": {
+            "PATH": "${workspaceFolder}/engine/.venv/bin:${env:PATH}"
+          }
+        }
+      },
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "shared", "group": "verify" },
+      "problemMatcher": []
+    },
+    {
+      "label": "检验: 外环 verify",
+      "type": "npm",
+      "script": "verify",
+      "presentation": { "reveal": "always", "panel": "shared", "group": "verify" },
+      "problemMatcher": []
+    },
+    {
+      "label": "检验: 壳 cargo check",
+      "type": "npm",
+      "script": "verify:shell",
+      "presentation": { "reveal": "always", "panel": "shared", "group": "verify" },
+      "problemMatcher": {
+        "owner": "rustc",
+        "fileLocation": ["relative", "${workspaceFolder}/src-tauri"],
+        "pattern": {
+          "regexp": "^(error|warning)(?:\\[(E\\d+)\\])?: (.*)$",
+          "severity": 1,
+          "code": 2,
+          "message": 3
+        }
+      }
+    },
+    {
+      "label": "UI: 测试",
+      "type": "npm",
+      "script": "test",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": { "reveal": "always", "panel": "shared", "group": "test" },
+      "problemMatcher": []
+    },
+    {
+      "label": "引擎: 测试",
+      "type": "npm",
+      "script": "engine:test",
+      "presentation": { "reveal": "always", "panel": "shared", "group": "test" },
+      "problemMatcher": []
+    }
+  ]
+}

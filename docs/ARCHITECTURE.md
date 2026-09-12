@@ -1,7 +1,7 @@
 # 总体架构
 
-> 状态：已评审 · 最后更新：2026-09-11
-> 关联决策：[ADR-0001](adr/0001-tauri-over-electron.md) [ADR-0003](adr/0003-python-sidecar.md) [ADR-0004](adr/0004-jsonrpc-over-stdio.md)
+> 状态：已评审 · 最后更新：2026-09-12
+> 实现进度：目标架构如下；落地范围以 [ROADMAP.md](ROADMAP.md) 当前里程碑为准（现为 **M0**）
 
 ## 1. 进程拓扑
 
@@ -32,11 +32,11 @@ Lanius Desktop 由三个进程角色组成，职责严格分层：
 └────────────────────────────────────────────────────────┘
 ```
 
-### 为什么是三层而不是两层
+### 分层规则
 
-- **UI 不直连 Python**：若 webview 直接持有 sidecar 的 stdio，壳就失去了统一的生命周期管理与错误规范化点，安全边界（CSP/capabilities）也会被绕过。所有跨层调用必须经过 Rust 这个"窄腰"。
-- **Rust 不写业务逻辑**：业务规则集中在 Python 单点维护，Rust handler 保持"薄"——校验参数类型、转发、规范化错误。这样业务演进不需要发版桌面壳的 Rust 部分之外的任何东西。
-- **Python 不碰呈现**：引擎只产出事件与结构化数据，如何呈现（toast、对话框、画布高亮）由 UI 决定。
+- **UI 不直连 Python**：跨层调用经 Rust（invoke / event → JSON-RPC）。
+- **Rust 不写业务逻辑**：handler 只做参数校验、转发、错误规范化。
+- **Python 不碰呈现**：引擎只产出事件与结构化数据，呈现由 UI 决定。
 
 ## 2. 职责矩阵
 
@@ -84,33 +84,45 @@ traceId 由 Rust 分配并贯穿三层：UI 日志、Rust 日志、Python struct
 
 ## 4. 目录结构
 
+与仓库当前布局对齐。标注 `（规划）` 的路径尚未落地，见 [ROADMAP.md](ROADMAP.md)。
+
 ```
-lanius-desktop/
+LaniusDesktop/
+├── lanius-desktop.code-workspace  # 官方 Cursor / VS Code Workspace
+├── .editorconfig
+├── .vscode/                    # 任务 / 调试 / 编辑器设置
+├── .cursor/rules/              # 分层 Cursor 规则（配合 AGENTS.md）
 ├── package.json                # 版本号唯一真源 + 前端脚本
 ├── components.json             # shadcn CLI 配置（组件落 src/ui/primitives）
+├── LICENSE                     # MIT（版权方 LaniusLab）
 ├── index.html
 ├── vite.config.ts
 ├── tsconfig.json
 ├── eslint.config.mjs
 │
 ├── src/                        # 前端（React）
-│   ├── main.tsx / App.tsx
+│   ├── main.tsx
+│   ├── router.tsx
 │   ├── ui/                     # 内置组件库（见 FRONTEND.md）
 │   │   ├── primitives/         #   Radix 包装：Button/Input/Dialog…
-│   │   ├── composed/           #   组合件：DataTable/FormField…
+│   │   ├── composed/           #   组合件：FormField…
 │   │   ├── patterns/           #   业务模式：PageHeader/EmptyState…
 │   │   ├── tokens.css          #   设计 token（CSS 变量）
 │   │   └── index.ts            #   barrel，唯一出口 "@/ui"
 │   ├── modules/
-│   │   ├── flow-editor/        # 画布模块（React Flow）
-│   │   ├── runner/             # 执行控制条 + 日志面板
-│   │   ├── history/            # 执行历史
-│   │   ├── settings/           # 设置
-│   │   └── command-palette/    # 命令面板
+│   │   ├── layout/             # 应用壳布局（自绘顶栏 + 侧栏）
+│   │   ├── start/              # 开始页（预设 + 勾选 + 试一次）
+│   │   ├── flow-editor/        # 编排页（脚本入口；M2 积木主体）
+│   │   ├── history/            # 运行记录页（M3）
+│   │   ├── settings/           # 设置页
+│   │   ├── search/             # 全局搜索（Overlay，替代命令面板）
+│   │   ├── dev/                # 组件页（侧栏「组件」）
+│   │   └── runner/             # （规划 · M3）执行控制条 + 日志面板
 │   ├── lib/
 │   │   ├── bridge/             # invoke/event 类型安全封装
 │   │   ├── commands/           # 命令注册表
-│   │   ├── errors/             # 错误模型 TS 镜像 + 呈现策略
+│   │   ├── i18n/               # 界面文案（zh-CN / en）
+│   │   ├── search/             # 全局搜索索引
 │   │   └── gen/                # schema codegen 产物（勿手改）
 │   └── stores/                 # zustand 分片
 │
@@ -119,9 +131,10 @@ lanius-desktop/
 │   ├── tauri.conf.json
 │   ├── capabilities/default.json
 │   └── src/
-│       ├── main.rs             # 入口 + 插件装配
+│       ├── main.rs             # 入口 + 插件装配 + 关闭行为
 │       ├── sidecar.rs          # 引擎进程守护 + JSON-RPC client
 │       ├── commands.rs         # invoke handlers（薄）
+│       ├── prefs.rs            # 本机偏好 / 自启 / 调试路径 / 日志
 │       └── error.rs            # 壳层错误 → 统一错误模型
 │
 ├── engine/                     # Python sidecar
@@ -129,23 +142,29 @@ lanius-desktop/
 │   ├── src/lanius_engine/
 │   │   ├── __main__.py         # stdio JSON-RPC 服务循环
 │   │   ├── rpc/                # 协议层（注册制方法表）
-│   │   ├── nodes/              # 节点基类 + 注册表 + 内置节点
-│   │   ├── drivers/            # base / mock / windows / macos / linux
+│   │   ├── nodes/              # 节点基类 + 注册表 + 内置节点（core.log / wait）
+│   │   ├── drivers/            # base / mock；（规划 · M4）windows / macos / linux
 │   │   ├── runtime/            # 执行器、状态机、作用域、取消
 │   │   ├── models/             # Pydantic 模型（对齐 schemas/）
+│   │   ├── history.py          # （规划 · M1）SQLite 执行历史
 │   │   └── logging.py          # structlog 配置
 │   └── tests/
 │
 ├── schemas/                    # JSON Schema 唯一真源
 │   ├── flow.schema.json
 │   ├── error.schema.json
-│   └── rpc/                    # 各方法的 params/result schema
+│   ├── shell-prefs.schema.json
+│   ├── shell-debug.schema.json
+│   └── rpc/                    # （规划 · M1）各方法的 params/result schema
+│
+├── examples/
+│   └── hello.flow.json         # 示例流程
 │
 ├── scripts/
-│   ├── codegen-schema.mjs      # schemas → TS 类型（+ 校验 Python 同步）
+│   ├── codegen-schema.mjs      # schemas → TS 类型（flow / error / shell-prefs / shell-debug）
 │   └── sync-version.mjs        # 根 package.json → 三端版本号
 │
-├── docs/                       # 本文档集
+├── docs/                       # 本文档集（索引见 docs/README.md；日常回路见 WORKFLOW.md）
 └── .github/workflows/ci.yml
 ```
 
@@ -165,7 +184,7 @@ lanius-desktop/
 | --- | --- | --- |
 | 服务端/引擎状态 | TanStack Query + event 失效 | 执行历史列表、引擎信息 |
 | 编辑器文档状态 | zustand + Immer + zundo | 当前流程的节点/连线/选区 |
-| 全局 UI 状态 | zustand 轻量分片 | 主题、面板开合、命令面板 |
+| 全局 UI 状态 | zustand 轻量分片 | 主题、面板开合、全局搜索 |
 | 组件局部状态 | useState | 输入框草稿、hover |
 
 执行状态机**不复制**到前端 store：UI 只渲染引擎推送的最新状态，避免双真源。

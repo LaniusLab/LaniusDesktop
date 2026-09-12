@@ -12,11 +12,14 @@
   "app": {
     "windows": [
       {
-        "title": "Lanius Desktop",
+        "title": "Lanius",
         "width": 1440,
         "height": 900,
         "minWidth": 960,
-        "minHeight": 600
+        "minHeight": 600,
+        "center": true,
+        "shadow": true,
+        "decorations": false
       }
     ],
     "security": {
