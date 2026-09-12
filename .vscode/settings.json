@@ -35,28 +35,40 @@
   },
   "json.schemas": [
     {
-      "fileMatch": ["**/*.flow.json"],
+      "fileMatch": [
+        "**/*.flow.json"
+      ],
       "url": "./schemas/flow.schema.json"
     }
   ],
   "editor.formatOnSave": true,
   "eslint.useFlatConfig": true,
   "eslint.format.enable": true,
-  "eslint.workingDirectories": [{ "mode": "auto" }],
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
+  ],
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "tailwindCSS.experimental.configFile": "src/ui/tokens.css",
   "css.lint.unknownAtRules": "ignore",
   "python.defaultInterpreterPath": "${workspaceFolder}/engine/.venv/Scripts/python.exe",
   "python.terminal.activateEnvironment": true,
-  "python.analysis.extraPaths": ["${workspaceFolder}/engine/src"],
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/engine/src"
+  ],
   "python.analysis.diagnosticMode": "workspace",
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
-  "python.testing.pytestArgs": ["engine/tests"],
+  "python.testing.pytestArgs": [
+    "engine/tests"
+  ],
   "python.analysis.typeCheckingMode": "off",
   "ruff.nativeServer": "on",
-  "rust-analyzer.linkedProjects": ["${workspaceFolder}/src-tauri/Cargo.toml"],
+  "rust-analyzer.linkedProjects": [
+    "${workspaceFolder}/src-tauri/Cargo.toml"
+  ],
   "rust-analyzer.check.command": "clippy",
   "[typescript]": {
     "editor.defaultFormatter": "dbaeumer.vscode-eslint",
@@ -103,5 +115,10 @@
   "terminal.integrated.env.linux": {
     "LANIUS_ENGINE_CMD": "${workspaceFolder}/engine/.venv/bin/python -m lanius_engine",
     "PYTHONPATH": "${workspaceFolder}/engine/src"
-  }
+  },
+  "cursorpyright.analysis.diagnosticMode": "workspace",
+  "cursorpyright.analysis.extraPaths": [
+    "${workspaceFolder}/engine/src"
+  ],
+  "cursorpyright.analysis.typeCheckingMode": "off"
 }

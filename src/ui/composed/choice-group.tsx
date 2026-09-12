@@ -14,6 +14,7 @@ export interface ChoiceGroupProps<T extends string> {
   "aria-label"?: string;
 }
 
+/** Segmented radio cards for settings (theme/accent/locale). Not a native radio group under the hood — buttons with role="radio". */
 export function ChoiceGroup<T extends string>({
   value,
   onChange,

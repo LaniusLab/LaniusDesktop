@@ -11,6 +11,8 @@ import { useT } from "@/stores/ui";
 import { Badge, Button, PageHeader } from "@/ui";
 
 /** 开始页：MaaEnd 式预设 + 勾选 + 试一次；勾选为 M0 mock，不写回引擎 */
+/** 开始页：MaaEnd 式预设 + 勾选 + 试一次；勾选为 M0 mock，不写回引擎。
+ */
 export function StartPage() {
   const navigate = useNavigate();
   const t = useT();

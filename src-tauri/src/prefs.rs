@@ -1,4 +1,10 @@
 //! 本机偏好与调试信息。只做读写、校验枚举、平台自启；不含业务规则。
+//! Shell preferences persistence and Windows-specific side effects.
+//! - On-disk JSON lives under the app config dir; browser preview uses localStorage instead.
+//! - `apply_autostart` writes/removes `%APPDATA%\\...\\Startup\\Lanius Desktop.bat` (Windows only).
+//! - `updater_check` is intentionally a stub until an update channel is configured.
+//! - Keep field enums in sync with frontend `ShellPrefs` / schema codegen.
+
 
 use std::fs::{self, OpenOptions};
 use std::io::Write;

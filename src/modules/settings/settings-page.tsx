@@ -20,6 +20,9 @@ type SettingsTab = "appearance" | "behavior" | "shortcuts" | "debug" | "about";
 
 const ACCENTS: ReadonlyArray<ShellPrefs["accent"]> = ["terracotta", "ink", "moss", "dusk"];
 
+/** 设置页：外观写 dataset；行为里 autostart 仅 Windows+Tauri 可改；更新检查走 updater stub。
+ * 快捷键录制用 eventToShortcut；palette/run 冲突时拒绝写入。
+ */
 export function SettingsPage() {
   const t = useT();
   const [tab, setTab] = useState<SettingsTab>("appearance");

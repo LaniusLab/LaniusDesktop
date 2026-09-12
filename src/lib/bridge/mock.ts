@@ -32,6 +32,7 @@ const MOCK_DEBUG: ShellDebugInfo = {
   },
 };
 
+/** 浏览器开发 mock：定时器模拟引擎心跳与一次执行流转；与 tauri.ts 保持同一 Bridge 契约。 */
 export function createMockBridge(): Bridge {
   const handlers = new Set<(event: EngineEvent) => void>();
   const emit = (event: EngineEvent) => handlers.forEach((h) => h(event));

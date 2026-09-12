@@ -12,14 +12,20 @@ export interface SearchHit extends SearchSource {
   score: number;
 }
 
+/** Stable group order for the palette UI (nav → tasks → app). */
 export const SEARCH_GROUP_ORDER: SearchGroup[] = ["nav", "run", "app"];
 
+/**
+ * Derive group from command id prefix.
+ * Gotcha: unknown prefixes land in `app` (including `app.*` and future ids).
+ */
 export function commandGroup(id: string): SearchGroup {
   if (id.startsWith("nav.")) return "nav";
   if (id.startsWith("flow.")) return "run";
   return "app";
 }
 
+/** Simple substring scorer: exact > prefix > mid-string (penalized by index). */
 export function scoreText(haystack: string, needle: string): number {
   const query = needle.trim().toLowerCase();
   if (!query) return 1;
@@ -31,7 +37,11 @@ export function scoreText(haystack: string, needle: string): number {
   return 0;
 }
 
-/** 命令注册表 → 可排序的搜索命中。空查询列出全部；不包含打开搜索自身。 */
+/**
+ * Registry items → ranked hits. Empty query lists everything.
+ * Always drop `app.search` so opening search cannot select itself.
+ * Score is max(title, id) so English ids still match when locale titles differ.
+ */
 export function collectHits(query: string, items: SearchSource[]): SearchHit[] {
   return items
     .filter((item) => item.id !== "app.search")
@@ -51,6 +61,7 @@ export function groupHits(hits: SearchHit[]): Array<{ group: SearchGroup; hits: 
   });
 }
 
+/** Split title into highlightable parts (first case-insensitive match only). */
 export function highlightMatch(text: string, query: string): Array<{ text: string; match: boolean }> {
   const needle = query.trim();
   if (!needle) return [{ text, match: false }];

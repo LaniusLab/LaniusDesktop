@@ -31,6 +31,8 @@ import {
 } from "@/ui";
 
 /** 组件页，替代 Storybook，见 ADR-0006 */
+/** 组件页，替代 Storybook，见 ADR-0006。新增 UI 原语时请同步补区块。
+ */
 export function GalleryPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [overlayOpen, setOverlayOpen] = useState(false);

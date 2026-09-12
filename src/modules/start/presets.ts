@@ -13,6 +13,8 @@ export interface JobPreset {
 }
 
 /** M0 写死的作业预设，与演示流程同一语义；M2 改为 *.flow.json 投影 */
+/** M0 演示预设；available=false 的卡片仅展示 laterHint，不可选。
+ */
 export const JOB_PRESETS: JobPreset[] = [
   {
     id: "notepad-sentence",

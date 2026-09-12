@@ -11,7 +11,7 @@ interface FormFieldProps {
   className?: string;
 }
 
-/** 标签 + 控件 + 提示/错误的统一行式布局，节点属性面板的默认形态 */
+/** Label + control + hint/error row; default shape for node property panels. Error wins over hint. */
 export function FormField({ label, htmlFor, error, hint, children, className }: FormFieldProps) {
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>

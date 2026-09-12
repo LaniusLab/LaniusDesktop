@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 import { useT } from "@/stores/ui";
 
 /** 自绘顶栏。无边框窗口靠 data-tauri-drag-region 拖动；关闭走壳的 closeBehavior。 */
+/** 自定义顶栏：无边框窗口靠 data-tauri-drag-region 拖动；关闭走壳的 closeBehavior。
+ * Windows 用右侧 CaptionButton；Apple 用左侧 TrafficLights（布局镜像）。
+ */
 export function Titlebar() {
   const t = useT();
   const apple = isApplePlatform();

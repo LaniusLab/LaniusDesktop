@@ -22,5 +22,33 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     css: false,
+    coverage: {
+      provider: "v8",
+      // Exclude generated JSON-schema outputs, entry shells that only wire routers,
+      // and pure type/re-export barrels — they inflate surface without behavior under test.
+      // Keep src/lib/gen/** out: codegen overwrites those files.
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/lib/gen/**",
+        "src/test/**",
+        "src/**/*.test.{ts,tsx}",
+        "src/main.tsx",
+        "src/router.tsx",
+        "src/ui/index.ts",
+        "src/lib/bridge/types.ts",
+        "src/lib/commands/types.ts",
+        "src/lib/i18n/en.ts",
+        "src/lib/i18n/zh-CN.ts",
+        // Real Tauri invoke wrapper; jsdom uses mock bridge instead.
+        "src/lib/bridge/tauri.ts",
+      ],
+      reporter: ["text", "text-summary", "html"],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80,
+      },
+    },
   },
 });

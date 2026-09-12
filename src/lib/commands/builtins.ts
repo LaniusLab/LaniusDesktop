@@ -1,6 +1,8 @@
 import { registry } from "./registry";
 
 // 内置命令。搜索 / 菜单 / 快捷键都只是这些实现的触发器（ADR-0007）
+// 内置命令。搜索 / 菜单 / 快捷键都只是这些实现的触发器（ADR-0007）。
+// 标题字符串会被 i18n 的 cmd.${id} 覆盖；此处中文仅作注册表兜底。
 export function registerBuiltinCommands(): void {
   registry.register({
     id: "app.search",

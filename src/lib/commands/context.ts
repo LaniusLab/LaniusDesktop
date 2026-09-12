@@ -6,6 +6,7 @@ import { useUiStore } from "@/stores/ui";
 import type { CommandContext } from "./types";
 
 // 从活跃 store 装配命令上下文；navigate 由路由层注入以避免命令层反向依赖路由
+// 从活跃 store 装配命令上下文；navigate 由路由层注入，避免命令层反向依赖路由。
 let navigateFn: (to: string) => void = () => {
   throw new Error("命令上下文的 navigate 尚未注入");
 };

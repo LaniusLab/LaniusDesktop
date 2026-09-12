@@ -10,15 +10,16 @@ export interface OverlayProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: ReactNode;
-  /** 关联的可见标题 id；没有则用 sr-only 标题 */
+  /** Accessible title; rendered sr-only when callers don't supply a visible heading. */
   title: string;
   className?: string;
   panelClassName?: string;
 }
 
 /**
- * 自研模态层：portal + 遮罩 + 焦点圈住 + Escape。
- * 不依赖 Dialog / Radix，给全局搜索等全屏浮层用。
+ * Lightweight modal layer: portal + backdrop + focus trap + Escape.
+ * Intentionally not Dialog/Radix — Global Search needs a full-window palette without Dialog semantics.
+ * Invariant: body scroll locks while open; focus restores to the previous element on close.
  */
 export function Overlay({
   open,

@@ -9,6 +9,7 @@ interface SettingRowProps {
   className?: string;
 }
 
+/** Horizontal label/description + control row used by Settings behavior/shortcuts tabs. */
 export function SettingRow({ label, description, children, className }: SettingRowProps) {
   return (
     <div

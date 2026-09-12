@@ -18,6 +18,9 @@ const GROUP_KEY: Record<SearchGroup, string> = {
 };
 
 /** 全局搜索：Overlay 浮层 + 命令注册表索引。动作仍只走 registry（ADR-0007）。 */
+/** 全局搜索：Overlay 浮层 + 命令注册表索引。动作仍只走 registry（ADR-0007）。
+ * 标题用 t(`cmd.${id}`)；快捷键经 commandShortcut 叠加 prefs 覆盖。
+ */
 export function GlobalSearch() {
   const open = useUiStore((s) => s.searchOpen);
   const setOpen = useUiStore((s) => s.setSearchOpen);

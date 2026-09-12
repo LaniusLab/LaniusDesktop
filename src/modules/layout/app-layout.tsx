@@ -24,6 +24,9 @@ const NAV_ITEMS = [
 
 const SKIP_DEFAULT_SHORTCUT = new Set(["app.search", "flow.run"]);
 
+/** 应用壳：侧栏导航 + 顶栏 + 引擎状态脚注 + 全局快捷键分发。
+ * palette/run 快捷键读 prefs；其余命令用注册表默认 shortcut（跳过 app.search/flow.run）。
+ */
 export function AppLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();

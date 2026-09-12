@@ -128,6 +128,8 @@ pub async fn prefs_get(state: State<'_, ShellState>) -> Result<Value, TracedErro
 }
 
 #[tauri::command]
+
+/// Persist prefs then best-effort apply Windows autostart; autostart failures are logged, not fatal.
 pub async fn prefs_set(
     app: AppHandle,
     state: State<'_, ShellState>,
@@ -158,6 +160,7 @@ pub async fn logs_tail(app: AppHandle) -> Result<String, TracedError> {
 }
 
 #[tauri::command]
+/// Updater stub: returns unavailable until a release channel is wired.
 pub async fn updater_check(app: AppHandle) -> Result<Value, TracedError> {
     prefs::append_log(&app, "updater.check skipped: channel not configured");
     Ok(json!({

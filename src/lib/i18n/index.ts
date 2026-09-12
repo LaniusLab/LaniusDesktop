@@ -8,6 +8,12 @@ const TABLES: Record<ShellPrefs["locale"], Record<string, string>> = {
   en,
 };
 
+/**
+ * Lookup UI copy by dotted key.
+ * Fallback chain: requested locale → zh-CN → raw key (so missing keys are visible in EN).
+ * Vars replace `{name}` tokens; unknown tokens are left as-is.
+ * Command titles use `cmd.${id}` — keep en/zh-CN key sets identical (see i18n.test).
+ */
 export function translate(
   locale: ShellPrefs["locale"],
   key: string,
