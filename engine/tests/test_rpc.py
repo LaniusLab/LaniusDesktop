@@ -11,7 +11,9 @@ from lanius_engine.rpc.server import RpcServer
 
 ENGINE_SRC = Path(__file__).resolve().parent.parent / "src"
 EXAMPLE_FLOW = json.loads(
-    (Path(__file__).resolve().parents[2] / "examples" / "hello.flow.json").read_text(encoding="utf-8")
+    (Path(__file__).resolve().parents[2] / "examples" / "hello.flow.json").read_text(
+        encoding="utf-8"
+    )
 )
 
 

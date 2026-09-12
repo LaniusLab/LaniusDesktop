@@ -1,5 +1,18 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Search } from "lucide-react";
+import {
+  Command,
+  CornerDownLeft,
+  History,
+  Keyboard,
+  LayoutGrid,
+  PencilLine,
+  Play,
+  Search,
+  Settings,
+  Sun,
+  Wand2,
+  type LucideIcon,
+} from "lucide-react";
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 
 import { currentContext, injectNavigate } from "@/lib/commands/context";
@@ -17,10 +30,19 @@ const GROUP_KEY: Record<SearchGroup, string> = {
   app: "search.group.app",
 };
 
-/** 全局搜索：Overlay 浮层 + 命令注册表索引。动作仍只走 registry（ADR-0007）。 */
-/** 全局搜索：Overlay 浮层 + 命令注册表索引。动作仍只走 registry（ADR-0007）。
- * 标题用 t(`cmd.${id}`)；快捷键经 commandShortcut 叠加 prefs 覆盖。
- */
+const COMMAND_ICON: Record<string, LucideIcon> = {
+  "nav.flows": Play,
+  "nav.edit": PencilLine,
+  "nav.history": History,
+  "nav.keymap": Keyboard,
+  "nav.settings": Settings,
+  "nav.gallery": LayoutGrid,
+  "flow.run": Play,
+  "flow.dryRun": Wand2,
+  "app.toggleTheme": Sun,
+};
+
+/** 命令盒：占位显示「搜索」，命中与回车只走命令注册表（ADR-0007）。 */
 export function GlobalSearch() {
   const open = useUiStore((s) => s.searchOpen);
   const setOpen = useUiStore((s) => s.setSearchOpen);
@@ -86,9 +108,14 @@ export function GlobalSearch() {
   let offset = 0;
 
   return (
-    <Overlay open={open} onOpenChange={setOpen} title={t("search.title")}>
-      <div className="flex items-center gap-2 border-b border-line px-4">
-        <Search className="size-4 text-fg-faint" />
+    <Overlay
+      open={open}
+      onOpenChange={setOpen}
+      title={t("search.title")}
+      panelClassName="max-w-2xl rounded-2xl"
+    >
+      <div className="flex items-center gap-3 px-4 py-3">
+        <Search className="size-4 shrink-0 text-fg-faint" />
         <Input
           value={query}
           onChange={(event) => {
@@ -97,52 +124,85 @@ export function GlobalSearch() {
           }}
           onKeyDown={onQueryKeyDown}
           placeholder={t("search.placeholder")}
-          className="border-0 bg-transparent focus-visible:outline-none"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={hits.length > 0}
+          aria-controls="command-palette-list"
+          className="h-10 border-0 bg-transparent px-0 shadow-none focus-visible:outline-none"
           autoFocus
         />
+        <Command className="size-4 shrink-0 text-fg-faint" aria-hidden />
       </div>
-      <ul className="max-h-80 overflow-auto py-2" role="listbox" aria-label={t("search.title")}>
+      <ul
+        id="command-palette-list"
+        className="max-h-80 overflow-auto px-2 pb-2"
+        role="listbox"
+        aria-label={t("search.title")}
+      >
         {hits.length === 0 ? (
-          <li className="px-4 py-8 text-center text-sm text-fg-faint">{t("search.empty")}</li>
+          <li className="px-3 py-10 text-center text-sm text-fg-faint">{t("search.empty")}</li>
         ) : (
           groups.map((bucket) => {
             const start = offset;
             offset += bucket.hits.length;
             return (
-              <li key={bucket.group} className="px-2">
-                <p className="px-2 pb-1 pt-2 font-display text-xs text-fg-faint">
+              <li key={bucket.group} className="pb-1">
+                <p className="px-3 pb-1 pt-2 text-[11px] tracking-wide text-fg-faint">
                   {t(GROUP_KEY[bucket.group])}
                 </p>
                 <ul>
                   {bucket.hits.map((hit, indexInGroup) => {
                     const index = start + indexInGroup;
+                    const Icon = COMMAND_ICON[hit.id] ?? Command;
+                    const active = index === cursor;
                     return (
                       <li key={hit.id}>
                         <button
                           type="button"
                           role="option"
-                          aria-selected={index === cursor}
+                          aria-selected={active}
                           aria-label={hit.title}
                           disabled={!hit.enabled}
                           onMouseEnter={() => setCursor(index)}
                           onClick={() => runHit(hit)}
                           className={cn(
-                            "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors duration-150",
-                            index === cursor ? "bg-surface-raised text-fg" : "text-fg-muted",
+                            "flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors duration-150",
+                            active ? "bg-fg/8 text-fg" : "text-fg-muted hover:bg-fg/5",
                             !hit.enabled && "cursor-not-allowed opacity-40",
                           )}
                         >
-                          <span>
-                            {highlightMatch(hit.title, query).map((part, partIndex) => (
-                              <span
-                                key={`${hit.id}-${String(partIndex)}`}
-                                className={part.match ? "text-accent" : undefined}
-                              >
-                                {part.text}
-                              </span>
-                            ))}
+                          <span
+                            className={cn(
+                              "flex size-8 shrink-0 items-center justify-center rounded-xl",
+                              active ? "bg-accent-soft text-accent" : "bg-fg/5 text-fg-faint",
+                            )}
+                          >
+                            <Icon className="size-4" />
                           </span>
-                          {hit.shortcut ? <Kbd>{formatShortcut(hit.shortcut)}</Kbd> : null}
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm text-fg">
+                              {highlightMatch(hit.title, query).map((part, partIndex) => (
+                                <span
+                                  key={`${hit.id}-${String(partIndex)}`}
+                                  className={part.match ? "text-accent" : undefined}
+                                >
+                                  {part.text}
+                                </span>
+                              ))}
+                            </span>
+                            <span className="mt-0.5 block text-[11px] text-fg-faint">
+                              {t(GROUP_KEY[hit.group])}
+                            </span>
+                          </span>
+                          <span className="flex shrink-0 items-center gap-2">
+                            {hit.shortcut ? <Kbd>{formatShortcut(hit.shortcut)}</Kbd> : null}
+                            {active ? (
+                              <span className="flex items-center gap-1 text-[11px] text-fg-faint">
+                                <CornerDownLeft className="size-3" />
+                                {t("search.hint.run")}
+                              </span>
+                            ) : null}
+                          </span>
                         </button>
                       </li>
                     );

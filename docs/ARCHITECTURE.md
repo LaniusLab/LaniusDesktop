@@ -114,7 +114,7 @@ LaniusDesktop/
 │   │   ├── start/              # 开始页（预设 + 勾选 + 试一次）
 │   │   ├── flow-editor/        # 编排页（脚本入口；M2 积木主体）
 │   │   ├── history/            # 运行记录页（M3）
-│   │   ├── settings/           # 设置页
+│   │   ├── settings/           # 设置 Dialog（侧栏底部 + 顶栏入口）
 │   │   ├── search/             # 全局搜索（Overlay，替代命令面板）
 │   │   ├── dev/                # 组件页（侧栏「组件」）
 │   │   └── runner/             # （规划 · M3）执行控制条 + 日志面板

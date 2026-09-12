@@ -8,7 +8,11 @@ export interface CommandContext {
   execution: { phase: ExecutionPhase };
   editor: { dirty: boolean };
   navigate: (to: string) => void;
-  ui: { toggleTheme: () => void; setSearchOpen: (open: boolean) => void };
+  ui: {
+    toggleTheme: () => void;
+    setSearchOpen: (open: boolean) => void;
+    setSettingsOpen: (open: boolean) => void;
+  };
 }
 
 export interface Command {

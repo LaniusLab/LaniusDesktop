@@ -22,7 +22,7 @@ export function registerBuiltinCommands(): void {
 
   registry.register({
     id: "nav.flows",
-    title: "前往：开始",
+    title: "开始",
     scope: "global",
     shortcut: "Mod+1",
     run: (ctx) => ctx.navigate("/"),
@@ -30,7 +30,7 @@ export function registerBuiltinCommands(): void {
 
   registry.register({
     id: "nav.edit",
-    title: "前往：编辑",
+    title: "编辑",
     scope: "global",
     shortcut: "Mod+2",
     run: (ctx) => ctx.navigate("/edit"),
@@ -38,23 +38,31 @@ export function registerBuiltinCommands(): void {
 
   registry.register({
     id: "nav.history",
-    title: "前往：运行记录",
+    title: "运行记录",
     scope: "global",
     shortcut: "Mod+3",
     run: (ctx) => ctx.navigate("/history"),
   });
 
   registry.register({
+    id: "nav.keymap",
+    title: "按键映射",
+    scope: "global",
+    shortcut: "Mod+4",
+    run: (ctx) => ctx.navigate("/keymap"),
+  });
+
+  registry.register({
     id: "nav.settings",
-    title: "前往：设置",
+    title: "打开设置",
     scope: "global",
     shortcut: "Mod+,",
-    run: (ctx) => ctx.navigate("/settings"),
+    run: (ctx) => ctx.ui.setSettingsOpen(true),
   });
 
   registry.register({
     id: "nav.gallery",
-    title: "前往：组件",
+    title: "组件",
     scope: "global",
     shortcut: "Mod+5",
     run: (ctx) => ctx.navigate("/gallery"),

@@ -1,12 +1,20 @@
 """core.wait：等待指定毫秒。演示协作式取消的最小节点：分段睡眠并轮询取消事件。"""
 
 import asyncio
+import builtins
 from typing import ClassVar
+
+from pydantic import BaseModel, Field
 
 from lanius_engine.models import LaniusError
 from lanius_engine.nodes.base import NodeContext, NodeResult, Port
 
 _TICK_MS = 50
+
+
+class WaitConfig(BaseModel):
+    ms: int = Field(default=1000, ge=0)
+    timeoutMs: int | None = Field(default=None, ge=1)
 
 
 class WaitNode:
@@ -15,6 +23,7 @@ class WaitNode:
     side_effect: ClassVar[bool] = False
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {}
+    config_schema: ClassVar[builtins.type[BaseModel]] = WaitConfig
 
     async def execute(self, ctx: NodeContext) -> NodeResult:
         raw = ctx.config.get("ms", 1000)

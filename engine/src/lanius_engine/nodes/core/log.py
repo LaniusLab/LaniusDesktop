@@ -1,9 +1,17 @@
 """core.log：输出一条结构化日志。无副作用，dry-run 照常执行。"""
 
-from typing import ClassVar
+import builtins
+from typing import ClassVar, Literal
+
+from pydantic import BaseModel
 
 from lanius_engine.nodes.base import NodeContext, NodeResult, Port
 from lanius_engine.runtime.scope import interpolate
+
+
+class LogConfig(BaseModel):
+    message: str = ""
+    level: Literal["debug", "info", "warning", "error"] = "info"
 
 
 class LogNode:
@@ -12,6 +20,7 @@ class LogNode:
     side_effect: ClassVar[bool] = False
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {}
+    config_schema: ClassVar[builtins.type[BaseModel]] = LogConfig
 
     async def execute(self, ctx: NodeContext) -> NodeResult:
         ctx.check_cancelled()

@@ -85,17 +85,17 @@ export function Overlay({
         type="button"
         tabIndex={-1}
         aria-label={title}
-        className="absolute inset-0 bg-bg/70 backdrop-blur-sm animate-fade"
+        className="absolute inset-0 bg-fg/20 backdrop-blur-md animate-fade"
         onClick={() => onOpenChange(false)}
       />
-      <div className="pointer-events-none relative flex h-full justify-center px-4 pt-[14vh]">
+      <div className="pointer-events-none relative flex h-full items-start justify-center px-4 pt-[18vh]">
         <div
           ref={panelRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
           className={cn(
-            "pointer-events-auto w-full max-w-xl overflow-hidden rounded-lg border border-line bg-surface shadow-float animate-pop",
+            "glass-modal pointer-events-auto w-full max-w-xl overflow-hidden rounded-2xl animate-fade",
             panelClassName,
           )}
         >

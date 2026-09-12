@@ -8,7 +8,8 @@ import { registry } from "@/lib/commands/registry";
 import { cn } from "@/lib/utils";
 import { redoEdit, undoEdit, useEditorStore } from "@/stores/editor";
 import { useT, useUiStore } from "@/stores/ui";
-import { Badge, Button, PageHeader, Tooltip, TooltipContent, TooltipTrigger } from "@/ui";
+import { KeymapCatalog } from "@/modules/keymap/keymap-catalog";
+import { Badge, Button, PageHeader, SplitPane, Tooltip, TooltipContent, TooltipTrigger } from "@/ui";
 
 const PALETTE_GROUPS = [
   { titleKey: "edit.group.keys", hintKey: "edit.group.keysHint", icon: Keyboard },
@@ -20,6 +21,8 @@ const PALETTE_GROUPS = [
 export function FlowsPage() {
   const { nodes, edges, dirty, onNodesChange, onEdgesChange, onConnect } = useEditorStore();
   const theme = useUiStore((s) => s.resolvedTheme);
+  const editorPaletteWidth = useUiStore((s) => s.editorPaletteWidth);
+  const setEditorPaletteWidth = useUiStore((s) => s.setEditorPaletteWidth);
   const t = useT();
   const runCommand = (id: string) => void registry.run(id, currentContext());
 
@@ -58,8 +61,16 @@ export function FlowsPage() {
           </>
         }
       />
-      <div className="flex min-h-0 flex-1">
-        <aside className="flex w-48 shrink-0 flex-col gap-2 border-r border-line bg-surface px-3 py-4">
+      <SplitPane
+        className="min-h-0 flex-1"
+        size={editorPaletteWidth}
+        onSizeChange={setEditorPaletteWidth}
+        min={160}
+        max={360}
+        minSecond={240}
+        label={t("layout.resize.horizontal")}
+      >
+        <aside className="flex h-full min-h-0 flex-col gap-2 bg-glass px-3 py-4 backdrop-blur-md">
           <p className="px-1 font-display text-sm text-fg animate-rise">{t("edit.blocks")}</p>
           <p className="px-1 text-xs leading-relaxed text-fg-muted animate-rise delay-1">
             {t("edit.blocksHint")}
@@ -68,7 +79,7 @@ export function FlowsPage() {
             <div
               key={group.titleKey}
               className={cn(
-                "rounded-md border border-dashed border-line bg-bg px-3 py-2.5 opacity-80 animate-rise",
+                "rounded-xl border border-dashed border-line bg-surface-sunken/50 px-3 py-2.5 opacity-80 animate-rise",
                 index === 0 && "delay-2",
                 index === 1 && "delay-3",
                 index === 2 && "delay-4",
@@ -78,11 +89,17 @@ export function FlowsPage() {
                 <group.icon className="size-3.5 text-accent" />
                 {t(group.titleKey)}
               </p>
-              <p className="mt-1 text-xs text-fg-faint">{t(group.hintKey)}</p>
+              {group.titleKey === "edit.group.keys" ? (
+                <div className="mt-2">
+                  <KeymapCatalog allowSwitchProfile />
+                </div>
+              ) : (
+                <p className="mt-1 text-xs text-fg-faint">{t(group.hintKey)}</p>
+              )}
             </div>
           ))}
         </aside>
-        <div className="min-h-0 min-w-0 flex-1">
+        <div className="h-full min-h-0 min-w-0">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -96,7 +113,7 @@ export function FlowsPage() {
             <Background gap={28} />
           </ReactFlow>
         </div>
-      </div>
+      </SplitPane>
     </div>
   );
 }

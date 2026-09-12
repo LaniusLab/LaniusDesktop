@@ -1,19 +1,23 @@
-import { Copy, Minus, Square, X } from "lucide-react";
+import { Copy, Minus, Moon, Settings, Square, Sun, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { bridge } from "@/lib/bridge";
 import { isApplePlatform } from "@/lib/shortcut";
 import { cn } from "@/lib/utils";
-import { useT } from "@/stores/ui";
+import { useT, useUiStore } from "@/stores/ui";
 
-/** 自绘顶栏。无边框窗口靠 data-tauri-drag-region 拖动；关闭走壳的 closeBehavior。 */
 /** 自定义顶栏：无边框窗口靠 data-tauri-drag-region 拖动；关闭走壳的 closeBehavior。
  * Windows 用右侧 CaptionButton；Apple 用左侧 TrafficLights（布局镜像）。
+ * 主题快捷切换在设置左侧；设置打开 Dialog。
+ * 五个 CaptionButton 用 pointer；设置 / 主题只改图标色，不铺 hover 底。
  */
 export function Titlebar() {
   const t = useT();
   const apple = isApplePlatform();
   const [maximized, setMaximized] = useState(false);
+  const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
+  const resolvedTheme = useUiStore((s) => s.resolvedTheme);
+  const toggleTheme = useUiStore((s) => s.toggleTheme);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,9 +40,31 @@ export function Titlebar() {
     });
   };
 
+  const themeButton = (
+    <CaptionButton
+      label={t("titlebar.theme")}
+      tone="accent"
+      pressed={resolvedTheme === "dark"}
+      onClick={toggleTheme}
+    >
+      {resolvedTheme === "dark" ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+    </CaptionButton>
+  );
+
+  const settingsButton = (
+    <CaptionButton
+      label={t("titlebar.settings")}
+      tone="accent"
+      onClick={() => setSettingsOpen(true)}
+    >
+      <Settings className="size-3.5" />
+    </CaptionButton>
+  );
+
   return (
-    <header className="relative flex h-9 shrink-0 select-none items-stretch border-b border-line bg-surface/90 backdrop-blur-md">
-      <div className="pointer-events-none absolute inset-x-10 bottom-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+    <header className="relative flex h-10 shrink-0 select-none items-stretch bg-glass backdrop-blur-md">
+      <div className="pointer-events-none absolute inset-0 border-b border-line" />
+      <div className="pointer-events-none absolute inset-x-16 bottom-0 h-px bg-gradient-to-r from-transparent via-accent/35 to-transparent" />
       {apple ? (
         <TrafficLights
           maximized={maximized}
@@ -55,13 +81,20 @@ export function Titlebar() {
         data-tauri-drag-region=""
         onDoubleClick={toggleMaximize}
       >
-        <span className="pointer-events-none font-display text-xs tracking-[0.18em] text-fg-faint">
+        <span className="pointer-events-none font-display text-xs tracking-[0.22em] text-fg-faint">
           {t("brand.name")}
         </span>
       </div>
 
-      {apple ? null : (
+      {apple ? (
         <div className="flex">
+          {themeButton}
+          {settingsButton}
+        </div>
+      ) : (
+        <div className="flex">
+          {themeButton}
+          {settingsButton}
           <CaptionButton label={t("titlebar.minimize")} onClick={() => void bridge.windowMinimize()}>
             <Minus className="size-3.5" />
           </CaptionButton>
@@ -89,22 +122,27 @@ function CaptionButton({
   onClick,
   children,
   danger = false,
+  pressed,
+  tone = "chrome",
 }: {
   label: string;
   onClick: () => void;
   children: ReactNode;
   danger?: boolean;
+  pressed?: boolean;
+  tone?: "chrome" | "accent";
 }) {
   return (
     <button
       type="button"
       aria-label={label}
+      aria-pressed={pressed}
       onClick={onClick}
       className={cn(
-        "app-no-drag inline-flex h-full w-11 items-center justify-center text-fg-muted transition-colors duration-150",
-        danger
-          ? "hover:bg-danger hover:text-accent-fg"
-          : "hover:bg-surface-raised hover:text-fg",
+        "app-no-drag inline-flex h-full w-11 cursor-pointer items-center justify-center text-fg-muted transition-colors duration-200",
+        tone === "accent" && "hover:text-accent",
+        tone === "chrome" && !danger && "hover:bg-fg/5 hover:text-fg",
+        danger && "hover:bg-danger hover:text-accent-fg",
       )}
     >
       {children}

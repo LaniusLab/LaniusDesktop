@@ -12,7 +12,7 @@ vi.mock("@tanstack/react-router", () => ({
 vi.mock("@/lib/commands/registry", () => ({
   registry: {
     list: () => [
-      { id: "nav.flows", title: "前往：开始", scope: "global", enabled: true, run: vi.fn() },
+      { id: "nav.flows", title: "开始", scope: "global", enabled: true, run: vi.fn() },
       { id: "flow.run", title: "试一次", scope: "editor", enabled: true, run: vi.fn() },
     ],
     run: vi.fn().mockResolvedValue(true),
@@ -27,7 +27,7 @@ vi.mock("@/lib/commands/context", () => ({
     execution: { phase: "idle" },
     editor: { dirty: false },
     navigate: vi.fn(),
-    ui: { toggleTheme: vi.fn(), setSearchOpen: vi.fn() },
+    ui: { toggleTheme: vi.fn(), setSearchOpen: vi.fn(), setSettingsOpen: vi.fn() },
   }),
 }));
 
@@ -40,11 +40,11 @@ describe("全局搜索", () => {
     useUiStore.setState({ searchOpen: true });
     render(<GlobalSearch />);
     expect(screen.getByRole("dialog", { name: "搜索" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /前往：开始/ })).toBeInTheDocument();
-    fireEvent.change(screen.getByPlaceholderText("搜索页面、任务、设置…"), {
+    expect(screen.getByRole("option", { name: /^开始$/ })).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText("搜索"), {
       target: { value: "试" },
     });
     expect(screen.getByRole("option", { name: /试一次/ })).toBeInTheDocument();
-    expect(screen.queryByRole("option", { name: /前往：开始/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /^开始$/ })).not.toBeInTheDocument();
   });
 });

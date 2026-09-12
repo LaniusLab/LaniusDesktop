@@ -43,10 +43,10 @@ export function ChoiceGroup<T extends string>({
             aria-checked={selected}
             onClick={() => onChange(option.value)}
             className={cn(
-              "hover-lift rounded-lg border px-3 py-2.5 text-left",
+              "hover-lift rounded-xl border px-3 py-2.5 text-left",
               selected
-                ? "border-accent bg-surface-raised shadow-float"
-                : "border-line bg-surface hover:border-accent/40 hover:bg-surface-raised",
+                ? "border-accent bg-accent-soft shadow-stamp"
+                : "glass-card hover:border-accent/40",
             )}
           >
             <span className="block text-sm text-fg">{option.label}</span>

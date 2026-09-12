@@ -19,7 +19,9 @@ describe("shortcut", () => {
       "Mod+Alt+,",
     );
     expect(eventToShortcut(new KeyboardEvent("keydown", { key: "Control" }))).toBeNull();
-    expect(eventToShortcut(new KeyboardEvent("keydown", { key: "F5" }))).toBeNull();
+    expect(eventToShortcut(new KeyboardEvent("keydown", { key: "F5" }))).toBe("F5");
+    expect(eventToShortcut(new KeyboardEvent("keydown", { key: "ArrowUp" }))).toBe("Up");
+    expect(matchShortcut(new KeyboardEvent("keydown", { key: "ArrowUp" }), "Up")).toBe(true);
   });
 
   it("formats Mod as Ctrl on non-Apple", () => {

@@ -2,6 +2,8 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+import { Label } from "../primitives/label";
+
 interface FormFieldProps {
   label: string;
   htmlFor?: string;
@@ -15,9 +17,7 @@ interface FormFieldProps {
 export function FormField({ label, htmlFor, error, hint, children, className }: FormFieldProps) {
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <label htmlFor={htmlFor} className="text-sm font-medium text-fg">
-        {label}
-      </label>
+      <Label htmlFor={htmlFor}>{label}</Label>
       {children}
       {error ? (
         <p className="text-xs text-danger">{error}</p>

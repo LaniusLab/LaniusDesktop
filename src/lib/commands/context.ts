@@ -25,6 +25,7 @@ export function currentContext(): CommandContext {
     ui: {
       toggleTheme: () => useUiStore.getState().toggleTheme(),
       setSearchOpen: (open) => useUiStore.getState().setSearchOpen(open),
+      setSettingsOpen: (open) => useUiStore.getState().setSettingsOpen(open),
     },
   };
 }

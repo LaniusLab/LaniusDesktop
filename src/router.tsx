@@ -1,11 +1,12 @@
-import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
+import { createRootRoute, createRoute, createRouter, redirect } from "@tanstack/react-router";
 
 import { GalleryPage } from "@/modules/dev/gallery-page";
 import { FlowsPage } from "@/modules/flow-editor/flows-page";
 import { HistoryPage } from "@/modules/history/history-page";
+import { KeymapPage } from "@/modules/keymap/keymap-page";
 import { AppLayout } from "@/modules/layout/app-layout";
-import { SettingsPage } from "@/modules/settings/settings-page";
 import { StartPage } from "@/modules/start/start-page";
+import { useUiStore } from "@/stores/ui";
 
 const rootRoute = createRootRoute({ component: AppLayout });
 
@@ -27,13 +28,21 @@ const historyRoute = createRoute({
   component: HistoryPage,
 });
 
+const keymapRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/keymap",
+  component: KeymapPage,
+});
+
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/settings",
-  component: SettingsPage,
+  beforeLoad: () => {
+    useUiStore.getState().setSettingsOpen(true);
+    throw redirect({ to: "/" });
+  },
 });
 
-// 组件页（ADR-0006）；旧路径 /dev/gallery 保留以免书签失效
 const galleryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/gallery",
@@ -50,6 +59,7 @@ const routeTree = rootRoute.addChildren([
   startRoute,
   editRoute,
   historyRoute,
+  keymapRoute,
   settingsRoute,
   galleryRoute,
   galleryLegacyRoute,

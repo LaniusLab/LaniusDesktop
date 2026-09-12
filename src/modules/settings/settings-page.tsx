@@ -1,58 +1,112 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  Bug,
+  Info,
+  Keyboard,
+  Languages,
+  Monitor,
+  Sparkles,
+  type LucideIcon,
+} from "lucide-react";
+import { useState, type ReactNode } from "react";
 
 import { bridge, isTauri, type UpdaterResult } from "@/lib/bridge";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
-import { eventToShortcut, formatShortcut } from "@/lib/shortcut";
+
+import { cn } from "@/lib/utils";
 import { useT, useUiStore } from "@/stores/ui";
 import {
   Badge,
   Button,
   ChoiceGroup,
-  Kbd,
-  PageHeader,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  KeyRecorder,
+  ScrollArea,
   SettingRow,
   Switch,
-  Tabs,
 } from "@/ui";
 
-type SettingsTab = "appearance" | "behavior" | "shortcuts" | "debug" | "about";
+type SettingsTab = "appearance" | "general" | "desktop" | "shortcuts" | "debug" | "about";
 
 const ACCENTS: ReadonlyArray<ShellPrefs["accent"]> = ["terracotta", "ink", "moss", "dusk"];
 
-/** 设置页：外观写 dataset；行为里 autostart 仅 Windows+Tauri 可改；更新检查走 updater stub。
- * 快捷键录制用 eventToShortcut；palette/run 冲突时拒绝写入。
+const SECTIONS: ReadonlyArray<{ id: SettingsTab; icon: LucideIcon; labelKey: string }> = [
+  { id: "appearance", icon: Sparkles, labelKey: "settings.appearance" },
+  { id: "general", icon: Languages, labelKey: "settings.behavior" },
+  { id: "desktop", icon: Monitor, labelKey: "settings.desktop" },
+  { id: "shortcuts", icon: Keyboard, labelKey: "settings.shortcuts" },
+  { id: "debug", icon: Bug, labelKey: "settings.debug" },
+  { id: "about", icon: Info, labelKey: "settings.about" },
+];
+
+/** 设置弹窗：Folia 式左侧分组 + Header/Footer 插槽；外观写 dataset。
+ * 浅色/深色只在外观页。桌面项对应关闭 / 自启 / 更新。
  */
-export function SettingsPage() {
+export function SettingsDialog() {
   const t = useT();
+  const open = useUiStore((s) => s.settingsOpen);
+  const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const [tab, setTab] = useState<SettingsTab>("appearance");
 
   return (
-    <div className="flex h-full flex-col">
-      <PageHeader title={t("settings.title")} description={t("settings.description")} />
-      <div className="flex-1 overflow-auto px-6 py-6">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-          <Tabs
-            value={tab}
-            onValueChange={setTab}
-            items={[
-              { value: "appearance", label: t("settings.appearance") },
-              { value: "behavior", label: t("settings.behavior") },
-              { value: "shortcuts", label: t("settings.shortcuts") },
-              { value: "debug", label: t("settings.debug") },
-              { value: "about", label: t("settings.about") },
-            ]}
-          />
-          <div className="animate-rise" key={tab}>
-            {tab === "appearance" ? <AppearanceSection /> : null}
-            {tab === "behavior" ? <BehaviorSection /> : null}
-            {tab === "shortcuts" ? <ShortcutsSection /> : null}
-            {tab === "debug" ? <DebugSection /> : null}
-            {tab === "about" ? <AboutSection /> : null}
-          </div>
+    <Dialog open={open} onOpenChange={setSettingsOpen}>
+      <DialogContent className="flex h-[min(40rem,calc(100vh-2rem))] w-[min(52rem,calc(100vw-2rem))] max-w-none flex-col overflow-hidden p-0">
+        <DialogHeader className="mb-0 shrink-0 border-b border-line px-6 pb-4 pt-5">
+          <DialogTitle>{t("settings.title")}</DialogTitle>
+          <DialogDescription>{t("settings.description")}</DialogDescription>
+        </DialogHeader>
+        <div className="flex min-h-0 flex-1">
+          <nav
+            role="tablist"
+            aria-label={t("settings.title")}
+            className="flex w-44 shrink-0 flex-col gap-0.5 border-r border-line p-3"
+          >
+            {SECTIONS.map((section) => {
+              const active = tab === section.id;
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTab(section.id)}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm transition-colors duration-150",
+                    active
+                      ? "bg-accent-soft text-fg shadow-soft"
+                      : "text-fg-muted hover:bg-fg/5 hover:text-fg",
+                  )}
+                >
+                  <section.icon className={cn("size-4", active ? "text-accent" : undefined)} />
+                  {t(section.labelKey)}
+                </button>
+              );
+            })}
+          </nav>
+          <ScrollArea className="min-h-0 flex-1 px-6 py-5">
+            <div className="animate-rise" key={tab}>
+              {tab === "appearance" ? <AppearanceSection /> : null}
+              {tab === "general" ? <GeneralSection /> : null}
+              {tab === "desktop" ? <DesktopSection /> : null}
+              {tab === "shortcuts" ? <ShortcutsSection /> : null}
+              {tab === "debug" ? <DebugSection /> : null}
+              {tab === "about" ? <AboutSection /> : null}
+            </div>
+          </ScrollArea>
         </div>
-      </div>
-    </div>
+        <DialogFooter className="mt-0 shrink-0 border-t border-line px-6 py-3">
+          <Button variant="secondary" onClick={() => setSettingsOpen(false)}>
+            {t("common.close")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -63,7 +117,7 @@ function AppearanceSection() {
 
   return (
     <div className="flex flex-col gap-6">
-      <FieldBlock label={t("settings.theme")} hint={t("settings.themeHint")}>
+      <SectionLabel title={t("settings.theme")} hint={t("settings.themeHint")}>
         <ChoiceGroup
           aria-label={t("settings.theme")}
           value={prefs.theme}
@@ -74,10 +128,10 @@ function AppearanceSection() {
             { value: "system", label: t("settings.theme.system") },
           ]}
         />
-      </FieldBlock>
+      </SectionLabel>
 
-      <FieldBlock label={t("settings.accent")} hint={t("settings.accentHint")}>
-        <div role="radiogroup" aria-label={t("settings.accent")} className="flex flex-wrap gap-3">
+      <SectionLabel title={t("settings.accent")} hint={t("settings.accentHint")}>
+        <div role="radiogroup" aria-label={t("settings.accent")} className="flex flex-wrap gap-2">
           {ACCENTS.map((accent) => {
             const selected = prefs.accent === accent;
             return (
@@ -89,19 +143,20 @@ function AppearanceSection() {
                 aria-label={t(`settings.accent.${accent}`)}
                 data-accent={accent}
                 onClick={() => patchPrefs({ accent })}
-                className="hover-lift flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2"
+                className={cn(
+                  "flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors duration-150",
+                  selected ? "border-accent bg-accent-soft" : "border-line hover:border-accent/40",
+                )}
               >
-                <span
-                  className={`size-5 rounded-full bg-accent ring-2 ring-offset-2 ring-offset-surface ${selected ? "ring-fg" : "ring-transparent"}`}
-                />
+                <span className="size-3.5 rounded-full bg-accent" />
                 <span className="text-sm text-fg">{t(`settings.accent.${accent}`)}</span>
               </button>
             );
           })}
         </div>
-      </FieldBlock>
+      </SectionLabel>
 
-      <FieldBlock label={t("settings.font")} hint={t("settings.fontHint")}>
+      <SectionLabel title={t("settings.font")} hint={t("settings.fontHint")}>
         <ChoiceGroup
           aria-label={t("settings.font")}
           value={prefs.font}
@@ -113,9 +168,9 @@ function AppearanceSection() {
           ]}
         />
         <p className="mt-3 font-display text-lg text-fg">{t("brand.tagline")}</p>
-      </FieldBlock>
+      </SectionLabel>
 
-      <FieldBlock label={t("settings.motion")} hint={t("settings.motionHint")}>
+      <SectionLabel title={t("settings.motion")} hint={t("settings.motionHint")}>
         <ChoiceGroup
           aria-label={t("settings.motion")}
           columns={2}
@@ -126,9 +181,19 @@ function AppearanceSection() {
             { value: "reduce", label: t("settings.motion.reduce") },
           ]}
         />
-      </FieldBlock>
+      </SectionLabel>
+    </div>
+  );
+}
 
-      <FieldBlock label={t("settings.locale")} hint={t("settings.localeHint")}>
+function GeneralSection() {
+  const t = useT();
+  const prefs = useUiStore((s) => s.prefs);
+  const patchPrefs = useUiStore((s) => s.patchPrefs);
+
+  return (
+    <div className="flex flex-col gap-4">
+      <SectionLabel title={t("settings.locale")} hint={t("settings.localeHint")}>
         <ChoiceGroup
           aria-label={t("settings.locale")}
           columns={2}
@@ -139,12 +204,12 @@ function AppearanceSection() {
             { value: "en", label: t("settings.locale.en") },
           ]}
         />
-      </FieldBlock>
+      </SectionLabel>
     </div>
   );
 }
 
-function BehaviorSection() {
+function DesktopSection() {
   const t = useT();
   const prefs = useUiStore((s) => s.prefs);
   const patchPrefs = useUiStore((s) => s.patchPrefs);
@@ -158,14 +223,14 @@ function BehaviorSection() {
   const autostartSupported = debug.data?.autostartSupported ?? false;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       {isTauri ? null : (
-        <p className="rounded-lg border border-line bg-surface px-4 py-3 text-xs text-fg-muted">
+        <p className="rounded-xl border border-line px-4 py-3 text-xs text-fg-muted">
           {t("common.browserPreview")}
         </p>
       )}
 
-      <FieldBlock label={t("settings.close")} hint={t("settings.closeHint")}>
+      <SectionLabel title={t("settings.close")} hint={t("settings.closeHint")}>
         <ChoiceGroup
           aria-label={t("settings.close")}
           columns={2}
@@ -176,7 +241,7 @@ function BehaviorSection() {
             { value: "minimize", label: t("settings.close.minimize") },
           ]}
         />
-      </FieldBlock>
+      </SectionLabel>
 
       <SettingRow label={t("settings.autostart")} description={t("settings.autostartHint")}>
         <Switch
@@ -195,7 +260,7 @@ function BehaviorSection() {
           onCheckedChange={(autoUpdate) => patchPrefs({ autoUpdate })}
         />
       </SettingRow>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 px-1">
         <Button
           variant="outline"
           size="sm"
@@ -218,8 +283,10 @@ function BehaviorSection() {
 
 function ShortcutsSection() {
   const t = useT();
+  const navigate = useNavigate();
   const prefs = useUiStore((s) => s.prefs);
   const patchPrefs = useUiStore((s) => s.patchPrefs);
+  const setSettingsOpen = useUiStore((s) => s.setSettingsOpen);
   const [conflict, setConflict] = useState<string | null>(null);
 
   const bind = (key: keyof ShellPrefs["shortcuts"], next: string) => {
@@ -233,60 +300,36 @@ function ShortcutsSection() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <p className="text-xs text-fg-muted">{t("settings.shortcutHint")}</p>
-      <SettingRow label={t("settings.shortcut.palette")}>
-        <ShortcutRecorder
+      <SettingRow label={t("settings.shortcut.palette")} description={t("settings.shortcut.paletteHint")}>
+        <KeyRecorder
           value={prefs.shortcuts.palette}
+          recordingLabel={t("settings.shortcutRecording")}
           onChange={(next) => bind("palette", next)}
         />
       </SettingRow>
       <SettingRow label={t("settings.shortcut.run")}>
-        <ShortcutRecorder value={prefs.shortcuts.run} onChange={(next) => bind("run", next)} />
+        <KeyRecorder
+          value={prefs.shortcuts.run}
+          recordingLabel={t("settings.shortcutRecording")}
+          onChange={(next) => bind("run", next)}
+        />
       </SettingRow>
       {conflict ? <p className="text-xs text-danger">{conflict}</p> : null}
+      <SettingRow label={t("settings.shortcut.keymap")} description={t("settings.shortcut.keymapHint")}>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            setSettingsOpen(false);
+            void navigate({ to: "/keymap" });
+          }}
+        >
+          {t("settings.shortcut.keymapOpen")}
+        </Button>
+      </SettingRow>
     </div>
-  );
-}
-
-function ShortcutRecorder({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (next: string) => void;
-}) {
-  const t = useT();
-  const [recording, setRecording] = useState(false);
-
-  useEffect(() => {
-    if (!recording) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.key === "Escape") {
-        setRecording(false);
-        return;
-      }
-      const next = eventToShortcut(event);
-      if (!next) return;
-      onChange(next);
-      setRecording(false);
-    };
-    window.addEventListener("keydown", onKeyDown, true);
-    return () => window.removeEventListener("keydown", onKeyDown, true);
-  }, [recording, onChange]);
-
-  return (
-    <Button
-      variant={recording ? "default" : "outline"}
-      size="sm"
-      onClick={() => setRecording(true)}
-      aria-pressed={recording}
-      className={recording ? "ring-2 ring-accent ring-offset-2 ring-offset-bg" : undefined}
-    >
-      {recording ? t("settings.shortcutRecording") : <Kbd>{formatShortcut(value)}</Kbd>}
-    </Button>
   );
 }
 
@@ -316,7 +359,7 @@ function DebugSection() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={refresh}>
           {t("settings.debug.refresh")}
@@ -326,7 +369,7 @@ function DebugSection() {
         </Button>
       </div>
 
-      <FieldBlock label={t("settings.debug.system")}>
+      <SectionLabel title={t("settings.debug.system")}>
         {debug.isPending || engine.isPending ? (
           <p className="text-sm text-fg-muted">{t("engine.starting")}</p>
         ) : (
@@ -359,9 +402,9 @@ function DebugSection() {
             </div>
           </div>
         ) : null}
-      </FieldBlock>
+      </SectionLabel>
 
-      <FieldBlock label={t("settings.debug.paths")}>
+      <SectionLabel title={t("settings.debug.paths")}>
         {debug.data ? (
           <InfoList
             rows={[
@@ -375,17 +418,17 @@ function DebugSection() {
         ) : (
           <p className="text-sm text-fg-muted">{t("engine.starting")}</p>
         )}
-      </FieldBlock>
+      </SectionLabel>
 
-      <FieldBlock label={t("settings.debug.logs")}>
+      <SectionLabel title={t("settings.debug.logs")}>
         {logs.data ? (
-          <pre className="max-h-64 overflow-auto rounded-md border border-line bg-bg p-3 font-mono text-xs leading-relaxed text-fg">
+          <pre className="max-h-64 overflow-auto rounded-xl border border-line bg-surface-sunken/80 p-3 font-mono text-xs leading-relaxed text-fg">
             {logs.data}
           </pre>
         ) : (
           <p className="text-sm text-fg-muted">{t("settings.debug.emptyLog")}</p>
         )}
-      </FieldBlock>
+      </SectionLabel>
     </div>
   );
 }
@@ -396,7 +439,7 @@ function AboutSection() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="relative overflow-hidden rounded-lg border border-line bg-surface px-5 py-8">
+      <div className="relative overflow-hidden rounded-2xl border border-line px-5 py-8">
         <div className="pointer-events-none absolute -right-8 -top-10 size-36 rounded-full bg-accent/15" />
         <div className="pointer-events-none absolute -bottom-12 left-8 size-24 rounded-full bg-accent/10" />
         <p className="font-display text-3xl tracking-wide text-fg">{t("brand.name")}</p>
@@ -416,20 +459,22 @@ function AboutSection() {
   );
 }
 
-function FieldBlock({
-  label,
+function SectionLabel({
+  title,
   hint,
   children,
 }: {
-  label: string;
+  title: string;
   hint?: string;
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-line bg-surface px-5 py-4 shadow-soft">
-      <h2 className="font-display text-base text-fg">{label}</h2>
-      {hint ? <p className="mt-1 text-xs leading-relaxed text-fg-muted">{hint}</p> : null}
-      <div className="mt-3">{children}</div>
+    <section className="flex flex-col gap-3">
+      <div>
+        <h2 className="text-sm font-medium text-fg">{title}</h2>
+        {hint ? <p className="mt-1 text-xs leading-relaxed text-fg-muted">{hint}</p> : null}
+      </div>
+      {children}
     </section>
   );
 }

@@ -1,3 +1,5 @@
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+
 import { cn } from "@/lib/utils";
 
 interface TabsProps<T extends string> {
@@ -9,30 +11,34 @@ interface TabsProps<T extends string> {
 
 export function Tabs<T extends string>({ value, onValueChange, items, className }: TabsProps<T>) {
   return (
-    <div
-      role="tablist"
-      className={cn("flex flex-wrap gap-1 rounded-lg border border-line bg-surface p-1", className)}
+    <TabsPrimitive.Root
+      value={value}
+      onValueChange={(next) => {
+        onValueChange(next as T);
+      }}
     >
-      {items.map((item) => {
-        const active = item.value === value;
-        return (
-          <button
+      <TabsPrimitive.List
+        className={cn(
+          "flex flex-wrap gap-1 rounded-xl border border-line bg-surface-sunken/70 p-1 shadow-inset",
+          className,
+        )}
+      >
+        {items.map((item) => (
+          <TabsPrimitive.Trigger
             key={item.value}
-            type="button"
-            role="tab"
-            aria-selected={active}
+            value={item.value}
             onClick={() => onValueChange(item.value)}
             className={cn(
-              "rounded-md px-3 py-1.5 text-sm transition-all duration-200",
-              active
-                ? "bg-surface-raised text-fg shadow-sm"
-                : "text-fg-muted hover:bg-surface-raised/60 hover:text-fg",
+              "rounded-lg px-3 py-1.5 text-sm transition-all duration-200",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+              "data-[state=active]:bg-surface-raised data-[state=active]:text-fg data-[state=active]:shadow-soft",
+              "data-[state=inactive]:text-fg-muted data-[state=inactive]:hover:bg-fg/5 data-[state=inactive]:hover:text-fg",
             )}
           >
             {item.label}
-          </button>
-        );
-      })}
-    </div>
+          </TabsPrimitive.Trigger>
+        ))}
+      </TabsPrimitive.List>
+    </TabsPrimitive.Root>
   );
 }

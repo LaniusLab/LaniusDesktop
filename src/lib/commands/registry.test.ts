@@ -15,7 +15,7 @@ function fakeContext(overrides: Partial<CommandContext> = {}): CommandContext {
     execution: { phase: "idle" },
     editor: { dirty: false },
     navigate: vi.fn(),
-    ui: { toggleTheme: vi.fn(), setSearchOpen: vi.fn() },
+    ui: { toggleTheme: vi.fn(), setSearchOpen: vi.fn(), setSettingsOpen: vi.fn() },
     ...overrides,
   };
 }

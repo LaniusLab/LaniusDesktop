@@ -14,7 +14,7 @@ export function SettingRow({ label, description, children, className }: SettingR
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-4 rounded-lg border border-line bg-surface px-4 py-3",
+        "glass-card flex items-start justify-between gap-4 rounded-xl px-4 py-3",
         className,
       )}
     >

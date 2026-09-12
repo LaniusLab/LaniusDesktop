@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -50,7 +51,12 @@ vi.mock("@/lib/commands/registry", () => ({
 
 describe("AppLayout", () => {
   afterEach(() => {
-    useUiStore.setState({ searchOpen: false });
+    useUiStore.setState({
+      searchOpen: false,
+      settingsOpen: false,
+      sidebarCollapsed: false,
+      sidebarWidth: 208,
+    });
     useExecutionStore.setState({ engineStatus: "ready", engineUptimeMs: 0, phase: "idle" });
     vi.clearAllMocks();
   });
@@ -61,14 +67,18 @@ describe("AppLayout", () => {
     useExecutionStore.setState({ engineStatus: "ready", engineUptimeMs: 5000, phase: "idle" });
     const { registry } = await import("@/lib/commands/registry");
 
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const { unmount } = render(
-      <TooltipProvider>
-        <AppLayout />
-      </TooltipProvider>,
+      <QueryClientProvider client={client}>
+        <TooltipProvider>
+          <AppLayout />
+        </TooltipProvider>
+      </QueryClientProvider>,
     );
 
     expect(screen.getByTestId("titlebar")).toBeInTheDocument();
     expect(screen.getByTestId("outlet")).toBeInTheDocument();
+    expect(screen.getByRole("separator", { name: /拖动调整左右宽度|Drag to resize width/i })).toBeInTheDocument();
     expect(screen.getByText(/已就绪|Ready/i)).toBeInTheDocument();
     expect(onEngineEvent).toHaveBeenCalled();
 
@@ -111,6 +121,17 @@ describe("AppLayout", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /Search|搜索/i }));
     expect(useUiStore.getState().searchOpen).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: /设置|Settings/i }));
+    expect(useUiStore.getState().settingsOpen).toBe(true);
+    await act(async () => {
+      useUiStore.setState({ settingsOpen: false });
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /收起侧栏|Collapse sidebar/i }));
+    expect(useUiStore.getState().sidebarCollapsed).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: /展开侧栏|Expand sidebar/i }));
+    expect(useUiStore.getState().sidebarCollapsed).toBe(false);
 
     unmount();
     expect(unsub).toHaveBeenCalled();

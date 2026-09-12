@@ -3,6 +3,19 @@ import { afterEach, vi } from "vitest";
 
 import "@testing-library/jest-dom/vitest";
 
+class ResizeObserverStub {
+  observe(): void {
+    return undefined;
+  }
+  unobserve(): void {
+    return undefined;
+  }
+  disconnect(): void {
+    return undefined;
+  }
+}
+vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+
 Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: vi.fn().mockImplementation((query: string) => ({
@@ -22,10 +35,19 @@ afterEach(async () => {
   const { applyAppearance } = await import("@/lib/appearance");
   const { DEFAULT_PREFS } = await import("@/lib/prefs");
   const { useUiStore } = await import("@/stores/ui");
+  const { useKeymapStore } = await import("@/stores/keymap");
+  const { createDefaultKeymapState } = await import("@/lib/keymap");
+  useKeymapStore.setState(createDefaultKeymapState());
   useUiStore.setState({
     prefs: { ...DEFAULT_PREFS, shortcuts: { ...DEFAULT_PREFS.shortcuts } },
     resolvedTheme: "light",
     searchOpen: false,
+    settingsOpen: false,
+    sidebarCollapsed: false,
+    sidebarWidth: 208,
+    startTopHeight: 280,
+    startLogWidth: 320,
+    editorPaletteWidth: 192,
   });
   applyAppearance(DEFAULT_PREFS);
 });
