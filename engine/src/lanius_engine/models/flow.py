@@ -8,6 +8,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+CURRENT_SCHEMA_VERSION = 2
+
 
 class FlowVariable(BaseModel):
     model_config = ConfigDict(extra="allow")
@@ -21,6 +23,54 @@ class FlowSettings(BaseModel):
 
     timeout_ms: int = Field(default=600_000, alias="timeoutMs", gt=0)
     on_error: str = Field(default="stop", alias="onError")
+
+
+class FlowTargetMatch(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    exe: str = ""
+    title: str = ""
+    class_name: str = Field(default="", alias="className")
+
+    def is_empty(self) -> bool:
+        return not (self.exe or self.title or self.class_name)
+
+
+class FlowLocate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    channel: Literal["a11y", "vision"] = "a11y"
+    source: Literal["probe", "user"] = "probe"
+    capture: Literal["client", "screen"] = "client"
+    vision_pack: str = Field(default="template", alias="visionPack")
+
+
+class FlowTarget(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    match: FlowTargetMatch = Field(default_factory=FlowTargetMatch)
+    locate: FlowLocate = Field(default_factory=FlowLocate)
+
+
+class FlowStep(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    id: str
+    kind: Literal["binding", "mouse", "preset"]
+    type: str = ""
+    mapping_id: str = Field(default="", alias="mappingId")
+    profile_id: str = Field(default="", alias="profileId")
+    keys: str = ""
+    label: str = ""
+    config: dict[str, Any] = Field(default_factory=dict)
+    disabled: bool = False
+
+    def node_type(self) -> str:
+        if self.kind == "binding":
+            return self.type or "keyboard.press"
+        if self.type:
+            return self.type
+        return ""
 
 
 class FlowNode(BaseModel):
@@ -53,8 +103,11 @@ class FlowFile(BaseModel):
     id: str
     name: str
     description: str = ""
+    keymap_profile_id: str = Field(default="default", alias="keymapProfileId")
+    target: FlowTarget = Field(default_factory=FlowTarget)
     variables: dict[str, FlowVariable] = Field(default_factory=dict)
     settings: FlowSettings = Field(default_factory=FlowSettings)
+    steps: list[FlowStep] = Field(default_factory=list)
     nodes: list[FlowNode] = Field(default_factory=list)
     edges: list[FlowEdge] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)

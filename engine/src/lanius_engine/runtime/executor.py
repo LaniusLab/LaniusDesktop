@@ -1,6 +1,6 @@
-"""执行器：拓扑调度 + 状态机 + 协作式取消 + 双层超时（docs/ENGINE.md §5）。
+"""执行器：有序模板 + 状态机 + 协作式取消 + 双层超时（docs/ENGINE.md §5）。
 
-M0 范围：顺序执行 control 边定义的图；并行结构串行化与分支语义属 M1。
+schemaVersion 2 起按 steps 顺序执行；v1 DAG 在进入执行前迁移。
 """
 
 import asyncio
@@ -12,7 +12,7 @@ from typing import Any, Literal
 
 from lanius_engine.drivers.base import Driver
 from lanius_engine.logging import get_logger
-from lanius_engine.models import FlowFile, LaniusError
+from lanius_engine.models import FlowFile, FlowStep, LaniusError, migrate_to_current
 from lanius_engine.nodes.base import NodeContext
 from lanius_engine.nodes.registry import NodeRegistry
 from lanius_engine.runtime.cancel import FlowCancelled
@@ -91,9 +91,8 @@ class Executor:
         )
 
         try:
-            order = _topo_order(flow)
+            flow = migrate_to_current(flow)
         except LaniusError as err:
-            # 校验期失败同样走状态机：validating → failed，错误进记录
             machine.transition(ExecutionState.FAILED)
             record.state = machine.state
             record.error = err.error.model_dump(mode="json")
@@ -107,47 +106,58 @@ class Executor:
         emit("execution.stateChanged", {"from": "validating", "to": "running"})
 
         flow_deadline = time.monotonic() + flow.settings.timeout_ms / 1000
+        target_handle: str | None = None
 
         try:
-            for node in order:
-                if node.disabled:
+            if not flow.target.match.is_empty():
+                target_handle = await self._driver.find_window(
+                    {
+                        "exe": flow.target.match.exe,
+                        "title": flow.target.match.title,
+                        "className": flow.target.match.class_name,
+                    }
+                )
+
+            for step in flow.steps:
+                if step.disabled:
                     record.node_runs.append(
-                        NodeRun(node_id=node.id, status="skipped", duration_ms=0)
+                        NodeRun(node_id=step.id, status="skipped", duration_ms=0)
                     )
                     continue
                 if cancel_event.is_set():
                     raise FlowCancelled()
 
-                node_cls = self._registry.get(node.type)
+                node_type = _resolve_step_type(step)
+                node_cls = self._registry.get(node_type)
                 if node_cls is None:
                     raise LaniusError.of(
                         "engine.flow.unknownNodeType",
-                        f"未知节点类型: {node.type}",
-                        node_id=node.id,
-                        details={"type": node.type},
+                        f"未知节点类型: {node_type}",
+                        node_id=step.id,
+                        details={"type": node_type, "kind": step.kind},
                     )
 
-                emit("execution.nodeStarted", {"nodeId": node.id})
+                emit("execution.nodeStarted", {"nodeId": step.id})
                 started = time.monotonic()
                 remaining_ms = int((flow_deadline - time.monotonic()) * 1000)
                 if remaining_ms <= 0:
                     raise LaniusError.of(
                         "engine.runtime.timeout",
                         "流程级超时预算已耗尽",
-                        node_id=node.id,
+                        node_id=step.id,
                     )
                 node_timeout_s = min(
-                    float(node.config.get("timeoutMs", 30_000)), float(remaining_ms)
+                    float(step.config.get("timeoutMs", 30_000)), float(remaining_ms)
                 ) / 1000
 
                 ctx = NodeContext(
                     driver=self._driver,
                     scope=scope,
-                    logger=logger.bind(nodeId=node.id),
+                    logger=logger.bind(nodeId=step.id),
                     cancel_event=cancel_event,
-                    node_id=node.id,
-                    config=node.config,
-                    inputs=node.inputs,
+                    node_id=step.id,
+                    config=_step_config(step),
+                    inputs={},
                     emit=emit,
                 )
                 instance = node_cls()
@@ -158,20 +168,20 @@ class Executor:
                 except TimeoutError:
                     raise LaniusError.of(
                         "engine.runtime.timeout",
-                        f"节点 {node.id} 超过超时预算",
-                        node_id=node.id,
+                        f"节点 {step.id} 超过超时预算",
+                        node_id=step.id,
                         retryable=True,
                     ) from None
 
                 duration_ms = int((time.monotonic() - started) * 1000)
                 if result.outputs:
-                    scope.set(node.id, {"outputs": result.outputs})
+                    scope.set(step.id, {"outputs": result.outputs})
                 record.node_runs.append(
-                    NodeRun(node_id=node.id, status="done", duration_ms=duration_ms)
+                    NodeRun(node_id=step.id, status="done", duration_ms=duration_ms)
                 )
                 emit(
                     "execution.nodeFinished",
-                    {"nodeId": node.id, "status": "done", "durationMs": duration_ms},
+                    {"nodeId": step.id, "status": "done", "durationMs": duration_ms},
                 )
 
             machine.transition(ExecutionState.DONE)
@@ -184,30 +194,25 @@ class Executor:
 
         record.state = machine.state
         emit("execution.stateChanged", {"from": "running", "to": machine.state.value})
+        if target_handle is not None:
+            emit("execution.targetBound", {"handle": target_handle})
         return record
 
 
-def _topo_order(flow: FlowFile) -> list[Any]:
-    """Kahn 拓扑排序；环在 M1 的 flow.validate 中拦截，这里兜底报错。"""
-    nodes = {node.id: node for node in flow.nodes}
-    indegree = {node.id: 0 for node in flow.nodes}
-    for edge in flow.edges:
-        if edge.kind == "control" and edge.to in indegree:
-            indegree[edge.to] += 1
-    queue = sorted((nid for nid, deg in indegree.items() if deg == 0))
-    order: list[Any] = []
-    while queue:
-        nid = queue.pop(0)
-        order.append(nodes[nid])
-        for edge in flow.edges:
-            if edge.kind == "control" and edge.from_ == nid and edge.to in indegree:
-                indegree[edge.to] -= 1
-                if indegree[edge.to] == 0:
-                    queue.append(edge.to)
-    if len(order) != len(flow.nodes):
+def _resolve_step_type(step: FlowStep) -> str:
+    node_type = step.node_type()
+    if not node_type:
         raise LaniusError.of(
-            "engine.flow.cycleDetected",
-            "流程图存在环或悬空连线，无法拓扑排序",
-            details={"sorted": len(order), "total": len(flow.nodes)},
+            "engine.flow.unknownNodeType",
+            f"步骤 {step.id} 缺少可执行类型",
+            node_id=step.id,
+            details={"kind": step.kind},
         )
-    return order
+    return node_type
+
+
+def _step_config(step: FlowStep) -> dict[str, Any]:
+    config = dict(step.config)
+    if step.kind == "binding" and step.keys and "keys" not in config:
+        config["keys"] = step.keys
+    return config

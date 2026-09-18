@@ -12,20 +12,14 @@ export interface JobPreset {
   steps: JobStep[];
 }
 
-/** M0 写死的作业预设，与演示流程同一语义；M2 改为 *.flow.json 投影 */
-/** M0 演示预设；available=false 的卡片仅展示 laterHint，不可选。
- */
+/** M0 作业列表。可用项的步骤与模板编辑器同一份 store。 */
 export const JOB_PRESETS: JobPreset[] = [
   {
-    id: "notepad-sentence",
-    title: "给记事本写一句话",
-    summary: "找到记事本，写下一句话，并记下已经做完。",
+    id: "window-template",
+    title: "对选定窗口跑模板",
+    summary: "选进程，确认识别方式，然后按模板里的按键、鼠标和预设操作执行。",
     available: true,
-    steps: [
-      { id: "open_app", label: "定位记事本" },
-      { id: "type_text", label: "输入内容" },
-      { id: "log_done", label: "记下完成" },
-    ],
+    steps: [],
   },
   {
     id: "sort-downloads",

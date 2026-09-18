@@ -172,17 +172,25 @@ pub async fn updater_check(app: AppHandle) -> Result<Value, TracedError> {
 
 fn demo_flow() -> Value {
     json!({
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "id": "demo-flow",
-        "name": "壳内示例流程",
-        "nodes": [
-            { "id": "hello", "type": "core.log", "config": { "message": "来自 Tauri 壳的问候" } },
-            { "id": "wait", "type": "core.wait", "config": { "ms": 100 } },
-            { "id": "bye", "type": "core.log", "config": { "message": "执行完毕" } }
-        ],
-        "edges": [
-            { "id": "e1", "from": "hello", "to": "wait", "kind": "control" },
-            { "id": "e2", "from": "wait", "to": "bye", "kind": "control" }
+        "name": "壳内示例模板",
+        "keymapProfileId": "default",
+        "target": {
+            "match": { "exe": "notepad.exe", "title": "", "className": "" },
+            "locate": {
+                "channel": "a11y",
+                "source": "probe",
+                "capture": "client",
+                "visionPack": "template"
+            }
+        },
+        "steps": [
+            { "id": "hello", "kind": "preset", "type": "core.log", "label": "记下开始", "config": { "message": "来自 Tauri 壳的问候", "level": "info" } },
+            { "id": "key", "kind": "binding", "type": "keyboard.press", "profileId": "default", "mappingId": "d-enter", "keys": "Enter", "label": "回车" },
+            { "id": "click", "kind": "mouse", "type": "mouse.click", "label": "单击", "config": { "button": "left", "x": 0, "y": 0 } },
+            { "id": "wait", "kind": "preset", "type": "core.wait", "label": "稍等", "config": { "ms": 100 } },
+            { "id": "bye", "kind": "preset", "type": "core.log", "label": "记下完成", "config": { "message": "执行完毕", "level": "info" } }
         ]
     })
 }

@@ -1,18 +1,14 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ARROWS_PROFILE_ID, createDefaultKeymapState } from "@/lib/keymap";
+import { createDemoSteps } from "@/lib/template";
+import { PROCESS_CATALOG } from "@/lib/targets";
+import { useEditorStore } from "@/stores/editor";
 import { useKeymapStore } from "@/stores/keymap";
 import { TooltipProvider } from "@/ui";
 
 import { FlowsPage } from "./flows-page";
-
-vi.mock("@xyflow/react", () => ({
-  ReactFlow: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="react-flow">{children}</div>
-  ),
-  Background: () => <div data-testid="rf-bg" />,
-}));
 
 vi.mock("@/lib/commands/registry", () => ({
   registry: {
@@ -32,18 +28,38 @@ vi.mock("@/lib/commands/context", () => ({
   }),
 }));
 
-describe("编排页", () => {
-  it("渲染画布与积木分组，并可触发试一次", async () => {
+describe("模板页", () => {
+  afterEach(() => {
+    const first = PROCESS_CATALOG[0];
+    useEditorStore.setState({
+      steps: createDemoSteps(),
+      keymapProfileId: "default",
+      processId: first?.id ?? "notepad",
+      match: first?.match,
+      locate: first?.recommended,
+      dirty: false,
+    });
+    useKeymapStore.setState(createDefaultKeymapState());
+  });
+
+  it("渲染有序步骤，点选积木写入模板，并可试一次", async () => {
     const { registry } = await import("@/lib/commands/registry");
-    render(<TooltipProvider><FlowsPage /></TooltipProvider>);
-    expect(screen.getByTestId("react-flow")).toBeInTheDocument();
-    expect(screen.getAllByText(/按键|Keys/i).length).toBeGreaterThan(0);
+    render(
+      <TooltipProvider>
+        <FlowsPage />
+      </TooltipProvider>,
+    );
+    expect(screen.getByText("稍等片刻")).toBeInTheDocument();
+    expect(screen.getAllByText("回车").length).toBeGreaterThan(0);
+    const before = useEditorStore.getState().steps.length;
+    fireEvent.click(screen.getByRole("button", { name: "记一条日志" }));
+    expect(useEditorStore.getState().steps.length).toBe(before + 1);
     fireEvent.click(screen.getByRole("button", { name: /试一次|Try once/i }));
     expect(registry.run).toHaveBeenCalledWith("flow.run", expect.anything());
     fireEvent.click(screen.getByRole("button", { name: /预演|Preview/i }));
     expect(registry.run).toHaveBeenCalledWith("flow.dryRun", expect.anything());
-    fireEvent.click(screen.getByRole("button", { name: /撤销|Undo/i }));
-    fireEvent.click(screen.getByRole("button", { name: /重做|Redo/i }));
+    fireEvent.click(screen.getAllByRole("button", { name: "撤销" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "重做" })[0]);
   });
 
   it("按键分组可切换方案并列出映射表", () => {
@@ -52,6 +68,7 @@ describe("编排页", () => {
       activeId: ARROWS_PROFILE_ID,
       selectedId: ARROWS_PROFILE_ID,
     });
+    useEditorStore.setState({ keymapProfileId: ARROWS_PROFILE_ID });
     render(
       <TooltipProvider>
         <FlowsPage />
@@ -62,7 +79,72 @@ describe("编排页", () => {
     expect(screen.getByText("Up")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("按键方案"), { target: { value: "default" } });
     expect(screen.getByLabelText("按键方案")).toHaveValue("default");
-    expect(screen.getByText("回车")).toBeInTheDocument();
-    expect(screen.getAllByText("A").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("回车").length).toBeGreaterThan(0);
+  });
+
+  it("可切换目标进程并看到推荐通道", () => {
+    render(
+      <TooltipProvider>
+        <FlowsPage />
+      </TooltipProvider>,
+    );
+    fireEvent.change(screen.getByLabelText("目标进程"), { target: { value: "client" } });
+    expect(useEditorStore.getState().locate.channel).toBe("vision");
+    expect(screen.getByText("画面")).toBeInTheDocument();
+  });
+
+  it("可把鼠标积木拖进步骤末尾", () => {
+    render(
+      <TooltipProvider>
+        <FlowsPage />
+      </TooltipProvider>,
+    );
+    const transfer = createTransfer();
+    const before = useEditorStore.getState().steps.map((step) => step.label);
+    fireEvent.dragStart(screen.getByRole("button", { name: "单击" }), { dataTransfer: transfer });
+    fireEvent.drop(screen.getByText("拖到这里追加到末尾"), { dataTransfer: transfer });
+    expect(useEditorStore.getState().steps.map((step) => step.label)).toEqual([...before, "单击"]);
+  });
+
+  it("可在列表内拖动重排步骤", () => {
+    render(
+      <TooltipProvider>
+        <FlowsPage />
+      </TooltipProvider>,
+    );
+    const transfer = createTransfer();
+    const first = screen.getByText("稍等片刻").closest("[draggable='true']");
+    if (!(first instanceof HTMLElement)) {
+      throw new Error("步骤行应可拖拽");
+    }
+    fireEvent.dragStart(first, { dataTransfer: transfer });
+    fireEvent.drop(screen.getByText("拖到这里追加到末尾"), { dataTransfer: transfer });
+    expect(useEditorStore.getState().steps.map((step) => step.label)).toEqual([
+      "回车",
+      "单击",
+      "记下完成",
+      "稍等片刻",
+    ]);
   });
 });
+
+function createTransfer(): DataTransfer {
+  const store = new Map<string, string>();
+  return {
+    dropEffect: "move",
+    effectAllowed: "all",
+    files: [] as unknown as FileList,
+    items: [] as unknown as DataTransferItemList,
+    types: [],
+    setData(type: string, value: string) {
+      store.set(type, value);
+    },
+    getData(type: string) {
+      return store.get(type) ?? "";
+    },
+    clearData() {
+      store.clear();
+    },
+    setDragImage() {},
+  } as DataTransfer;
+}

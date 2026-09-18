@@ -13,8 +13,8 @@ import type { Bridge, EngineEvent, EngineInfo } from "./types";
 const MOCK_INFO: EngineInfo = {
   protocolVersion: "0.1.0",
   engineVersion: "0.1.0-mock",
-  capabilities: ["dryRun"],
-  nodeTypes: ["core.log", "core.wait", "mouse.click", "keyboard.type", "window.find"],
+  capabilities: ["dryRun", "template.steps", "locate.a11y"],
+  nodeTypes: ["core.log", "core.wait", "keyboard.press", "mouse.click", "mouse.dblclick", "mouse.move"],
 };
 
 const MOCK_DEBUG: ShellDebugInfo = {

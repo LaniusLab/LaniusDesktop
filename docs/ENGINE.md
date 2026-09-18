@@ -23,7 +23,7 @@ engine/src/lanius_engine/
 ├── nodes/
 │   ├── base.py        # Node 协议：inputs/outputs/config schema/execute
 │   ├── registry.py    # 节点注册表（type → 类）
-│   └── core/          # 已落地：log、wait；（规划 · M1）flow/数据/fs/键鼠…
+│   └── core/          # 已落地：log、wait、press、mouse；（规划 · M1）flow/数据/fs
 ├── drivers/
 │   ├── base.py        # Driver 抽象接口
 │   ├── mock.py        # Mock driver（CI/测试/dry-run 用）
@@ -31,7 +31,7 @@ engine/src/lanius_engine/
 │   ├── macos.py       # （规划 · M4）pyobjc
 │   └── linux.py       # （规划 · M4）pyatspi
 ├── runtime/
-│   ├── executor.py    # 执行器：拓扑调度 + 状态机
+│   ├── executor.py    # 执行器：有序 steps + 状态机
 │   ├── state.py       # 执行状态机定义
 │   ├── scope.py       # 变量作用域链
 │   └── cancel.py      # 协作式取消原语
@@ -48,10 +48,10 @@ engine/src/lanius_engine/
 
 | 能力 | 方法示例 | 说明 |
 | --- | --- | --- |
-| 鼠标 | `click(x, y, button)`、`move(x, y)`、`drag(...)` | 坐标为屏幕物理像素 |
-| 键盘 | `type_text(text)`、`hotkey(*keys)`、`press(key)` | 文本输入走 IME 安全路径 |
+| 鼠标 | `click(x, y, button)`、`move(x, y)` | 坐标为窗口客户区或屏幕物理像素 |
+| 键盘 | `press(keys)`、`type_text(text)`、`hotkey(*keys)` | `press` 走按键方案的 `keys` 字符串 |
 | 窗口 | `find_window(query)`、`activate(handle)`、`bounds(handle)` | query 支持标题/类名/进程名 |
-| 元素 | `find_element(locator)`、`element_click(locator)` | 基于无障碍树的稳定定位（优先于坐标） |
+| 元素 | `find_element(locator)`、`element_click(locator)` | `locate.channel=a11y` 时使用 |
 | 屏幕 | `screenshot(region?)` | 返回临时文件路径（不进 stdio） |
 | 剪贴板 | `clipboard_get()`、`clipboard_set(text)` | |
 | 进程 | `launch(cmd)`、`terminate(pid)` | |
@@ -89,20 +89,16 @@ class Node(Protocol):
 
 ### 4.2 注册表
 
-`registry.py` 维护 `type → Node 类` 映射。内置节点在包导入时注册；自定义节点经入口点（entry points，`lanius_engine.nodes` 组）发现。注册表内容经 `engine.hello` 上报给 UI，画布节点面板由此渲染——**节点定义以引擎为准，前端不硬编码节点清单**。
+`registry.py` 维护 `type → Node 类` 映射。内置节点在包导入时注册；自定义节点经入口点（entry points，`lanius_engine.nodes` 组）发现。注册表内容经 `engine.hello` 上报给 UI，模板积木面板由此渲染——**节点定义以引擎为准，前端不硬编码可执行 type 清单**。
 
 ### 4.3 内置节点清单（V1）
 
-- 流程控制：`flow.if`、`flow.loop`、`flow.wait`、`flow.subflow`、`flow.tryCatch`
-- 鼠标：`mouse.click`、`mouse.move`、`mouse.drag`、`mouse.wheel`
-- 键盘：`keyboard.type`、`keyboard.hotkey`、`keyboard.press`
-- 窗口：`window.find`、`window.activate`、`window.resize`、`window.screenshot`
-- 元素：`element.click`、`element.setText`、`element.getText`、`element.waitFor`
-- 文件：`fs.read`、`fs.write`、`fs.copy`、`fs.glob`
-- HTTP：`http.request`（GET/POST，响应进变量）
-- 剪贴板：`clipboard.get`、`clipboard.set`
-- 数据：`data.setVar`、`data.template`（字符串模板渲染）
-- 诊断：`core.log`、`core.assert`
+- 流程控制：`flow.if`、`flow.loop`、`flow.wait`、`flow.subflow`、`flow.tryCatch`（嵌套进 steps，属 M1+）
+- 按键：`keyboard.press`（`kind: binding`）
+- 鼠标：`mouse.click`、`mouse.dblclick`、`mouse.move`
+- 诊断：`core.log`、`core.wait`、`core.assert`
+- 窗口绑定在模板 `target`，不作为默认步骤
+- 元素 / 文件 / HTTP 等仍按里程碑补节点，以 preset 步骤接入
 
 ## 5. 执行器与状态机
 
@@ -121,9 +117,10 @@ idle → validating → running ⇄ paused → done
 
 ### 5.2 调度模型
 
-- 流程图先拓扑排序；存在环则校验期拒绝（`engine.flow.cycleDetected`）。
-- 顺序执行（非并行）——键鼠是全局资源，并行分支在 V1 不支持，图中有并行结构时按确定性的字典序串行化并在校验期给出 warning。
+- 流程图先变成有序 `steps`（v1 DAG 经迁移）；存在环则迁移/校验期拒绝（`engine.flow.cycleDetected`）。
+- 顺序执行（非并行）——键鼠是全局资源，并行分支在 V1 不支持。
 - 全局互斥：引擎内一把 asyncio 锁，第二个 `flow.start` 收到 `engine.runtime.busy`。
+- 开跑时可按 `target.match` 绑定窗口句柄（`find_window`），步骤在该句柄上下文中发键鼠。
 
 ### 5.3 协作式取消
 

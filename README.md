@@ -8,7 +8,7 @@ Lanius（伯劳）由三部分组成：Tauri 2 桌面壳、React 19 前端工作
 
 ## 特性
 
-- **先开跑后编排**：开始页选预设、勾选步骤、试一次；需要时再进编排器用按键与操作积木改步骤，保存为可 diff 的 `*.flow.json`
+- **先开跑后编排**：开始页选模板、选进程、确认识别方式、试一次；需要时再把按键与预设拖进顺序，保存为可 diff 的 `*.flow.json`
 - **跨平台 UI 控制**：Python 引擎封装平台 driver（Windows 先行；macOS/Linux 能力子集），统一抽象
 - **类型安全协议**：JSON Schema 为唯一真源，TypeScript 与 Python 双端对齐，CI 校验生成产物
 - **可观测执行**：执行状态机 + 结构化日志 + traceId 三层贯穿（完整通知流见后续里程碑）
@@ -29,7 +29,7 @@ UI (React) ──invoke/event──▶ Rust 壳 ──JSON-RPC/stdio──▶ Py
 | --- | --- |
 | 桌面壳 | Tauri 2（Rust） |
 | 前端 | React 19 · TypeScript · Vite · Tailwind CSS 4 · 内置组件库（shadcn 种子） |
-| 画布 | React Flow v12（`@xyflow/react`） |
+| 模板编辑 | 有序步骤列表（拖拽按键 / 鼠标 / 预设） |
 | 状态 | Zustand + Immer + zundo · TanStack Query |
 | 表单 | React Hook Form + Zod |
 | 引擎 | Python 3.11+ · Typer · Pydantic v2 · structlog |
@@ -82,10 +82,10 @@ pnpm version:sync
 | [docs/ROADMAP.md](docs/ROADMAP.md) | 里程碑 M0–M5 与验收标准 |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | 变更分类、开发回路、IDE 门禁 |
 | [docs/adr/](docs/adr/) | 架构决策记录 |
-| [examples/hello.flow.json](examples/hello.flow.json) | 示例流程 |
+| [examples/hello.flow.json](examples/hello.flow.json) | 示例模板 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 开发规范全集 |
 | [AGENTS.md](AGENTS.md) | AI 编码代理硬约束 |
 
 ## 仓库状态
 
-当前处于 **M0**：三层骨架已就位；开始页与编排页可走通 `flow.run`；引擎已注册 `engine.hello` / `ping` / `shutdown`、`flow.validate` / `start` / `cancel`。完整积木编辑器与平台 driver 见后续里程碑（[ROADMAP](docs/ROADMAP.md)）。
+当前处于 **M0**：三层骨架已就位；开始页选进程后与模板页可走通 `flow.run`；引擎按有序 `steps` 执行（含 v1 DAG 迁移）。完整存盘、识图与平台 driver 见后续里程碑（[ROADMAP](docs/ROADMAP.md)）。

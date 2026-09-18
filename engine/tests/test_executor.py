@@ -9,13 +9,26 @@ from lanius_engine.runtime.executor import Executor
 from lanius_engine.runtime.state import ExecutionState, ExecutionStateMachine
 
 
-def make_flow(nodes: list[dict], edges: list[dict] | None = None, **overrides) -> FlowFile:
+def make_flow(
+    nodes: list[dict] | None = None, edges: list[dict] | None = None, **overrides
+) -> FlowFile:
     raw = {
         "schemaVersion": 1,
         "id": "test-flow",
         "name": "测试流程",
-        "nodes": nodes,
+        "nodes": nodes or [],
         "edges": edges or [],
+        **overrides,
+    }
+    return FlowFile.model_validate(raw)
+
+
+def make_template(steps: list[dict], **overrides) -> FlowFile:
+    raw = {
+        "schemaVersion": 2,
+        "id": "test-template",
+        "name": "测试模板",
+        "steps": steps,
         **overrides,
     }
     return FlowFile.model_validate(raw)
@@ -25,7 +38,45 @@ def make_executor() -> Executor:
     return Executor(default_registry(), MockDriver())
 
 
-async def test_sequential_execution_records_node_runs() -> None:
+async def test_v2_steps_run_key_and_mouse_on_bound_window() -> None:
+    driver = MockDriver()
+    executor = Executor(default_registry(), driver)
+    flow = make_template(
+        steps=[
+            {
+                "id": "key",
+                "kind": "binding",
+                "keys": "Enter",
+                "label": "回车",
+            },
+            {
+                "id": "click",
+                "kind": "mouse",
+                "type": "mouse.click",
+                "config": {"x": 12, "y": 34, "button": "left"},
+            },
+        ],
+        target={"match": {"exe": "client.exe"}, "locate": {"channel": "vision", "source": "user"}},
+    )
+    record = await executor.start(flow, mode="dryRun")
+    assert record.state == ExecutionState.DONE
+    assert [run.node_id for run in record.node_runs] == ["key", "click"]
+    methods = [call.method for call in driver.calls]
+    assert methods == ["find_window", "press", "click"]
+    assert driver.calls[0].args[0]["exe"] == "client.exe"
+    assert driver.calls[1].args[0] == "Enter"
+    assert driver.calls[2].args[:2] == (12, 34)
+
+
+async def test_binding_without_keys_fails() -> None:
+    flow = make_template([{"id": "key", "kind": "binding", "label": "空键"}])
+    record = await make_executor().start(flow, mode="dryRun")
+    assert record.state == ExecutionState.FAILED
+    assert record.error is not None
+    assert record.error["code"] == "engine.flow.validationFailed"
+
+
+async def test_v1_graph_still_migrates_and_runs() -> None:
     flow = make_flow(
         nodes=[
             {"id": "a", "type": "core.log", "config": {"message": "第一步"}},

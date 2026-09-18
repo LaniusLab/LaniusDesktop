@@ -11,7 +11,7 @@
 | 构建 | Vite 6（开发服务器即 UI 预览） |
 | 样式 | Tailwind CSS 4 + `tokens.css` 语义 token |
 | 组件库 | 内置 `src/ui`（shadcn 种子，见第 3 节） |
-| 画布 | React Flow v12（`@xyflow/react`）；完整积木编辑器属 M2 |
+| 模板编辑 | 有序步骤列表（拖拽按键 / 鼠标 / 预设）；完整属性表属 M2 |
 | 客户端状态 | Zustand + Immer + zundo（zundo 仅编辑器撤销） |
 | 服务端状态 | TanStack Query |
 | 表单 | React Hook Form + Zod |
@@ -23,14 +23,14 @@
 
 ## 2. 应用骨架
 
-默认路径是作业台。编辑页才出画布。
+默认路径是作业台。模板页才出步骤列表。
 
 ```
 ┌─────────────────────────────────────────────────────┐
 │  自绘顶栏（拖动 / 最小化 / 最大化 / 关闭）              │
 ├──────────┬──────────────────────────────────────────┤
 │          │  开始：预设卡 + 步骤勾选 + 试一次          │
-│  搜索    │  编辑：画布（脚本入口）                    │
+│  搜索    │  模板：拖拽步骤列表                        │
 │  开始    │  运行记录 / 按键映射 / 组件                │
 │  编辑    │                                          │
 │  运行记录 │                                          │
@@ -43,7 +43,7 @@
 └─────────────────────────────────────────────────────┘
 ```
 
-- 路由：TanStack Router；`/`（开始）、`/edit`（编辑）、`/history`、`/keymap`（按键映射方案）、`/gallery`（组件；旧路径 `/dev/gallery` 仍可用）。`/settings` 只打开设置 Dialog 并回到 `/`。`/flows/:id`、`/history/:executionId` 属后续里程碑。
+- 路由：TanStack Router；`/`（开始）、`/edit`（模板）、`/history`、`/keymap`（按键映射方案）、`/gallery`（组件；旧路径 `/dev/gallery` 仍可用）。`/settings` 只打开设置 Dialog 并回到 `/`。`/flows/:id`、`/history/:executionId` 属后续里程碑。
 - 主题：**light-first**（日光石色作业台），token 驱动；深色为午夜锌色的同一 token 集。界面用词用「浅色 / 深色」，不用「纸面 / 夜间」。
 - 空/加载/错误三态是每个页面的必备件（`ui/patterns/EmptyState`、`ErrorState`、`LoadingState`）。
 
@@ -53,12 +53,12 @@
 
 | 表面 | M0 已落地 | M2 规划 |
 | --- | --- | --- |
-| 开始 `/` | mock 预设卡 + 步骤勾选；上栏预设 / 日志、下栏步骤可拖拽改尺寸；试一次走 `flow.run` | 勾选与 `*.flow.json` 同步；预设是可运行文件的投影 |
-| 编辑 `/edit` | 演示画布、人话节点、同一 `flow.run`；按键分组可预览指定方案的映射表 | 积木面板点选插入、属性表、保存、校验上图 |
+| 开始 `/` | mock 模板卡 + 进程选择 + 识别方式（探测可改）+ 步骤勾选；上栏模板 / 日志、下栏步骤可拖拽改尺寸；试一次走 `flow.run` | 勾选与 `*.flow.json` 同步；模板是可运行文件的投影 |
+| 编辑 `/edit` | 有序步骤列表；按键方案 / 鼠标 / 预设可点选或拖入；顶栏选进程 | 属性表、保存、校验上列表 |
 | 组件 `/gallery` | 左侧分组目录 + 关键词过滤 + 滚动同步高亮；分区展示变体 / 禁用 / 空态 | — |
 | 搜索 | Overlay 命令盒；占位显示「搜索」，回车执行命令；分组 + 快捷键 | 接入编辑器命令 |
 | 设置 Dialog | Folia 式左侧分组：外观 / 常规 / 桌面 / 快捷键 / 调试 / 关于；`DialogHeader` / `DialogFooter` 插槽；浅色/深色只在外观页；快捷键页可跳到按键映射 | 凭据、签名更新通道（M4/M5） |
-| 按键映射 `/keymap` | 方案是一整套命名映射表（宏表）；内置「默认」只读不可删；本机 localStorage，不改系统按键 | 编排按键积木：选方案 → 列出映射表 → 点选插入（M2 写入流程） |
+| 按键映射 `/keymap` | 方案是一整套命名映射表（宏表）；内置「默认」只读不可删；本机 localStorage，不改系统按键；模板页可切方案并拖入映射 | 系统级热键、方案导入导出 |
 | 侧栏 | 可收起为图标轨，展开时可拖拽改宽度；搜索在顶部，设置与收起在底部 | — |
 | 顶栏 | 无边框自绘；主题快捷切换在设置图标左侧；设置在窗口三键左侧 | — |
 | 状态栏 | 就绪/忙碌用人话；traceId 不常驻 | 执行控制条（M3） |
@@ -69,12 +69,10 @@ UI 按「我想做什么」分组，不展示机器 ID。每块积木映射引�
 
 | 分组 | 积木（人话） | 映射（实现用，不展示） | 备注 |
 | --- | --- | --- | --- |
-| 按键 | 按一下指定键、组合键、输入一段文字 | `keyboard.press` / `keyboard.hotkey` / `keyboard.type` | 也可先选一套方案，再从其映射表点选（像选宏）；流程只存 `profileId` + `mappingId` |
+| 按键 | 方案里的一条 | `kind: binding` → `keyboard.press` | 先选方案再拖入；流程存 `profileId` + `mappingId` + `keys` |
 | 鼠标 | 单击、双击、移动到 | `mouse.click` / `mouse.dblclick` / `mouse.move` | |
-| 窗口 | 找到窗口、等到出现、切到前台 | `window.find` / `window.wait` / `window.focus` | |
-| 节奏 | 等一会、等到画面稳定 | `core.wait` | |
-| 记录 | 记下一条日志 | `core.log` | M0 演示已有 |
-| 控制 | 如果、重复 | `flow.if` / `flow.loop` | M2 后半，可先灰掉 |
+| 预设 | 等一会、记一条日志 | `core.wait` / `core.log` | `vision.wait` 先占位 |
+| 目标 | 开跑时选进程，不进步骤列表 | `target.match` + `target.locate` | 探测可改 |
 
 属性先只暴露必填三项，表达式折叠。校验句写「缺了什么、点哪里补」。
 
@@ -106,20 +104,20 @@ UI 按「我想做什么」分组，不展示机器 ID。每块积木映射引�
 - 文案：自研 `src/lib/i18n`（`zh-CN` / `en`），不引入 i18next。
 - 动效只服务理解与反馈（`animate-rise` / `fade` / `pop` / `page`，150–380ms；卡片 `hover-lift`）；`data-motion="reduce"` 与 `prefers-reduced-motion` 同时生效。
 
-## 5. 画布模块（flow-editor）
+## 5. 模板编辑器（flow-editor）
 
-- React Flow v12 受控模式：节点/连线状态在 zustand 编辑器分片（Immer 结构共享 + zundo 撤销栈）。
-- 节点类型清单来自引擎 `engine.hello` 上报的注册表；每种节点对应自定义 React 节点（统一外壳 `NodeShell`）。画布上只显示人话标题。
-- 校验反馈实时映射到画布：引擎 `flow.validate` 的 issues 按 nodeId 挂到节点。
-- 大流程性能：>500 节点开启 `onlyRenderVisibleElements`；连线默认贝塞尔，密集成团时降级直线。
-- 撤销边界：画布操作进 zundo 栈；引擎执行产生的状态变化**不进**撤销栈。
-- 开始页与编排页的「试一次」必须触发同一 `flow.run`，禁止第二套执行路径。
+- 有序步骤列表受控于 zustand 编辑器分片（zundo 撤销栈）。
+- 左侧调色板：当前按键方案映射表、鼠标预设、引擎预设操作；点选或拖入列表。
+- 顶栏与开始页共用目标进程 / 识别方式。
+- 校验反馈按步骤 id 挂到列表（完整校验上表属 M2）。
+- 撤销边界：模板操作进 zundo 栈；引擎执行产生的状态变化**不进**撤销栈。
+- 开始页与模板页的「试一次」必须触发同一 `flow.run`，禁止第二套执行路径。
 
 ## 6. 状态管理
 
 | 分片 | 内容 | 实现 |
 | --- | --- | --- |
-| `editorStore` | 当前流程文档、选区、dirty 标记 | zustand + Immer + zundo |
+| `editorStore` | 当前模板步骤、目标进程、locate、dirty 标记 | zustand + zundo |
 | `executionStore` | 最近一次执行状态镜像（渲染用，非真源） | zustand，由 event 驱动 |
 | `uiStore` | 主题/强调色/字体/动效/语言、窗口偏好、全局搜索开合 | zustand；桌面壳以 `prefs.json` 为真源 |
 | `keymapStore` | 按键方案（完整映射表）与编排默认方案 | zustand；本机 `localStorage`，不进协议 |
@@ -163,4 +161,4 @@ registry.register({
 
 - 组件测试：Vitest + Testing Library，只测行为不测实现；bridge 层用 vi.mock 替换。
 - e2e：Playwright 跑 Vite dev server（web 层流程）；Tauri 内 e2e 在 M5 评估。
-- 性能预算：首屏 JS < 350 KiB gzip；画布 500 节点交互 60fps；全局搜索打开 < 100ms。CI 记录 bundle 体积趋势。
+- 性能预算：首屏 JS < 350 KiB gzip；步骤列表 500 步交互 60fps；全局搜索打开 < 100ms。CI 记录 bundle 体积趋势。

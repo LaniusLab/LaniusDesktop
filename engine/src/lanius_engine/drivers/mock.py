@@ -22,12 +22,21 @@ class MockDriver(Driver):
     calls: list[MockCall] = field(default_factory=list)
     clipboard: str = ""
     windows: dict[str, dict[str, Any]] = field(default_factory=dict)
+    cursor: tuple[int, int] = (0, 0)
 
     def _record(self, method: str, *args: Any, **kwargs: Any) -> None:
         self.calls.append(MockCall(method=method, args=args, kwargs=kwargs))
 
     async def click(self, x: int, y: int, button: str = "left") -> None:
         self._record("click", x, y, button=button)
+        self.cursor = (x, y)
+
+    async def move(self, x: int, y: int) -> None:
+        self._record("move", x, y)
+        self.cursor = (x, y)
+
+    async def press(self, keys: str) -> None:
+        self._record("press", keys)
 
     async def type_text(self, text: str) -> None:
         self._record("type_text", text)
@@ -35,15 +44,25 @@ class MockDriver(Driver):
     async def find_window(self, query: dict[str, Any]) -> str:
         self._record("find_window", query)
         title = str(query.get("title", ""))
+        exe = str(query.get("exe", ""))
+        class_name = str(query.get("className", query.get("class_name", "")))
         for handle, info in self.windows.items():
             if title and title in str(info.get("title", "")):
                 return handle
-        raise LaniusError.of(
-            "engine.driver.windowNotFound",
-            f"未找到窗口: {query}",
-            details={"query": query},
-            retryable=True,
-        )
+            if exe and exe == str(info.get("exe", "")):
+                return handle
+            if class_name and class_name == str(info.get("className", "")):
+                return handle
+        if self.windows:
+            raise LaniusError.of(
+                "engine.driver.windowNotFound",
+                f"未找到窗口: {query}",
+                details={"query": query},
+                retryable=True,
+            )
+        handle = "hwnd-mock"
+        self.windows[handle] = {"title": title, "exe": exe, "className": class_name}
+        return handle
 
     async def clipboard_get(self) -> str:
         self._record("clipboard_get")

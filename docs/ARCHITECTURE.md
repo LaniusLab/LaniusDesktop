@@ -76,7 +76,7 @@ Lanius Desktop 由三个进程角色组成，职责严格分层：
   → Python: 校验 → 状态机 running → 逐节点执行
   → Python 通知: execution.nodeStarted / log / ...   [Python → Rust]
   → Rust: 补 traceId → emit("execution://event", …)  [Rust → UI]
-  → UI: 画布高亮 + 日志面板追加
+  → UI: 步骤高亮 + 日志面板追加
   → Python 响应: { executionId, finalState }          [原路返回]
 ```
 
@@ -112,7 +112,7 @@ LaniusDesktop/
 │   ├── modules/
 │   │   ├── layout/             # 应用壳布局（自绘顶栏 + 侧栏）
 │   │   ├── start/              # 开始页（预设 + 勾选 + 试一次）
-│   │   ├── flow-editor/        # 编排页（脚本入口；M2 积木主体）
+│   │   ├── flow-editor/        # 模板页（有序步骤；M2 属性/存盘）
 │   │   ├── history/            # 运行记录页（M3）
 │   │   ├── settings/           # 设置 Dialog（侧栏底部 + 顶栏入口）
 │   │   ├── search/             # 全局搜索（Overlay，替代命令面板）

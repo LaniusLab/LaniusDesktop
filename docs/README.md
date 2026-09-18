@@ -42,7 +42,7 @@
 
 下列主题已在域文档出现，落地前宜补 ADR（或明确声明由域文档承载）：
 
-- 流程 `schemaVersion` 与迁移链（见 FLOW-FORMAT）
+- 流程 `schemaVersion` 与迁移链（见 FLOW-FORMAT；v1→v2 已落地，后续版本仍登记）
 - SQLite 执行历史路径与保留策略（见 ENGINE）
 - 信任分级与危险节点确认（见 SECURITY）
 - dry-run ≡ mock driver（见 ENGINE）

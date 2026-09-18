@@ -1,65 +1,93 @@
-import {
-  addEdge,
-  applyEdgeChanges,
-  applyNodeChanges,
-  type Connection,
-  type Edge,
-  type EdgeChange,
-  type Node,
-  type NodeChange,
-} from "@xyflow/react";
 import { create } from "zustand";
 import { temporal } from "zundo";
 
-// M0 演示流程：M2 里程碑将替换为从引擎注册表驱动的完整编辑器
-const DEMO_NODES: Node[] = [
-  {
-    id: "open_app",
-    type: "default",
-    position: { x: 80, y: 120 },
-    data: { label: "定位记事本" },
-  },
-  {
-    id: "type_text",
-    type: "default",
-    position: { x: 380, y: 120 },
-    data: { label: "输入内容" },
-  },
-  {
-    id: "log_done",
-    type: "default",
-    position: { x: 680, y: 120 },
-    data: { label: "记下完成" },
-  },
-];
-
-const DEMO_EDGES: Edge[] = [
-  { id: "e1", source: "open_app", target: "type_text" },
-  { id: "e2", source: "type_text", target: "log_done" },
-];
+import { PROCESS_CATALOG, type LocateProfile, type TargetMatch } from "@/lib/targets";
+import { createDemoSteps, createStepId, type TemplateDraft, type TemplateStep } from "@/lib/template";
 
 interface EditorStore {
-  nodes: Node[];
-  edges: Edge[];
+  steps: TemplateStep[];
+  keymapProfileId: string;
+  processId: string;
+  match: TargetMatch;
+  locate: LocateProfile;
   dirty: boolean;
-  onNodesChange: (changes: NodeChange[]) => void;
-  onEdgesChange: (changes: EdgeChange[]) => void;
-  onConnect: (connection: Connection) => void;
+  insertStep: (draft: TemplateDraft, index?: number) => void;
+  removeStep: (id: string) => void;
+  moveStep: (fromIndex: number, toIndex: number) => void;
+  setKeymapProfileId: (id: string) => void;
+  bindProcess: (processId: string) => void;
+  setLocateChannel: (channel: LocateProfile["channel"]) => void;
+  setVisionPack: (visionPack: string) => void;
   markSaved: () => void;
+}
+
+const firstProcess = PROCESS_CATALOG[0];
+
+function clampIndex(index: number, length: number): number {
+  if (index < 0) return 0;
+  if (index > length) return length;
+  return index;
 }
 
 export const useEditorStore = create<EditorStore>()(
   temporal(
     (set) => ({
-      nodes: DEMO_NODES,
-      edges: DEMO_EDGES,
+      steps: createDemoSteps(),
+      keymapProfileId: "default",
+      processId: firstProcess?.id ?? "",
+      match: firstProcess?.match ?? { exe: "", title: "", className: "" },
+      locate: firstProcess?.recommended ?? {
+        channel: "a11y",
+        source: "probe",
+        capture: "client",
+        visionPack: "template",
+      },
       dirty: false,
-      onNodesChange: (changes) =>
-        set((s) => ({ nodes: applyNodeChanges(changes, s.nodes), dirty: true })),
-      onEdgesChange: (changes) =>
-        set((s) => ({ edges: applyEdgeChanges(changes, s.edges), dirty: true })),
-      onConnect: (connection) =>
-        set((s) => ({ edges: addEdge(connection, s.edges), dirty: true })),
+      insertStep: (draft, index) =>
+        set((s) => {
+          const next = [...s.steps];
+          const at = clampIndex(index ?? next.length, next.length);
+          next.splice(at, 0, { ...draft, id: createStepId(), config: { ...draft.config } });
+          return { steps: next, dirty: true };
+        }),
+      removeStep: (id) =>
+        set((s) => ({
+          steps: s.steps.filter((step) => step.id !== id),
+          dirty: true,
+        })),
+      moveStep: (fromIndex, toIndex) =>
+        set((s) => {
+          if (fromIndex === toIndex) return s;
+          if (fromIndex < 0 || fromIndex >= s.steps.length) return s;
+          const next = [...s.steps];
+          const [item] = next.splice(fromIndex, 1);
+          if (!item) return s;
+          const at = clampIndex(toIndex, next.length);
+          next.splice(at, 0, item);
+          return { steps: next, dirty: true };
+        }),
+      setKeymapProfileId: (id) => set({ keymapProfileId: id, dirty: true }),
+      bindProcess: (processId) =>
+        set((s) => {
+          const found = PROCESS_CATALOG.find((item) => item.id === processId);
+          if (!found) return s;
+          return {
+            processId: found.id,
+            match: found.match,
+            locate: found.recommended,
+            dirty: true,
+          };
+        }),
+      setLocateChannel: (channel) =>
+        set((s) => ({
+          locate: { ...s.locate, channel, source: "user" },
+          dirty: true,
+        })),
+      setVisionPack: (visionPack) =>
+        set((s) => ({
+          locate: { ...s.locate, visionPack, source: "user" },
+          dirty: true,
+        })),
       markSaved: () => set({ dirty: false }),
     }),
     { limit: 100 },

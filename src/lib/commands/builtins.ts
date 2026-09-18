@@ -30,7 +30,7 @@ export function registerBuiltinCommands(): void {
 
   registry.register({
     id: "nav.edit",
-    title: "编辑",
+    title: "模板",
     scope: "global",
     shortcut: "Mod+2",
     run: (ctx) => ctx.navigate("/edit"),
