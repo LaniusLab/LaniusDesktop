@@ -1,6 +1,6 @@
 import { Clock, Keyboard, MousePointer2, Sparkles } from "lucide-react";
 
-import { encodeStepDrag, MOUSE_PRESETS, OP_PRESETS, type TemplateDraft } from "@/lib/template";
+import { MOUSE_PRESETS, OP_PRESETS, writeStepDrag, type TemplateDraft } from "@/lib/template";
 import { KeymapCatalog, useKeymapLabels } from "@/modules/keymap/keymap-catalog";
 import { useEditorStore } from "@/stores/editor";
 import { useT } from "@/stores/ui";
@@ -140,7 +140,7 @@ function PaletteButton({
       )}
       onClick={onAdd}
       onDragStart={(event) => {
-        event.dataTransfer.setData("text/plain", encodeStepDrag({ source: "palette", draft }));
+        writeStepDrag(event.dataTransfer, { source: "palette", draft });
         event.dataTransfer.effectAllowed = "copy";
       }}
     >

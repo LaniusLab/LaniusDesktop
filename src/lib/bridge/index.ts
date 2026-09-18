@@ -14,6 +14,8 @@ export type {
   EngineInfo,
   EngineStatus,
   ExecutionPhase,
+  FlowNodeRun,
+  FlowRunResult,
   UpdaterResult,
   UpdaterStatus,
 } from "./types";

@@ -1,7 +1,6 @@
 import { DEFAULT_PREFS, mergePrefs } from "@/lib/prefs";
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
-
 import type { Bridge, EngineEvent, EngineInfo } from "./types";
 
 /*
@@ -52,26 +51,42 @@ export function createMockBridge(): Bridge {
       return MOCK_INFO;
     },
 
-    async flowRun(mode) {
+    async flowRun(flow, mode) {
       const executionId = `mock-exec-${++traceSeq}`;
       const traceId = `mock-trace-${traceSeq.toString().padStart(4, "0")}`;
-      const steps: Array<[number, EngineEvent]> = [
+      const enabled = (flow.steps ?? []).filter((step) => !step.disabled);
+      const exe = flow.target?.match?.exe || "window";
+      const channel = flow.target?.locate?.channel === "vision" ? "画面" : "控件";
+      const prefix = mode === "dryRun" ? "演练：" : "";
+      const events: Array<[number, EngineEvent]> = [
         [0, { kind: "execution", executionId, phase: "validating", traceId }],
-        [300, { kind: "execution", executionId, phase: "running", traceId }],
+        [80, { kind: "execution", executionId, phase: "running", traceId }],
         [
-          500,
+          120,
           {
             kind: "log",
             executionId,
             traceId,
-            message: mode === "dryRun" ? "演练：记下完成" : "记下：你好，Lanius",
+            message: `${prefix}绑定 ${exe}（${channel}）`,
           },
         ],
-        [900, { kind: "log", executionId, traceId, message: "等了一小会" }],
-        [1400, { kind: "execution", executionId, phase: "done", traceId }],
-        [1800, { kind: "execution", executionId, phase: "idle", traceId }],
       ];
-      for (const [delay, event] of steps) {
+      enabled.forEach((step, index) => {
+        events.push([
+          180 + index * 80,
+          {
+            kind: "log",
+            executionId,
+            traceId,
+            message: `${prefix}${step.label ?? step.id}`,
+          },
+        ]);
+      });
+      events.push(
+        [180 + enabled.length * 80 + 80, { kind: "execution", executionId, phase: "done", traceId }],
+        [180 + enabled.length * 80 + 160, { kind: "execution", executionId, phase: "idle", traceId }],
+      );
+      for (const [delay, event] of events) {
         setTimeout(() => emit(event), delay);
       }
       return { executionId };

@@ -53,7 +53,7 @@
 | --- | --- | --- | --- | --- |
 | `flow.validate` | `{ flow }` 或 `{ path }` | `{ ok, issues[] }` | 已实现 | 静态校验，不执行 |
 | `flow.migrate` | `{ flow }` | `{ flow, migratedFrom, migratedTo }` | M2 | 迁移到当前 schemaVersion |
-| `flow.start` | `{ path \| flow, mode, inputs? }` | 见下 | 已实现（同步） | `inputs.target` / `inputs.locate` 覆盖绑定；全局互斥 |
+| `flow.start` | `{ path \| flow, mode, inputs? }` | 见下 | 已实现（同步） | UI 传入当前模板 `flow`；`inputs.target` / `inputs.locate` 覆盖绑定；全局互斥 |
 | `flow.pause` / `flow.resume` | `{ executionId }` | `{}` | M1 | 暂停/继续 |
 | `flow.cancel` | `{ executionId, reason? }` | `{}` | 已实现 | 协作式取消 |
 | `execution.get` | `{ executionId }` | `{ record }` | M1 | 查询单条执行记录 |

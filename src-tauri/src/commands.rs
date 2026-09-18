@@ -2,6 +2,7 @@
 //! 业务规则出现在这里即重构信号（docs/ARCHITECTURE.md §6）。
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use serde_json::{json, Value};
 use tauri::{AppHandle, State};
@@ -77,21 +78,28 @@ pub async fn engine_call(
 }
 
 #[tauri::command]
-pub async fn flow_run(state: State<'_, ShellState>, mode: String) -> Result<Value, TracedError> {
+pub async fn flow_run(
+    state: State<'_, ShellState>,
+    flow: Value,
+    mode: String,
+) -> Result<Value, TracedError> {
     let trace_id = new_trace_id();
     if mode != "run" && mode != "dryRun" {
         return Err(ShellError::Protocol(format!("非法执行模式: {mode}")).with_trace(trace_id));
     }
+    // 壳只做形状校验；语义归引擎。schemaVersion 2 以 steps 为真源。
+    if !flow.get("steps").is_some_and(Value::is_array) {
+        return Err(ShellError::Protocol("flow 缺少 steps 数组".into()).with_trace(trace_id));
+    }
     let client = engine(&state)
         .await
         .map_err(|e| e.with_trace(trace_id.clone()))?;
-    // M0：示例流程内嵌于壳；M2 起由编辑器保存的 *.flow.json 经 flow_open 读入
-    let flow = demo_flow();
     client
-        .call(
+        .call_with_timeout(
             "flow.start",
             json!({ "flow": flow, "mode": mode }),
             &trace_id,
+            Duration::from_secs(120),
         )
         .await
         .map_err(|e| e.with_trace(trace_id))
@@ -168,29 +176,4 @@ pub async fn updater_check(app: AppHandle) -> Result<Value, TracedError> {
         "currentVersion": env!("CARGO_PKG_VERSION"),
         "message": "updater.notConfigured",
     }))
-}
-
-fn demo_flow() -> Value {
-    json!({
-        "schemaVersion": 2,
-        "id": "demo-flow",
-        "name": "壳内示例模板",
-        "keymapProfileId": "default",
-        "target": {
-            "match": { "exe": "notepad.exe", "title": "", "className": "" },
-            "locate": {
-                "channel": "a11y",
-                "source": "probe",
-                "capture": "client",
-                "visionPack": "template"
-            }
-        },
-        "steps": [
-            { "id": "hello", "kind": "preset", "type": "core.log", "label": "记下开始", "config": { "message": "来自 Tauri 壳的问候", "level": "info" } },
-            { "id": "key", "kind": "binding", "type": "keyboard.press", "profileId": "default", "mappingId": "d-enter", "keys": "Enter", "label": "回车" },
-            { "id": "click", "kind": "mouse", "type": "mouse.click", "label": "单击", "config": { "button": "left", "x": 0, "y": 0 } },
-            { "id": "wait", "kind": "preset", "type": "core.wait", "label": "稍等", "config": { "ms": 100 } },
-            { "id": "bye", "kind": "preset", "type": "core.log", "label": "记下完成", "config": { "message": "执行完毕", "level": "info" } }
-        ]
-    })
 }

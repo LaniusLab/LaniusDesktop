@@ -36,7 +36,7 @@ export const zhCN: Record<string, string> = {
   "start.using": "当前",
   "start.log": "运行日志",
   "start.logEmpty": "暂无日志",
-  "start.selected": "已选 {n} / {total} 步。勾选仅供查看，运行仍会执行全部步骤。",
+  "start.selected": "已选 {n} / {total} 步。取消勾选的步骤这次不执行。",
   "start.run": "试一次",
   "start.dryRun": "预演",
   "start.edit": "改模板",

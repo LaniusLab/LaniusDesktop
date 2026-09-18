@@ -79,7 +79,16 @@ def register_all(server: RpcServer) -> None:
         return {
             "executionId": record.execution_id,
             "finalState": record.state.value,
-            "nodeRuns": [vars(run) for run in record.node_runs],
+            "nodeRuns": [
+                {
+                    "nodeId": run.node_id,
+                    "status": run.status,
+                    "durationMs": run.duration_ms,
+                    "errorCode": run.error_code,
+                    "label": run.label,
+                }
+                for run in record.node_runs
+            ],
             "error": record.error,
         }
 

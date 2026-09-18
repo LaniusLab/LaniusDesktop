@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { decodeStepDrag, encodeStepDrag } from "./template";
+import { decodeStepDrag, encodeStepDrag, readStepDrag, writeStepDrag } from "./template";
 
 describe("template dnd payload", () => {
   it("往返 palette 与 reorder 载荷", () => {
@@ -15,5 +15,18 @@ describe("template dnd payload", () => {
     const reorder = encodeStepDrag({ source: "reorder", id: "s-1" });
     expect(decodeStepDrag(reorder)).toEqual({ source: "reorder", id: "s-1" });
     expect(decodeStepDrag("nope")).toBeNull();
+  });
+
+  it("同时写入自定义 MIME 与 text/plain", () => {
+    const store = new Map<string, string>();
+    const transfer = {
+      setData: (type: string, value: string) => {
+        store.set(type, value);
+      },
+      getData: (type: string) => store.get(type) ?? "",
+    };
+    writeStepDrag(transfer, { source: "reorder", id: "s-9" });
+    expect(readStepDrag(transfer)).toEqual({ source: "reorder", id: "s-9" });
+    expect(store.has("application/x-lanius-step")).toBe(true);
   });
 });

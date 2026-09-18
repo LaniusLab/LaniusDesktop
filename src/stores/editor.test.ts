@@ -61,4 +61,13 @@ describe("editor store", () => {
       ids[0],
     ]);
   });
+
+  it("可把步骤标为这次不执行", () => {
+    const id = useEditorStore.getState().steps[0]?.id;
+    if (!id) {
+      throw new Error("示例模板不应为空");
+    }
+    useEditorStore.getState().setStepDisabled(id, true);
+    expect(useEditorStore.getState().steps[0]?.disabled).toBe(true);
+  });
 });

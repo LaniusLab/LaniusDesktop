@@ -1,5 +1,5 @@
 import { bridge } from "@/lib/bridge";
-import { useEditorStore } from "@/stores/editor";
+import { editorToFlowFile, useEditorStore } from "@/stores/editor";
 import { useExecutionStore } from "@/stores/execution";
 import { useUiStore } from "@/stores/ui";
 
@@ -19,8 +19,11 @@ export function currentContext(): CommandContext {
   return {
     bridge,
     engine: { status: useExecutionStore.getState().engineStatus },
-    execution: { phase: useExecutionStore.getState().phase },
-    editor: { dirty: useEditorStore.getState().dirty },
+    execution: {
+      phase: useExecutionStore.getState().phase,
+      ingestRunResult: (result) => useExecutionStore.getState().ingestRunResult(result),
+    },
+    editor: { dirty: useEditorStore.getState().dirty, toFlowFile: editorToFlowFile },
     navigate: (to) => navigateFn(to),
     ui: {
       toggleTheme: () => useUiStore.getState().toggleTheme(),

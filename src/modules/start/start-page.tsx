@@ -32,10 +32,8 @@ export function StartPage() {
   const bindProcess = useEditorStore((s) => s.bindProcess);
   const setLocateChannel = useEditorStore((s) => s.setLocateChannel);
   const setVisionPack = useEditorStore((s) => s.setVisionPack);
+  const setStepDisabled = useEditorStore((s) => s.setStepDisabled);
   const liveSteps = preset.available ? templateSteps : preset.steps;
-  const [checked, setChecked] = useState<ReadonlySet<string>>(
-    () => new Set(templateSteps.map((step) => step.id)),
-  );
   const startTopHeight = useUiStore((s) => s.startTopHeight);
   const setStartTopHeight = useUiStore((s) => s.setStartTopHeight);
   const startLogWidth = useUiStore((s) => s.startLogWidth);
@@ -47,8 +45,8 @@ export function StartPage() {
     engineStatus === "ready" && phase !== "running" && phase !== "validating" && Boolean(processId);
 
   const selectedCount = useMemo(
-    () => liveSteps.filter((step) => checked.has(step.id)).length,
-    [checked, liveSteps],
+    () => liveSteps.filter((step) => !("disabled" in step && step.disabled)).length,
+    [liveSteps],
   );
   const probed = processById(processId);
 
@@ -56,19 +54,12 @@ export function StartPage() {
     const next = JOB_PRESETS.find((item) => item.id === id);
     if (!next?.available) return;
     setPresetId(id);
-    setChecked(new Set(templateSteps.map((step) => step.id)));
   };
 
   const toggleStep = (id: string) => {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
+    const step = templateSteps.find((item) => item.id === id);
+    if (!step) return;
+    setStepDisabled(id, !step.disabled);
   };
 
   const runCommand = (id: string) => void registry.run(id, currentContext());
@@ -211,7 +202,7 @@ export function StartPage() {
 
           <ol className="mt-4 min-h-0 flex-1 overflow-auto">
             {liveSteps.map((step, index) => {
-              const isOn = checked.has(step.id);
+              const isOn = !("disabled" in step && step.disabled);
               return (
                 <li key={step.id}>
                   <button

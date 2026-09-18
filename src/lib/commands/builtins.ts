@@ -78,7 +78,8 @@ export function registerBuiltinCommands(): void {
       ctx.execution.phase !== "running" &&
       ctx.execution.phase !== "validating",
     run: async (ctx) => {
-      await ctx.bridge.flowRun("run");
+      const result = await ctx.bridge.flowRun(ctx.editor.toFlowFile(), "run");
+      ctx.execution.ingestRunResult(result);
     },
   });
 
@@ -92,7 +93,8 @@ export function registerBuiltinCommands(): void {
       ctx.execution.phase !== "running" &&
       ctx.execution.phase !== "validating",
     run: async (ctx) => {
-      await ctx.bridge.flowRun("dryRun");
+      const result = await ctx.bridge.flowRun(ctx.editor.toFlowFile(), "dryRun");
+      ctx.execution.ingestRunResult(result);
     },
   });
 }

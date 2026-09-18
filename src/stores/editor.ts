@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
 
+import { toFlowFile } from "@/lib/flow-file";
 import { PROCESS_CATALOG, type LocateProfile, type TargetMatch } from "@/lib/targets";
 import { createDemoSteps, createStepId, type TemplateDraft, type TemplateStep } from "@/lib/template";
 
@@ -14,6 +15,7 @@ interface EditorStore {
   insertStep: (draft: TemplateDraft, index?: number) => void;
   removeStep: (id: string) => void;
   moveStep: (fromIndex: number, toIndex: number) => void;
+  setStepDisabled: (id: string, disabled: boolean) => void;
   setKeymapProfileId: (id: string) => void;
   bindProcess: (processId: string) => void;
   setLocateChannel: (channel: LocateProfile["channel"]) => void;
@@ -66,6 +68,11 @@ export const useEditorStore = create<EditorStore>()(
           next.splice(at, 0, item);
           return { steps: next, dirty: true };
         }),
+      setStepDisabled: (id, disabled) =>
+        set((s) => ({
+          steps: s.steps.map((step) => (step.id === id ? { ...step, disabled } : step)),
+          dirty: true,
+        })),
       setKeymapProfileId: (id) => set({ keymapProfileId: id, dirty: true }),
       bindProcess: (processId) =>
         set((s) => {
@@ -100,4 +107,14 @@ export function undoEdit() {
 
 export function redoEdit() {
   useEditorStore.temporal.getState().redo();
+}
+
+export function editorToFlowFile() {
+  const state = useEditorStore.getState();
+  return toFlowFile({
+    keymapProfileId: state.keymapProfileId,
+    match: state.match,
+    locate: state.locate,
+    steps: state.steps,
+  });
 }

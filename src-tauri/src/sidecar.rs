@@ -127,6 +127,17 @@ impl EngineClient {
         params: Value,
         trace_id: &str,
     ) -> Result<Value, ShellError> {
+        self.call_with_timeout(method, params, trace_id, RPC_TIMEOUT)
+            .await
+    }
+
+    pub async fn call_with_timeout(
+        &self,
+        method: &str,
+        params: Value,
+        trace_id: &str,
+        rpc_timeout: Duration,
+    ) -> Result<Value, ShellError> {
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let (tx, rx) = oneshot::channel();
         self.pending.lock().await.insert(id, tx);
@@ -151,7 +162,7 @@ impl EngineClient {
                 .map_err(|_| ShellError::SidecarUnavailable)?;
         }
 
-        match timeout(RPC_TIMEOUT, rx).await {
+        match timeout(rpc_timeout, rx).await {
             Ok(Ok(result)) => result,
             Ok(Err(_closed)) => Err(ShellError::SidecarUnavailable),
             Err(_elapsed) => {

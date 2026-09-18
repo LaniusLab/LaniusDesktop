@@ -6,8 +6,12 @@ describe("mockBridge", () => {
   it("覆盖 M0 常用 invoke 面", async () => {
     const bridge = createMockBridge();
     await expect(bridge.engineInfo()).resolves.toMatchObject({ protocolVersion: "0.1.0" });
-    await expect(bridge.flowRun("run")).resolves.toMatchObject({ executionId: expect.any(String) });
-    await expect(bridge.flowRun("dryRun")).resolves.toMatchObject({ executionId: expect.any(String) });
+    await expect(bridge.flowRun({ schemaVersion: 2, id: "t", name: "t", steps: [] }, "run")).resolves.toMatchObject({
+      executionId: expect.any(String),
+    });
+    await expect(
+      bridge.flowRun({ schemaVersion: 2, id: "t", name: "t", steps: [] }, "dryRun"),
+    ).resolves.toMatchObject({ executionId: expect.any(String) });
     await expect(bridge.flowCancel("x")).resolves.toBeUndefined();
     const prefs = await bridge.prefsGet();
     await expect(bridge.prefsSet(prefs)).resolves.toMatchObject({ theme: prefs.theme });

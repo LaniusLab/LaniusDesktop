@@ -28,6 +28,7 @@ class NodeRun:
     status: Literal["done", "failed", "cancelled", "skipped"]
     duration_ms: int
     error_code: str | None = None
+    label: str = ""
 
 
 @dataclass
@@ -117,11 +118,25 @@ class Executor:
                         "className": flow.target.match.class_name,
                     }
                 )
+                await self._driver.activate(target_handle)
+                await self._driver.set_locate(
+                    {
+                        "channel": flow.target.locate.channel,
+                        "source": flow.target.locate.source,
+                        "capture": flow.target.locate.capture,
+                        "visionPack": flow.target.locate.vision_pack,
+                    }
+                )
 
             for step in flow.steps:
                 if step.disabled:
                     record.node_runs.append(
-                        NodeRun(node_id=step.id, status="skipped", duration_ms=0)
+                        NodeRun(
+                            node_id=step.id,
+                            status="skipped",
+                            duration_ms=0,
+                            label=step.label,
+                        )
                     )
                     continue
                 if cancel_event.is_set():
@@ -177,7 +192,12 @@ class Executor:
                 if result.outputs:
                     scope.set(step.id, {"outputs": result.outputs})
                 record.node_runs.append(
-                    NodeRun(node_id=step.id, status="done", duration_ms=duration_ms)
+                    NodeRun(
+                        node_id=step.id,
+                        status="done",
+                        duration_ms=duration_ms,
+                        label=step.label,
+                    )
                 )
                 emit(
                     "execution.nodeFinished",
@@ -195,7 +215,18 @@ class Executor:
         record.state = machine.state
         emit("execution.stateChanged", {"from": "running", "to": machine.state.value})
         if target_handle is not None:
-            emit("execution.targetBound", {"handle": target_handle})
+            emit(
+                "execution.targetBound",
+                {
+                    "handle": target_handle,
+                    "locate": {
+                        "channel": flow.target.locate.channel,
+                        "source": flow.target.locate.source,
+                        "capture": flow.target.locate.capture,
+                        "visionPack": flow.target.locate.vision_pack,
+                    },
+                },
+            )
         return record
 
 

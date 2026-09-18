@@ -62,10 +62,25 @@ async def test_v2_steps_run_key_and_mouse_on_bound_window() -> None:
     assert record.state == ExecutionState.DONE
     assert [run.node_id for run in record.node_runs] == ["key", "click"]
     methods = [call.method for call in driver.calls]
-    assert methods == ["find_window", "press", "click"]
+    assert methods == ["find_window", "activate", "set_locate", "press", "click"]
     assert driver.calls[0].args[0]["exe"] == "client.exe"
-    assert driver.calls[1].args[0] == "Enter"
-    assert driver.calls[2].args[:2] == (12, 34)
+    assert driver.bound_handle == "hwnd-mock"
+    assert driver.locate is not None
+    assert driver.locate["channel"] == "vision"
+    assert driver.calls[3].args[0] == "Enter"
+    assert driver.calls[4].args[:2] == (12, 34)
+
+
+async def test_disabled_steps_are_skipped() -> None:
+    flow = make_template(
+        steps=[
+            {"id": "key", "kind": "binding", "keys": "Enter", "disabled": True, "label": "回车"},
+            {"id": "log", "kind": "preset", "type": "core.log", "config": {"message": "x"}},
+        ]
+    )
+    record = await make_executor().start(flow, mode="dryRun")
+    assert record.state == ExecutionState.DONE
+    assert [run.status for run in record.node_runs] == ["skipped", "done"]
 
 
 async def test_binding_without_keys_fails() -> None:

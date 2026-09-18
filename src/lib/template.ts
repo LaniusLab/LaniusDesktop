@@ -45,7 +45,7 @@ export const OP_PRESETS: readonly OpPreset[] = [
   { type: "vision.wait", labelKey: "edit.preset.waitImage", available: false },
 ];
 
-export const STEP_DND_MIME = "text/plain";
+export const STEP_DND_MIME = "application/x-lanius-step";
 export const STEP_DND_PREFIX = "lanius-step:";
 
 export function createStepId(): string {
@@ -96,6 +96,22 @@ export function decodeStepDrag(raw: string): StepDragPayload | null {
 export type StepDragPayload =
   | { source: "palette"; draft: TemplateDraft }
   | { source: "reorder"; id: string };
+
+/** HTML5 DataTransfer 的最小面，避免测试里强转整个 DataTransfer。 */
+export interface StepDragTransfer {
+  setData: (type: string, value: string) => void;
+  getData: (type: string) => string;
+}
+
+export function writeStepDrag(transfer: StepDragTransfer, payload: StepDragPayload): void {
+  const raw = encodeStepDrag(payload);
+  transfer.setData(STEP_DND_MIME, raw);
+  transfer.setData("text/plain", raw);
+}
+
+export function readStepDrag(transfer: StepDragTransfer): StepDragPayload | null {
+  return decodeStepDrag(transfer.getData(STEP_DND_MIME) || transfer.getData("text/plain"));
+}
 
 export function createDemoSteps(): TemplateStep[] {
   return [

@@ -36,7 +36,7 @@ export const en: Record<string, string> = {
   "start.using": "Current",
   "start.log": "Run log",
   "start.logEmpty": "No log yet",
-  "start.selected": "{n} / {total} steps selected. Checks are for review; a run still does every step.",
+  "start.selected": "{n} / {total} steps selected. Unchecked steps are skipped this run.",
   "start.run": "Try once",
   "start.dryRun": "Preview",
   "start.edit": "Edit template",

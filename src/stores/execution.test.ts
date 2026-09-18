@@ -16,5 +16,13 @@ describe("execution store", () => {
     useExecutionStore.getState().appendLog({ ts: 1, message: "a" });
     useExecutionStore.getState().appendLog({ ts: 2, message: "b", traceId: "t" });
     expect(useExecutionStore.getState().logLines.at(-1)?.message).toBe("b");
+
+    useExecutionStore.getState().ingestRunResult({
+      executionId: "exec-2",
+      finalState: "done",
+      nodeRuns: [{ nodeId: "s1", status: "done", durationMs: 3, label: "回车" }],
+    });
+    expect(useExecutionStore.getState().phase).toBe("done");
+    expect(useExecutionStore.getState().logLines.at(-1)?.message).toBe("回车：完成");
   });
 });

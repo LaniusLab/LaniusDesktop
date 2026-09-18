@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, GripVertical, Trash2 } from "lucide-react";
 import { useState } from "react";
 
-import { decodeStepDrag, encodeStepDrag, type TemplateStep } from "@/lib/template";
+import { readStepDrag, writeStepDrag, type TemplateStep } from "@/lib/template";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editor";
 import { useT } from "@/stores/ui";
@@ -15,8 +15,8 @@ export function TemplateSequence() {
   const removeStep = useEditorStore((s) => s.removeStep);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
 
-  const applyDrop = (index: number, raw: string) => {
-    const payload = decodeStepDrag(raw);
+  const applyDrop = (index: number, transfer: DataTransfer) => {
+    const payload = readStepDrag(transfer);
     if (!payload) return;
     if (payload.source === "palette") {
       insertStep(payload.draft, index);
@@ -37,7 +37,7 @@ export function TemplateSequence() {
         }}
         onDrop={(event) => {
           event.preventDefault();
-          applyDrop(0, event.dataTransfer.getData("text/plain"));
+          applyDrop(0, event.dataTransfer);
         }}
       >
         <EmptyState title={t("edit.emptyTitle")} description={t("edit.emptyHint")} />
@@ -59,7 +59,7 @@ export function TemplateSequence() {
             onDrop={(event) => {
               event.preventDefault();
               setDropIndex(null);
-              applyDrop(index, event.dataTransfer.getData("text/plain"));
+              applyDrop(index, event.dataTransfer);
             }}
           >
             <StepRow
@@ -86,7 +86,7 @@ export function TemplateSequence() {
         onDrop={(event) => {
           event.preventDefault();
           setDropIndex(null);
-          applyDrop(steps.length, event.dataTransfer.getData("text/plain"));
+          applyDrop(steps.length, event.dataTransfer);
         }}
       >
         <p className="px-3 py-2 text-xs text-fg-faint">{t("edit.dropEnd")}</p>
@@ -123,7 +123,7 @@ function StepRow({
       className="glass-card flex items-center gap-2 rounded-xl px-2 py-2"
       draggable
       onDragStart={(event) => {
-        event.dataTransfer.setData("text/plain", encodeStepDrag({ source: "reorder", id: step.id }));
+        writeStepDrag(event.dataTransfer, { source: "reorder", id: step.id });
         event.dataTransfer.effectAllowed = "move";
       }}
     >

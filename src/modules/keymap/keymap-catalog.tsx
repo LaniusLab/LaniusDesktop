@@ -8,7 +8,7 @@ import {
   type KeyMapping,
   type KeymapProfile,
 } from "@/lib/keymap";
-import { encodeStepDrag } from "@/lib/template";
+import { writeStepDrag } from "@/lib/template";
 import { useKeymapStore } from "@/stores/keymap";
 import { useT } from "@/stores/ui";
 import { Kbd, Select } from "@/ui";
@@ -77,21 +77,18 @@ export function KeymapCatalog({
                 className="flex w-full cursor-grab items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-fg-muted hover:bg-fg/5 hover:text-fg"
                 onDragStart={(event) => {
                   if (!profile || !onPick) return;
-                  event.dataTransfer.setData(
-                    "text/plain",
-                    encodeStepDrag({
-                      source: "palette",
-                      draft: {
-                        kind: "binding",
-                        type: "keyboard.press",
-                        label: mappingLabel(mapping),
-                        mappingId: mapping.id,
-                        profileId: profile.id,
-                        keys: mapping.keys,
-                        config: {},
-                      },
-                    }),
-                  );
+                  writeStepDrag(event.dataTransfer, {
+                    source: "palette",
+                    draft: {
+                      kind: "binding",
+                      type: "keyboard.press",
+                      label: mappingLabel(mapping),
+                      mappingId: mapping.id,
+                      profileId: profile.id,
+                      keys: mapping.keys,
+                      config: {},
+                    },
+                  });
                   event.dataTransfer.effectAllowed = "copy";
                 }}
                 onClick={() => {

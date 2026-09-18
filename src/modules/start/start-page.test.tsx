@@ -58,6 +58,7 @@ describe("开始页", () => {
     expect(step).toHaveAttribute("aria-checked", "true");
     fireEvent.click(step);
     expect(step).toHaveAttribute("aria-checked", "false");
+    expect(useEditorStore.getState().steps[0]?.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText("目标进程"), { target: { value: "client" } });
     expect(useEditorStore.getState().locate.channel).toBe("vision");
     fireEvent.click(screen.getByRole("radio", { name: "控件" }));

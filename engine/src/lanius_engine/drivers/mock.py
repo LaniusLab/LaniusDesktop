@@ -23,6 +23,8 @@ class MockDriver(Driver):
     clipboard: str = ""
     windows: dict[str, dict[str, Any]] = field(default_factory=dict)
     cursor: tuple[int, int] = (0, 0)
+    bound_handle: str | None = None
+    locate: dict[str, Any] | None = None
 
     def _record(self, method: str, *args: Any, **kwargs: Any) -> None:
         self.calls.append(MockCall(method=method, args=args, kwargs=kwargs))
@@ -63,6 +65,14 @@ class MockDriver(Driver):
         handle = "hwnd-mock"
         self.windows[handle] = {"title": title, "exe": exe, "className": class_name}
         return handle
+
+    async def activate(self, handle: str) -> None:
+        self._record("activate", handle)
+        self.bound_handle = handle
+
+    async def set_locate(self, locate: dict[str, Any]) -> None:
+        self._record("set_locate", locate)
+        self.locate = locate
 
     async def clipboard_get(self) -> str:
         self._record("clipboard_get")
