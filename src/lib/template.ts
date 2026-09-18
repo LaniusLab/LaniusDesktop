@@ -113,6 +113,27 @@ export function readStepDrag(transfer: StepDragTransfer): StepDragPayload | null
   return decodeStepDrag(transfer.getData(STEP_DND_MIME) || transfer.getData("text/plain"));
 }
 
+export function configNumber(config: Record<string, unknown>, key: string, fallback: number): number {
+  const raw = config[key];
+  return typeof raw === "number" && Number.isFinite(raw) ? raw : fallback;
+}
+
+export function configString(config: Record<string, unknown>, key: string, fallback: string): string {
+  const raw = config[key];
+  return typeof raw === "string" ? raw : fallback;
+}
+
+/** 列表/属性表用人话 key；完整引擎校验仍走 flow.validate。 */
+export function stepIssueKey(step: TemplateStep): string | null {
+  if (step.kind === "binding" && !String(step.keys ?? "").trim()) {
+    return "edit.issue.keys";
+  }
+  if (step.type === "core.wait" && configNumber(step.config, "ms", 0) < 0) {
+    return "edit.issue.wait";
+  }
+  return null;
+}
+
 export function createDemoSteps(): TemplateStep[] {
   return [
     {

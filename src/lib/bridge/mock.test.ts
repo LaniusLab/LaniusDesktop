@@ -8,10 +8,31 @@ describe("mockBridge", () => {
     await expect(bridge.engineInfo()).resolves.toMatchObject({ protocolVersion: "0.1.0" });
     await expect(bridge.flowRun({ schemaVersion: 2, id: "t", name: "t", steps: [] }, "run")).resolves.toMatchObject({
       executionId: expect.any(String),
+      finalState: "done",
+      nodeRuns: [],
     });
     await expect(
-      bridge.flowRun({ schemaVersion: 2, id: "t", name: "t", steps: [] }, "dryRun"),
-    ).resolves.toMatchObject({ executionId: expect.any(String) });
+      bridge.flowRun(
+        {
+          schemaVersion: 2,
+          id: "t",
+          name: "t",
+          steps: [
+            { id: "a", kind: "preset", type: "core.log", label: "记下", config: { message: "x" } },
+            { id: "b", kind: "preset", type: "core.wait", label: "等", disabled: true, config: { ms: 1 } },
+          ],
+        },
+        "dryRun",
+      ),
+    ).resolves.toMatchObject({
+      executionId: expect.any(String),
+      finalState: "done",
+      mode: "dryRun",
+      nodeRuns: [
+        { nodeId: "a", status: "done", label: "记下" },
+        { nodeId: "b", status: "skipped", label: "等" },
+      ],
+    });
     await expect(bridge.flowCancel("x")).resolves.toBeUndefined();
     const prefs = await bridge.prefsGet();
     await expect(bridge.prefsSet(prefs)).resolves.toMatchObject({ theme: prefs.theme });

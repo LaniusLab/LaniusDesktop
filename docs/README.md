@@ -27,7 +27,7 @@
 | [SECURITY.md](SECURITY.md) | 威胁模型与控制 | 多为目标态（M4/M5） |
 | [ROADMAP.md](ROADMAP.md) | M0–M5 范围与验收 | 实现进度锚点 |
 | [WORKFLOW.md](WORKFLOW.md) | 变更分类、开发回路、IDE 门禁 | 已落地（Workspace / 任务 / 规则） |
-| [adr/](adr/) | 架构决策记录 | 0001–0009 已接受 |
+| [adr/](adr/) | 架构决策记录 | 0001–0010 已接受 |
 
 根目录规范：
 

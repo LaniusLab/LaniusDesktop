@@ -7,9 +7,20 @@ export interface CommandContext {
   engine: { status: EngineStatus };
   execution: {
     phase: ExecutionPhase;
+    beginRun: (input: {
+      mode: "run" | "dryRun";
+      exe: string;
+      channel: string;
+      steps: Array<{ id: string; disabled?: boolean }>;
+    }) => void;
     ingestRunResult: (result: FlowRunResult) => void;
   };
-  editor: { dirty: boolean; toFlowFile: () => FlowFile };
+  editor: {
+    dirty: boolean;
+    hasTarget: boolean;
+    toFlowFile: () => FlowFile;
+    saveTemplate: () => void;
+  };
   navigate: (to: string) => void;
   ui: {
     toggleTheme: () => void;

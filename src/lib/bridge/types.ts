@@ -34,6 +34,7 @@ export interface FlowNodeRun {
 export interface FlowRunResult {
   executionId: string;
   finalState?: ExecutionPhase;
+  mode?: "run" | "dryRun";
   nodeRuns?: FlowNodeRun[];
   error?: { code?: string; message?: string } | null;
 }
@@ -43,6 +44,8 @@ export interface EngineEvent {
   status?: EngineStatus;
   executionId?: string;
   phase?: ExecutionPhase;
+  nodeId?: string;
+  nodeStatus?: "running" | "done" | "failed" | "skipped";
   traceId?: string;
   message?: string;
   uptimeMs?: number;

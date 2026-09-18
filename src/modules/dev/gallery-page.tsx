@@ -434,7 +434,7 @@ export function GalleryPage() {
                       ]}
                     />
                     <p className="text-sm text-fg-muted">
-                      {tab === "a" ? "A：外观与主题" : tab === "b" ? "B：编排画布" : "C：调试与日志"}
+                      {tab === "a" ? "A：外观与主题" : tab === "b" ? "B：编排模板" : "C：调试与日志"}
                     </p>
                   </Example>
                 </GallerySection>

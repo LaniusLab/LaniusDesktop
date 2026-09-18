@@ -1,7 +1,7 @@
 import { DEFAULT_PREFS, mergePrefs } from "@/lib/prefs";
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
-import type { Bridge, EngineEvent, EngineInfo } from "./types";
+import type { Bridge, EngineEvent, EngineInfo, FlowNodeRun } from "./types";
 
 /*
  * 浏览器开发 mock：pnpm dev 脱离 Tauri 运行时，用定时器模拟
@@ -54,42 +54,76 @@ export function createMockBridge(): Bridge {
     async flowRun(flow, mode) {
       const executionId = `mock-exec-${++traceSeq}`;
       const traceId = `mock-trace-${traceSeq.toString().padStart(4, "0")}`;
-      const enabled = (flow.steps ?? []).filter((step) => !step.disabled);
+      const steps = flow.steps ?? [];
       const exe = flow.target?.match?.exe || "window";
       const channel = flow.target?.locate?.channel === "vision" ? "画面" : "控件";
       const prefix = mode === "dryRun" ? "演练：" : "";
-      const events: Array<[number, EngineEvent]> = [
-        [0, { kind: "execution", executionId, phase: "validating", traceId }],
-        [80, { kind: "execution", executionId, phase: "running", traceId }],
-        [
-          120,
-          {
-            kind: "log",
-            executionId,
-            traceId,
-            message: `${prefix}绑定 ${exe}（${channel}）`,
-          },
-        ],
-      ];
-      enabled.forEach((step, index) => {
-        events.push([
-          180 + index * 80,
-          {
-            kind: "log",
-            executionId,
-            traceId,
-            message: `${prefix}${step.label ?? step.id}`,
-          },
-        ]);
+      const tick = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+      emit({ kind: "execution", executionId, phase: "validating", traceId });
+      await tick(12);
+      emit({ kind: "execution", executionId, phase: "running", traceId });
+      emit({
+        kind: "log",
+        executionId,
+        traceId,
+        message: `${prefix}绑定 ${exe}（${channel}）`,
       });
-      events.push(
-        [180 + enabled.length * 80 + 80, { kind: "execution", executionId, phase: "done", traceId }],
-        [180 + enabled.length * 80 + 160, { kind: "execution", executionId, phase: "idle", traceId }],
-      );
-      for (const [delay, event] of events) {
-        setTimeout(() => emit(event), delay);
+
+      const nodeRuns: FlowNodeRun[] = [];
+      for (const step of steps) {
+        if (step.disabled) {
+          nodeRuns.push({
+            nodeId: step.id,
+            status: "skipped" as const,
+            durationMs: 0,
+            label: step.label,
+          });
+          emit({
+            kind: "execution",
+            executionId,
+            phase: "running",
+            nodeId: step.id,
+            nodeStatus: "skipped",
+            traceId,
+          });
+          continue;
+        }
+        emit({
+          kind: "execution",
+          executionId,
+          phase: "running",
+          nodeId: step.id,
+          nodeStatus: "running",
+          traceId,
+        });
+        await tick(24);
+        emit({
+          kind: "log",
+          executionId,
+          traceId,
+          nodeId: step.id,
+          message: `${prefix}${step.label ?? step.id}`,
+        });
+        emit({
+          kind: "execution",
+          executionId,
+          phase: "running",
+          nodeId: step.id,
+          nodeStatus: "done",
+          traceId,
+        });
+        nodeRuns.push({
+          nodeId: step.id,
+          status: "done" as const,
+          durationMs: 24,
+          label: step.label,
+        });
       }
-      return { executionId };
+      emit({ kind: "execution", executionId, phase: "done", traceId });
+      await tick(12);
+      emit({ kind: "execution", executionId, phase: "idle", traceId });
+      return { executionId, finalState: "done", mode, nodeRuns };
     },
 
     async flowCancel() {

@@ -1,6 +1,6 @@
 # Python 引擎设计
 
-> 状态：已评审 · 最后更新：2026-09-12
+> 状态：已评审 · 最后更新：2026-09-18
 > 实现进度：目标设计如下；模块树中标注 `（规划）` 的尚未落地。当前里程碑见 [ROADMAP.md](ROADMAP.md)（**M0**）。
 
 引擎（`lanius-engine`）是全部业务语义的所在：流程校验、执行、节点实现、平台自动化。它以 sidecar 形态运行，通过 stdio JSON-RPC 与壳通信（见 [PROTOCOL.md](PROTOCOL.md)）。
@@ -37,6 +37,7 @@ engine/src/lanius_engine/
 │   └── cancel.py      # 协作式取消原语
 ├── models/            # Pydantic v2 模型（对齐 schemas/）
 ├── history.py         # （规划 · M1）SQLite 执行历史
+├── cli.py             # 调试 CLI：validate / run 按 steps（含 v1 迁移）
 └── logging.py         # structlog 配置（JSON、traceId 注入）
 ```
 

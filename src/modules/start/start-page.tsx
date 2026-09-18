@@ -40,6 +40,8 @@ export function StartPage() {
   const setStartLogWidth = useUiStore((s) => s.setStartLogWidth);
   const logLines = useExecutionStore((s) => s.logLines);
   const phase = useExecutionStore((s) => s.phase);
+  const stepStatuses = useExecutionStore((s) => s.stepStatuses);
+  const activeStepId = useExecutionStore((s) => s.activeStepId);
   const engineStatus = useExecutionStore((s) => s.engineStatus);
   const canRun =
     engineStatus === "ready" && phase !== "running" && phase !== "validating" && Boolean(processId);
@@ -203,6 +205,8 @@ export function StartPage() {
           <ol className="mt-4 min-h-0 flex-1 overflow-auto">
             {liveSteps.map((step, index) => {
               const isOn = !("disabled" in step && step.disabled);
+              const running = activeStepId === step.id;
+              const runStatus = stepStatuses[step.id];
               return (
                 <li key={step.id}>
                   <button
@@ -214,6 +218,7 @@ export function StartPage() {
                     className={cn(
                       "flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors duration-150",
                       "hover:bg-fg/5",
+                      running && "bg-accent-soft",
                     )}
                   >
                     <span
@@ -237,6 +242,9 @@ export function StartPage() {
                     <span className={cn("text-sm", isOn ? "text-fg" : "text-fg-muted line-through")}>
                       {step.label}
                     </span>
+                    {runStatus && runStatus !== "pending" ? (
+                      <span className="ml-auto text-xs text-fg-faint">{t(`edit.run.${runStatus}`)}</span>
+                    ) : null}
                   </button>
                 </li>
               );

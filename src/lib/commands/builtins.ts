@@ -1,6 +1,5 @@
 import { registry } from "./registry";
 
-// 内置命令。搜索 / 菜单 / 快捷键都只是这些实现的触发器（ADR-0007）
 // 内置命令。搜索 / 菜单 / 快捷键都只是这些实现的触发器（ADR-0007）。
 // 标题字符串会被 i18n 的 cmd.${id} 覆盖；此处中文仅作注册表兜底。
 export function registerBuiltinCommands(): void {
@@ -69,16 +68,32 @@ export function registerBuiltinCommands(): void {
   });
 
   registry.register({
+    id: "flow.save",
+    title: "保存模板",
+    scope: "editor",
+    shortcut: "Mod+S",
+    run: (ctx) => ctx.editor.saveTemplate(),
+  });
+
+  registry.register({
     id: "flow.run",
     title: "试一次",
     scope: "editor",
     shortcut: "Mod+Enter",
     when: (ctx) =>
       ctx.engine.status === "ready" &&
+      ctx.editor.hasTarget &&
       ctx.execution.phase !== "running" &&
       ctx.execution.phase !== "validating",
     run: async (ctx) => {
-      const result = await ctx.bridge.flowRun(ctx.editor.toFlowFile(), "run");
+      const flow = ctx.editor.toFlowFile();
+      ctx.execution.beginRun({
+        mode: "run",
+        exe: flow.target?.match?.exe ?? "",
+        channel: flow.target?.locate?.channel ?? "a11y",
+        steps: (flow.steps ?? []).map((step) => ({ id: step.id, disabled: step.disabled })),
+      });
+      const result = await ctx.bridge.flowRun(flow, "run");
       ctx.execution.ingestRunResult(result);
     },
   });
@@ -90,10 +105,18 @@ export function registerBuiltinCommands(): void {
     shortcut: "Mod+Shift+Enter",
     when: (ctx) =>
       ctx.engine.status === "ready" &&
+      ctx.editor.hasTarget &&
       ctx.execution.phase !== "running" &&
       ctx.execution.phase !== "validating",
     run: async (ctx) => {
-      const result = await ctx.bridge.flowRun(ctx.editor.toFlowFile(), "dryRun");
+      const flow = ctx.editor.toFlowFile();
+      ctx.execution.beginRun({
+        mode: "dryRun",
+        exe: flow.target?.match?.exe ?? "",
+        channel: flow.target?.locate?.channel ?? "a11y",
+        steps: (flow.steps ?? []).map((step) => ({ id: step.id, disabled: step.disabled })),
+      });
+      const result = await ctx.bridge.flowRun(flow, "dryRun");
       ctx.execution.ingestRunResult(result);
     },
   });

@@ -48,6 +48,24 @@ afterEach(async () => {
     startTopHeight: 280,
     startLogWidth: 320,
     editorPaletteWidth: 192,
+    editorInspectorWidth: 280,
+    editorLogHeight: 140,
+  });
+  const { useEditorStore } = await import("@/stores/editor");
+  const { defaultStoredTemplate } = await import("@/lib/template-store");
+  const { useExecutionStore } = await import("@/stores/execution");
+  const editor = defaultStoredTemplate();
+  useEditorStore.setState({ ...editor, selectedStepId: editor.steps[0]?.id });
+  useEditorStore.temporal.getState().clear();
+  useExecutionStore.setState({
+    engineStatus: "starting",
+    engineUptimeMs: 0,
+    phase: "idle",
+    logLines: [],
+    runs: [],
+    stepStatuses: {},
+    activeStepId: undefined,
+    pendingRun: undefined,
   });
   applyAppearance(DEFAULT_PREFS);
 });

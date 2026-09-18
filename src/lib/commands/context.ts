@@ -1,11 +1,10 @@
 import { bridge } from "@/lib/bridge";
-import { editorToFlowFile, useEditorStore } from "@/stores/editor";
+import { editorHasTarget, editorToFlowFile, useEditorStore } from "@/stores/editor";
 import { useExecutionStore } from "@/stores/execution";
 import { useUiStore } from "@/stores/ui";
 
 import type { CommandContext } from "./types";
 
-// 从活跃 store 装配命令上下文；navigate 由路由层注入以避免命令层反向依赖路由
 // 从活跃 store 装配命令上下文；navigate 由路由层注入，避免命令层反向依赖路由。
 let navigateFn: (to: string) => void = () => {
   throw new Error("命令上下文的 navigate 尚未注入");
@@ -21,9 +20,15 @@ export function currentContext(): CommandContext {
     engine: { status: useExecutionStore.getState().engineStatus },
     execution: {
       phase: useExecutionStore.getState().phase,
+      beginRun: (input) => useExecutionStore.getState().beginRun(input),
       ingestRunResult: (result) => useExecutionStore.getState().ingestRunResult(result),
     },
-    editor: { dirty: useEditorStore.getState().dirty, toFlowFile: editorToFlowFile },
+    editor: {
+      dirty: useEditorStore.getState().dirty,
+      hasTarget: editorHasTarget(),
+      toFlowFile: editorToFlowFile,
+      saveTemplate: () => useEditorStore.getState().saveTemplate(),
+    },
     navigate: (to) => navigateFn(to),
     ui: {
       toggleTheme: () => useUiStore.getState().toggleTheme(),

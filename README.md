@@ -88,4 +88,4 @@ pnpm version:sync
 
 ## 仓库状态
 
-当前处于 **M0**：三层骨架已就位；开始页选进程后与模板页可走通 `flow.run`；引擎按有序 `steps` 执行（含 v1 DAG 迁移）。完整存盘、识图与平台 driver 见后续里程碑（[ROADMAP](docs/ROADMAP.md)）。
+当前处于 **M0**：三层骨架已就位；开始页选进程后与模板页可走通 `flow.run`；模板可改步骤属性并保存本机草稿。完整 `*.flow.json` 存盘、识图与平台 driver 见后续里程碑（[ROADMAP](docs/ROADMAP.md)）。

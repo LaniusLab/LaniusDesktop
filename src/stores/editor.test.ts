@@ -1,26 +1,23 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createDemoSteps } from "@/lib/template";
-import { PROCESS_CATALOG } from "@/lib/targets";
+import { stepIssueKey } from "@/lib/template";
+import { TEMPLATE_STORAGE_KEY, defaultStoredTemplate } from "@/lib/template-store";
 
 import { redoEdit, undoEdit, useEditorStore } from "./editor";
 
+function resetEditor() {
+  const initial = defaultStoredTemplate();
+  useEditorStore.setState({
+    ...initial,
+    selectedStepId: initial.steps[0]?.id,
+  });
+  useEditorStore.temporal.getState().clear();
+}
+
 describe("editor store", () => {
   afterEach(() => {
-    const first = PROCESS_CATALOG[0];
-    useEditorStore.setState({
-      steps: createDemoSteps(),
-      keymapProfileId: "default",
-      processId: first?.id ?? "",
-      match: first?.match ?? { exe: "", title: "", className: "" },
-      locate: first?.recommended ?? {
-        channel: "a11y",
-        source: "probe",
-        capture: "client",
-        visionPack: "template",
-      },
-      dirty: false,
-    });
+    localStorage.removeItem(TEMPLATE_STORAGE_KEY);
+    resetEditor();
   });
 
   it("插入步骤标记 dirty，并可撤销", () => {
@@ -37,7 +34,7 @@ describe("editor store", () => {
     expect(useEditorStore.getState().steps.length).toBe(before);
     redoEdit();
     expect(useEditorStore.getState().steps.length).toBe(before + 1);
-    useEditorStore.getState().markSaved();
+    useEditorStore.getState().saveTemplate();
     expect(useEditorStore.getState().dirty).toBe(false);
   });
 
@@ -69,5 +66,34 @@ describe("editor store", () => {
     }
     useEditorStore.getState().setStepDisabled(id, true);
     expect(useEditorStore.getState().steps[0]?.disabled).toBe(true);
+  });
+
+  it("可改步骤属性并写入本机草稿", () => {
+    const id = useEditorStore.getState().steps[0]?.id;
+    if (!id) {
+      throw new Error("示例模板不应为空");
+    }
+    useEditorStore.getState().patchStep(id, { label: "多等一会", config: { ms: 800 } });
+    expect(useEditorStore.getState().steps[0]?.label).toBe("多等一会");
+    const raw = localStorage.getItem(TEMPLATE_STORAGE_KEY);
+    expect(raw).toBeTruthy();
+    if (!raw) {
+      throw new Error("草稿应写入 localStorage");
+    }
+    expect(raw).toContain("多等一会");
+  });
+});
+
+describe("stepIssueKey", () => {
+  it("按键步骤缺 keys 时提示", () => {
+    expect(
+      stepIssueKey({
+        id: "s",
+        kind: "binding",
+        type: "keyboard.press",
+        label: "空",
+        config: {},
+      }),
+    ).toBe("edit.issue.keys");
   });
 });

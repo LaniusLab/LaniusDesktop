@@ -10,7 +10,7 @@
 
 范围：
 - 仓库结构、文档集、开发规范、CI 骨架
-- 前端：Vite + React 19 + Tailwind 4 + `src/ui` 种子 + 自绘顶栏 + 开始页（模板 / 进程 / 识别方式 / 试一次）+ 模板序列编辑器 + 设置分段（外观 / 行为 / 快捷键 / 调试 / 关于）+ 自研 i18n
+- 前端：Vite + React 19 + Tailwind 4 + `src/ui` 种子 + 自绘顶栏 + 开始页（模板 / 进程 / 识别方式 / 试一次）+ 模板序列编辑器（拖拽 + 步骤属性 + 本机草稿保存 + 运行高亮）+ 设置分段（外观 / 行为 / 快捷键 / 调试 / 关于）+ 自研 i18n
 - 引擎：JSON-RPC stdio 服务、`engine.hello` / `engine.ping` / `engine.shutdown`、`flow.validate` / `flow.start` / `flow.cancel`、节点注册表骨架、mock driver 骨架、pytest 通过
 - 壳：Tauri 2 无边框窗口、sidecar spawn、偏好落盘、关闭行为、Windows 开机自启、更新检查占位、上述方法往返
 - schemas 真源 + codegen 脚本 + 版本同步脚本
@@ -18,6 +18,7 @@
 验收：
 - `pnpm dev` 起前端，`pnpm tauri dev` 起完整应用
 - 开始页可「试一次」，须先选目标进程；状态栏用人话显示就绪 / 忙碌
+- 模板页可改步骤属性，保存本机草稿；试一次后步骤高亮、开始页与模板页都能看到运行日志
 - `pytest`、`vitest`、`cargo check` 全绿
 
 ## M1 引擎核心

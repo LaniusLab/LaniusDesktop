@@ -37,6 +37,7 @@ describe("模板页", () => {
       processId: first?.id ?? "notepad",
       match: first?.match,
       locate: first?.recommended,
+      selectedStepId: createDemoSteps()[0]?.id,
       dirty: false,
     });
     useKeymapStore.setState(createDefaultKeymapState());
@@ -58,8 +59,23 @@ describe("模板页", () => {
     expect(registry.run).toHaveBeenCalledWith("flow.run", expect.anything());
     fireEvent.click(screen.getByRole("button", { name: /预演|Preview/i }));
     expect(registry.run).toHaveBeenCalledWith("flow.dryRun", expect.anything());
+    fireEvent.click(screen.getByRole("button", { name: "保存模板" }));
+    expect(registry.run).toHaveBeenCalledWith("flow.save", expect.anything());
     fireEvent.click(screen.getAllByRole("button", { name: "撤销" })[0]);
     fireEvent.click(screen.getAllByRole("button", { name: "重做" })[0]);
+  });
+
+  it("点选步骤后可改等待时间", () => {
+    render(
+      <TooltipProvider>
+        <FlowsPage />
+      </TooltipProvider>,
+    );
+    fireEvent.click(screen.getAllByText("稍等片刻")[0]);
+    const wait = screen.getByLabelText(/等待（毫秒）|Wait \(ms\)/);
+    fireEvent.change(wait, { target: { value: "1500" } });
+    expect(useEditorStore.getState().steps[0]?.config.ms).toBe(1500);
+    expect(useEditorStore.getState().dirty).toBe(true);
   });
 
   it("按键分组可切换方案并列出映射表", () => {

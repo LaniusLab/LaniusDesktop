@@ -11,6 +11,8 @@ export const DEFAULT_LAYOUT = {
   startTopHeight: 280,
   startLogWidth: 320,
   editorPaletteWidth: 192,
+  editorInspectorWidth: 280,
+  editorLogHeight: 140,
 } as const;
 
 interface UiState {
@@ -23,6 +25,8 @@ interface UiState {
   startTopHeight: number;
   startLogWidth: number;
   editorPaletteWidth: number;
+  editorInspectorWidth: number;
+  editorLogHeight: number;
   setSearchOpen: (open: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -30,6 +34,8 @@ interface UiState {
   setStartTopHeight: (height: number) => void;
   setStartLogWidth: (width: number) => void;
   setEditorPaletteWidth: (width: number) => void;
+  setEditorInspectorWidth: (width: number) => void;
+  setEditorLogHeight: (height: number) => void;
   replacePrefs: (prefs: ShellPrefs) => void;
   patchPrefs: (patch: Partial<ShellPrefs>) => void;
   toggleTheme: () => void;
@@ -59,6 +65,8 @@ export const useUiStore = create<UiState>()((set, get) => ({
   startTopHeight: DEFAULT_LAYOUT.startTopHeight,
   startLogWidth: DEFAULT_LAYOUT.startLogWidth,
   editorPaletteWidth: DEFAULT_LAYOUT.editorPaletteWidth,
+  editorInspectorWidth: DEFAULT_LAYOUT.editorInspectorWidth,
+  editorLogHeight: DEFAULT_LAYOUT.editorLogHeight,
   setSearchOpen: (open) => set({ searchOpen: open }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
@@ -66,6 +74,8 @@ export const useUiStore = create<UiState>()((set, get) => ({
   setStartTopHeight: (height) => set({ startTopHeight: height }),
   setStartLogWidth: (width) => set({ startLogWidth: width }),
   setEditorPaletteWidth: (width) => set({ editorPaletteWidth: width }),
+  setEditorInspectorWidth: (width) => set({ editorInspectorWidth: width }),
+  setEditorLogHeight: (height) => set({ editorLogHeight: height }),
   replacePrefs: (next) => {
     const prefs = mergePrefs(next);
     const resolvedTheme = persistAndApply(prefs);
