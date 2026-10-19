@@ -60,12 +60,17 @@ describe("设置弹窗", () => {
     expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
   });
 
-  it("桌面页可以检查更新并看到通道未配置", async () => {
+  it("桌面页可以检查更新并列出 GitHub 版本", async () => {
     renderSettings();
     fireEvent.click(screen.getByRole("tab", { name: "桌面" }));
     fireEvent.click(screen.getByRole("button", { name: "检查更新" }));
     await waitFor(() => {
-      expect(screen.getByText("更新通道尚未配置")).toBeInTheDocument();
+      expect(screen.getByText(/已是最新版本/)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "刷新版本列表" }));
+    await waitFor(() => {
+      expect(screen.getByText("v0.2.0")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "下载" })).toBeInTheDocument();
     });
   });
 

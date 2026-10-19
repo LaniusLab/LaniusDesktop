@@ -38,8 +38,16 @@ function tsType(rootSchema, schema, nameHint) {
     const { name } = resolveRef(rootSchema, schema.$ref);
     return pascalCase(name);
   }
+  if (schema.oneOf) {
+    return schema.oneOf.map((branch) => tsType(rootSchema, branch, nameHint)).join(" | ");
+  }
   if (schema.enum) {
     return schema.enum.map((v) => JSON.stringify(v)).join(" | ");
+  }
+  if (Array.isArray(schema.type)) {
+    return schema.type
+      .map((t) => (t === "null" ? "null" : tsType(rootSchema, { ...schema, type: t }, nameHint)))
+      .join(" | ");
   }
   switch (schema.type) {
     case "string":
@@ -49,6 +57,8 @@ function tsType(rootSchema, schema, nameHint) {
       return "number";
     case "boolean":
       return "boolean";
+    case "null":
+      return "null";
     case "array":
       return `Array<${tsType(rootSchema, schema.items ?? true, nameHint)}>`;
     case "object": {
@@ -71,13 +81,25 @@ function emitInterface(rootSchema, name, schema) {
     if (propSchema.description) lines.push(`  /** ${propSchema.description} */`);
     const optional = required.has(prop) ? "" : "?";
     const inline =
-      propSchema.type === "object" && propSchema.properties
+      propSchema.type === "object" && propSchema.properties && !propSchema.oneOf
         ? emitInlineObject(rootSchema, propSchema)
         : tsType(rootSchema, propSchema, prop);
     lines.push(`  ${JSON.stringify(prop)}${optional}: ${inline};`);
   }
   lines.push("}");
   return lines.join("\n");
+}
+
+/** 为 schema 中非 root 的 $defs 对象生成具名类型；enum/$ref 已由 tsType 内联 */
+function emitDefAliases(rootSchema) {
+  const parts = [];
+  for (const [defName, defSchema] of Object.entries(rootSchema.$defs ?? {})) {
+    if (defSchema.type === "object" && defSchema.properties) continue;
+    if (defSchema.enum || defSchema.oneOf || Array.isArray(defSchema.type) || defSchema.type) {
+      parts.push(`export type ${pascalCase(defName)} = ${tsType(rootSchema, defSchema, defName)};`, "");
+    }
+  }
+  return parts;
 }
 
 function emitInlineObject(rootSchema, schema) {
@@ -93,6 +115,7 @@ function generate(schemaPath, outName, rootTypeName) {
   const schema = JSON.parse(readFileSync(join(root, schemaPath), "utf8"));
   const parts = [HEADER];
 
+  parts.push(...emitDefAliases(schema));
   for (const [defName, defSchema] of Object.entries(schema.$defs ?? {})) {
     if (defSchema.type === "object" && defSchema.properties) {
       parts.push(emitInterface(schema, pascalCase(defName), defSchema), "");
@@ -107,6 +130,7 @@ const outputs = [
   generate("schemas/flow.schema.json", "flow.ts", "FlowFile"),
   generate("schemas/shell-prefs.schema.json", "shell-prefs.ts", "ShellPrefs"),
   generate("schemas/shell-debug.schema.json", "shell-debug.ts", "ShellDebugInfo"),
+  generate("schemas/shell-updater.schema.json", "shell-updater.ts", "UpdaterListResult"),
 ];
 
 mkdirSync(join(root, "src/lib/gen"), { recursive: true });

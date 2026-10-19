@@ -38,7 +38,20 @@ describe("mockBridge", () => {
     await expect(bridge.prefsSet(prefs)).resolves.toMatchObject({ theme: prefs.theme });
     await expect(bridge.debugInfo()).resolves.toMatchObject({ appVersion: expect.any(String) });
     await expect(bridge.logsTail()).resolves.toEqual(expect.any(String));
-    await expect(bridge.updaterCheck()).resolves.toMatchObject({ status: "unavailable" });
+    await expect(bridge.updaterList()).resolves.toMatchObject({
+      draftsOmitted: true,
+      releases: expect.arrayContaining([expect.objectContaining({ tag: "v0.2.0" })]),
+    });
+    await expect(bridge.updaterCheck()).resolves.toMatchObject({ status: "upToDate" });
+    await expect(bridge.updaterDownload("v0.2.0")).resolves.toMatchObject({
+      tag: "v0.2.0",
+      kind: "setupExe",
+    });
+    await expect(bridge.updaterInstall("/tmp/x.exe")).resolves.toMatchObject({
+      mode: "interactiveInstaller",
+    });
+    const offProgress = bridge.onUpdaterProgress(() => {});
+    offProgress();
     await expect(bridge.windowMinimize()).resolves.toBeUndefined();
     await expect(bridge.windowToggleMaximize()).resolves.toBeUndefined();
     await expect(bridge.windowIsMaximized()).resolves.toBe(false);

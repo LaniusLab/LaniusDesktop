@@ -153,12 +153,65 @@ export function createMockBridge(): Bridge {
       return "";
     },
 
+    async updaterList() {
+      return {
+        currentVersion: "0.2.0",
+        draftsOmitted: true,
+        releasesPageUrl: "https://github.com/LaniusLab/LaniusDesktop/releases",
+        releases: [
+          {
+            tag: "v0.2.0",
+            name: "v0.2.0 (mock)",
+            body: "Mock release for browser preview.",
+            prerelease: false,
+            publishedAt: "2026-10-01T00:00:00Z",
+            htmlUrl: "https://github.com/LaniusLab/LaniusDesktop/releases/tag/v0.2.0",
+            windowsAssets: [
+              {
+                name: "Lanius.Desktop_0.2.0_x64-setup.exe",
+                url: "https://example.invalid/setup.exe",
+                size: 1024,
+                kind: "setupExe" as const,
+              },
+            ],
+            preferredAsset: {
+              name: "Lanius.Desktop_0.2.0_x64-setup.exe",
+              url: "https://example.invalid/setup.exe",
+              size: 1024,
+              kind: "setupExe" as const,
+            },
+          },
+        ],
+      };
+    },
+
     async updaterCheck() {
       return {
-        status: "unavailable",
-        currentVersion: "0.1.0",
-        message: "updater.notConfigured",
+        status: "upToDate" as const,
+        currentVersion: "0.2.0",
+        latestTag: null,
+        latestVersion: null,
+        message: "updater.upToDate",
+        preferredAsset: null,
       };
+    },
+
+    async updaterDownload(tag) {
+      return {
+        tag,
+        fileName: "Lanius.Desktop_0.2.0_x64-setup.exe",
+        path: "(browser)/updates/Lanius.Desktop_0.2.0_x64-setup.exe",
+        bytes: 1024,
+        kind: "setupExe" as const,
+      };
+    },
+
+    async updaterInstall(path) {
+      return { path, launched: false, mode: "interactiveInstaller" as const };
+    },
+
+    onUpdaterProgress() {
+      return () => {};
     },
 
     async windowMinimize() {},

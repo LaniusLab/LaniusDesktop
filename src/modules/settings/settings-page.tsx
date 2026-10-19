@@ -9,9 +9,16 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
-import { bridge, isTauri, type UpdaterResult } from "@/lib/bridge";
+import {
+  bridge,
+  isTauri,
+  type UpdaterCheckResult,
+  type UpdaterDownloadResult,
+  type UpdaterListResult,
+  type UpdaterProgress,
+} from "@/lib/bridge";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
 
 import { cn } from "@/lib/utils";
@@ -214,11 +221,56 @@ function DesktopSection() {
   const prefs = useUiStore((s) => s.prefs);
   const patchPrefs = useUiStore((s) => s.patchPrefs);
   const debug = useQuery({ queryKey: ["shellDebug"], queryFn: () => bridge.debugInfo() });
-  const [update, setUpdate] = useState<UpdaterResult | null>(null);
+  const [update, setUpdate] = useState<UpdaterCheckResult | null>(null);
+  const [list, setList] = useState<UpdaterListResult | null>(null);
+  const [downloaded, setDownloaded] = useState<UpdaterDownloadResult | null>(null);
+  const [progress, setProgress] = useState<UpdaterProgress | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [busyTag, setBusyTag] = useState<string | null>(null);
+
   const checkUpdate = useMutation({
     mutationFn: () => bridge.updaterCheck(),
-    onSuccess: setUpdate,
+    onSuccess: (result) => {
+      setUpdate(result);
+      setActionError(null);
+    },
+    onError: (err) => setActionError(err instanceof Error ? err.message : String(err)),
   });
+
+  const listReleases = useMutation({
+    mutationFn: () => bridge.updaterList(),
+    onSuccess: (result) => {
+      setList(result);
+      setActionError(null);
+    },
+    onError: (err) => setActionError(err instanceof Error ? err.message : String(err)),
+  });
+
+  const downloadRelease = useMutation({
+    mutationFn: (tag: string) => bridge.updaterDownload(tag),
+    onMutate: (tag) => {
+      setBusyTag(tag);
+      setActionError(null);
+      setProgress(null);
+    },
+    onSuccess: (result) => {
+      setDownloaded(result);
+      setBusyTag(null);
+    },
+    onError: (err) => {
+      setBusyTag(null);
+      setActionError(err instanceof Error ? err.message : String(err));
+    },
+  });
+
+  const installPackage = useMutation({
+    mutationFn: (path: string) => bridge.updaterInstall(path),
+    onError: (err) => setActionError(err instanceof Error ? err.message : String(err)),
+  });
+
+  useEffect(() => {
+    return bridge.onUpdaterProgress((event) => setProgress(event));
+  }, []);
 
   const autostartSupported = debug.data?.autostartSupported ?? false;
 
@@ -264,19 +316,94 @@ function DesktopSection() {
         <Button
           variant="outline"
           size="sm"
-          disabled={checkUpdate.isPending}
+          disabled={checkUpdate.isPending || listReleases.isPending}
           onClick={() => checkUpdate.mutate()}
         >
           {t("settings.updateCheck")}
         </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={listReleases.isPending || checkUpdate.isPending}
+          onClick={() => listReleases.mutate()}
+        >
+          {t("settings.updateList")}
+        </Button>
         <p className="text-xs text-fg-muted">
-          {checkUpdate.isPending
-            ? t("settings.updateChecking")
+          {checkUpdate.isPending || listReleases.isPending
+            ? listReleases.isPending
+              ? t("settings.updateListing")
+              : t("settings.updateChecking")
             : update
               ? updateStatusText(t, update)
               : t("settings.updateIdle")}
         </p>
       </div>
+      <p className="px-1 text-xs text-fg-faint">{t("settings.updateDraftsNote")}</p>
+      {progress?.phase === "downloading" && progress.percent != null ? (
+        <p className="px-1 text-xs text-fg-muted">
+          {t("settings.updateProgress", { percent: Math.round(progress.percent) })}
+        </p>
+      ) : null}
+      {downloaded ? (
+        <div className="flex flex-wrap items-center gap-3 px-1">
+          <p className="text-xs text-fg-muted">
+            {t("settings.updateDownloaded", { file: downloaded.fileName })}
+          </p>
+          <Button
+            size="sm"
+            disabled={installPackage.isPending || !isTauri}
+            onClick={() => installPackage.mutate(downloaded.path)}
+          >
+            {t("settings.updateInstall")}
+          </Button>
+          <p className="text-xs text-fg-faint">{t("settings.updateInstallHint")}</p>
+        </div>
+      ) : null}
+      {actionError ? (
+        <p className="px-1 text-xs text-danger">{t("settings.updateError", { message: actionError })}</p>
+      ) : null}
+      {list ? (
+        <ul className="flex flex-col gap-2 rounded-xl border border-line px-3 py-2">
+          {list.releases.length === 0 ? (
+            <li className="text-xs text-fg-muted">{t("settings.updateEmpty")}</li>
+          ) : (
+            list.releases.map((release) => {
+              const asset = release.preferredAsset;
+              const canDownload = Boolean(asset);
+              const isBusy = busyTag === release.tag;
+              return (
+                <li
+                  key={release.tag}
+                  className="flex flex-wrap items-center justify-between gap-2 border-b border-line py-2 last:border-b-0"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-fg">
+                      {release.tag}
+                      {release.prerelease ? (
+                        <Badge className="ml-2" tone="warning">
+                          pre
+                        </Badge>
+                      ) : null}
+                    </p>
+                    <p className="truncate text-xs text-fg-muted">
+                      {asset ? asset.name : t("settings.updateNoWindowsAsset")}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!canDownload || downloadRelease.isPending}
+                    onClick={() => downloadRelease.mutate(release.tag)}
+                  >
+                    {isBusy ? t("settings.updateDownloading") : t("settings.updateDownload")}
+                  </Button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      ) : null}
     </div>
   );
 }
@@ -494,10 +621,13 @@ function InfoList({ rows }: { rows: ReadonlyArray<readonly [string, string]> }) 
 
 function updateStatusText(
   t: (key: string, vars?: Record<string, string | number>) => string,
-  result: UpdaterResult,
+  result: UpdaterCheckResult,
 ): string {
   if (result.status === "upToDate") {
     return t("settings.updateUpToDate", { version: result.currentVersion });
+  }
+  if (result.status === "available") {
+    return t("settings.updateAvailable", { tag: result.latestTag ?? "" });
   }
   if (result.status === "checking") return t("settings.updateChecking");
   return t("settings.updateUnavailable");

@@ -2,7 +2,7 @@
 //! Shell preferences persistence and Windows-specific side effects.
 //! - On-disk JSON lives under the app config dir; browser preview uses localStorage instead.
 //! - `apply_autostart` writes/removes `%APPDATA%\\...\\Startup\\Lanius Desktop.bat` (Windows only).
-//! - `updater_check` is intentionally a stub until an update channel is configured.
+//! - Updater uses GitHub Releases (see `updater.rs` / ADR-0011); signing is M5.
 //! - Keep field enums in sync with frontend `ShellPrefs` / schema codegen.
 
 

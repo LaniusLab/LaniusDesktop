@@ -140,6 +140,11 @@
 | `prefs_set` | `{ prefs }` | `ShellPrefs` | 写盘 + 同步开机自启 | 已实现 |
 | `shell_debug_info` | — | `ShellDebugInfo` | 系统 / 路径 | 已实现 |
 | `logs_tail` | — | `string` | 壳日志末 200 行 | 已实现 |
-| `updater_check` | — | `{ status, currentVersion, message }` | M0 返回 `unavailable`；签名通道属 M5 | 已实现（占位） |
+| `updater_list` | — | `UpdaterListResult`（见 `schemas/shell-updater.schema.json`） | 公开 GitHub Releases（published；draft 不可见） | 已实现 |
+| `updater_check` | — | `UpdaterCheckResult` | 相对当前版本是否有带 Windows 包的更新 | 已实现 |
+| `updater_download` | `{ tag }` | `UpdaterDownloadResult` | 下载该 tag 的 preferred setup.exe/msi | 已实现 |
+| `updater_install` | `{ path }` | `UpdaterInstallResult` | Windows 上交互式启动安装器；签名静默属 M5 | 已实现 |
 
-事件通道命名（目标）：`execution://event`、`engine://status`、`shell://notification`。UI 只通过 `src/lib/bridge/` 的封装访问，不散落裸 `invoke` 调用。
+事件通道命名（目标）：`execution://event`、`engine://status`、`shell://notification`、`updater://progress`。UI 只通过 `src/lib/bridge/` 的封装访问，不散落裸 `invoke` 调用。
+
+应用内更新说明：版本真源是 **GitHub Release tag**（非 `CHANGELOG.md`）。默认只列 published；draft（如未发布的 `v0.2.0`）需在 GitHub 上 Publish 后才会出现。安装模式为交互式启动 NSIS/MSI，**不是** M5 签名静默通道（ADR-0011）。

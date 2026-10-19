@@ -10,6 +10,7 @@ use tauri::{AppHandle, State};
 use crate::error::{ShellError, TracedError};
 use crate::prefs::{self, ShellPrefs};
 use crate::sidecar::EngineClient;
+use crate::updater;
 
 pub struct ShellState {
     pub engine: tokio::sync::Mutex<Option<Arc<EngineClient>>>,
@@ -168,12 +169,39 @@ pub async fn logs_tail(app: AppHandle) -> Result<String, TracedError> {
 }
 
 #[tauri::command]
-/// Updater stub: returns unavailable until a release channel is wired.
+/// 列出 GitHub published releases（tag 真源）；draft 对公开 API 不可见。
+pub async fn updater_list(app: AppHandle) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    prefs::append_log(&app, "updater.list");
+    updater::list_releases(&app)
+        .await
+        .map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+/// 相对当前版本检查是否有带 Windows 包的更新。
 pub async fn updater_check(app: AppHandle) -> Result<Value, TracedError> {
-    prefs::append_log(&app, "updater.check skipped: channel not configured");
-    Ok(json!({
-        "status": "unavailable",
-        "currentVersion": env!("CARGO_PKG_VERSION"),
-        "message": "updater.notConfigured",
-    }))
+    let trace_id = new_trace_id();
+    prefs::append_log(&app, "updater.check");
+    updater::check_update(&app)
+        .await
+        .map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+/// 下载指定 tag 的 preferred Windows 安装包到缓存目录。
+pub async fn updater_download(app: AppHandle, tag: String) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    prefs::append_log(&app, &format!("updater.download {tag}"));
+    updater::download_release(&app, &tag)
+        .await
+        .map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+/// 交互式启动已下载安装器（非静默；签名属 M5）。
+pub async fn updater_install(app: AppHandle, path: String) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    prefs::append_log(&app, &format!("updater.install {path}"));
+    updater::install_package(&path).map_err(|e| e.with_trace(trace_id))
 }

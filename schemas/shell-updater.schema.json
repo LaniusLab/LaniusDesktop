@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/shell-updater.schema.json",
+  "title": "UpdaterListResult",
+  "description": "壳层应用内更新：以 GitHub Releases / tag 为版本真源（非 CHANGELOG.md）。默认只列 published；draft 需人工发布后才会出现在公开 API。签名静默安装属 M5。",
+  "type": "object",
+  "required": ["currentVersion", "releases", "releasesPageUrl", "draftsOmitted"],
+  "properties": {
+    "currentVersion": { "type": "string", "description": "当前应用版本（无 v 前缀）" },
+    "releases": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/updaterRelease" },
+      "description": "按发布时间倒序的 published release"
+    },
+    "releasesPageUrl": { "type": "string", "description": "仓库 Releases 页 URL" },
+    "draftsOmitted": {
+      "type": "boolean",
+      "description": "true 表示未请求 draft（公开 API 默认不可见）"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "updaterAssetKind": {
+      "type": "string",
+      "enum": ["setupExe", "msi", "other"],
+      "description": "Windows 安装包形态"
+    },
+    "updaterReleaseAsset": {
+      "type": "object",
+      "required": ["name", "url", "size", "kind"],
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string", "description": "browser_download_url" },
+        "size": { "type": "integer", "minimum": 0 },
+        "kind": { "$ref": "#/$defs/updaterAssetKind" }
+      },
+      "additionalProperties": false
+    },
+    "updaterRelease": {
+      "type": "object",
+      "required": ["tag", "name", "prerelease", "htmlUrl", "windowsAssets"],
+      "properties": {
+        "tag": { "type": "string", "description": "GitHub release tag，如 v0.2.0" },
+        "name": { "type": "string", "description": "Release 标题" },
+        "body": { "type": ["string", "null"], "description": "Release 正文（changelog）" },
+        "prerelease": { "type": "boolean" },
+        "publishedAt": { "type": ["string", "null"] },
+        "htmlUrl": { "type": "string" },
+        "windowsAssets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/updaterReleaseAsset" }
+        },
+        "preferredAsset": {
+          "description": "优先 setup.exe，其次 msi；无 Windows 包时省略或为 null",
+          "oneOf": [
+            { "$ref": "#/$defs/updaterReleaseAsset" },
+            { "type": "null" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "updaterStatus": {
+      "type": "string",
+      "enum": ["idle", "checking", "upToDate", "available", "unavailable"],
+      "description": "检查结果状态"
+    },
+    "updaterCheckResult": {
+      "type": "object",
+      "required": ["status", "currentVersion", "message"],
+      "properties": {
+        "status": { "$ref": "#/$defs/updaterStatus" },
+        "currentVersion": { "type": "string" },
+        "latestTag": { "type": ["string", "null"] },
+        "latestVersion": { "type": ["string", "null"] },
+        "message": { "type": "string", "description": "机器可读提示键或短说明" },
+        "preferredAsset": {
+          "oneOf": [
+            { "$ref": "#/$defs/updaterReleaseAsset" },
+            { "type": "null" }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "updaterDownloadResult": {
+      "type": "object",
+      "required": ["tag", "fileName", "path", "bytes", "kind"],
+      "properties": {
+        "tag": { "type": "string" },
+        "fileName": { "type": "string" },
+        "path": { "type": "string", "description": "本机已下载路径" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "kind": { "$ref": "#/$defs/updaterAssetKind" }
+      },
+      "additionalProperties": false
+    },
+    "updaterInstallResult": {
+      "type": "object",
+      "required": ["path", "launched", "mode"],
+      "properties": {
+        "path": { "type": "string" },
+        "launched": { "type": "boolean" },
+        "mode": {
+          "type": "string",
+          "enum": ["interactiveInstaller"],
+          "description": "当前仅交互式启动安装器；签名静默属 M5"
+        }
+      },
+      "additionalProperties": false
+    },
+    "updaterProgress": {
+      "type": "object",
+      "required": ["phase", "downloaded"],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "enum": ["fetching", "downloading", "done"],
+          "description": "进度阶段"
+        },
+        "tag": { "type": ["string", "null"] },
+        "downloaded": { "type": "integer", "minimum": 0 },
+        "total": { "type": ["integer", "null"], "minimum": 0 },
+        "percent": { "type": ["number", "null"] }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -4,6 +4,7 @@ mod commands;
 mod error;
 mod prefs;
 mod sidecar;
+mod updater;
 
 use tauri::Manager;
 
@@ -82,7 +83,10 @@ fn main() {
             commands::prefs_set,
             commands::shell_debug_info,
             commands::logs_tail,
+            commands::updater_list,
             commands::updater_check,
+            commands::updater_download,
+            commands::updater_install,
         ])
         .build(tauri::generate_context!())
         .expect("启动 Tauri 应用失败")

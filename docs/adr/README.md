@@ -14,6 +14,7 @@
 | [0008](0008-error-model.md) | 统一错误模型 + traceId 三层贯穿 | 已接受 |
 | [0009](0009-radix-primitive-wrappers.md) | 非定制化 primitive 以 Radix 为底层 | 已接受 |
 | [0010](0010-template-sequence-over-dag.md) | 作业资产为有序模板，在选定窗口上执行 | 已接受 |
+| [0011](0011-reqwest-for-github-updater.md) | 壳层 curl 拉 GitHub Releases 做应用内更新（过渡；签名属 M5） | 已接受 |
 
 新 ADR 模板：复制任意一条，改编号与标题，状态从 `提议` 开始。
 
