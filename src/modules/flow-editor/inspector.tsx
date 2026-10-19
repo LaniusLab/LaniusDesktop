@@ -1,7 +1,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-import { bindingKeysSchema, typeTextSchema, waitMsSchema } from "@/lib/step-field-schema";
+import {
+  bindingKeysSchema,
+  ifFieldsSchema,
+  logMessageSchema,
+  loopFieldsSchema,
+  mouseFieldsSchema,
+  ocrFakeTextSchema,
+  stepLabelSchema,
+  typeTextSchema,
+  waitImageSchema,
+  waitMsSchema,
+} from "@/lib/step-field-schema";
 import {
   configNumber,
   configString,
@@ -14,7 +25,7 @@ import { useValidationStore } from "@/stores/validation";
 import { useT } from "@/stores/ui";
 import { EmptyState, FormField, Input, NumberField, Select, Switch, Textarea } from "@/ui";
 
-/** 点选步骤后改必填项；必填字段走 Zod+RHF，引擎 issue 同步展示。 */
+/** 步骤属性：字段统一 Zod+RHF；引擎 issue 同步展示。 */
 export function TemplateInspector() {
   const t = useT();
   const steps = useEditorStore((s) => s.steps);
@@ -36,8 +47,7 @@ export function TemplateInspector() {
   }
 
   const localIssue = stepIssueKey(step);
-  const headline =
-    engineIssues[0]?.message ?? (localIssue ? t(localIssue) : null);
+  const headline = engineIssues[0]?.message ?? (localIssue ? t(localIssue) : null);
   const patchConfig = (key: string, value: unknown) => {
     patchStep(step.id, { config: { ...step.config, [key]: value } });
   };
@@ -47,13 +57,7 @@ export function TemplateInspector() {
       <p className="px-1 font-display text-sm text-fg">{t("edit.inspector")}</p>
       {headline ? <p className="px-1 text-xs text-danger">{headline}</p> : null}
 
-      <FormField label={t("edit.field.label")} htmlFor="step-label">
-        <Input
-          id="step-label"
-          value={step.label}
-          onChange={(event) => patchStep(step.id, { label: event.target.value })}
-        />
-      </FormField>
+      <LabelField step={step} />
 
       <FormField label={t("edit.field.skip")} htmlFor="step-skip" hint={t("edit.field.skipHint")}>
         <Switch
@@ -73,6 +77,34 @@ export function TemplateInspector() {
       {step.type === "flow.if" ? <IfFields step={step} patchConfig={patchConfig} /> : null}
       {step.type === "flow.loop" ? <LoopFields step={step} patchConfig={patchConfig} /> : null}
     </aside>
+  );
+}
+
+function LabelField({ step }: { step: TemplateStep }) {
+  const t = useT();
+  const patchStep = useEditorStore((s) => s.patchStep);
+  const form = useForm({
+    resolver: zodResolver(stepLabelSchema),
+    values: { label: step.label },
+    mode: "onChange",
+  });
+  const errorKey = form.formState.errors.label?.message;
+  return (
+    <FormField
+      label={t("edit.field.label")}
+      htmlFor="step-label"
+      error={errorKey ? t(errorKey) : undefined}
+    >
+      <Input
+        id="step-label"
+        value={form.watch("label")}
+        onChange={(event) => {
+          const label = event.target.value;
+          void form.setValue("label", label, { shouldValidate: true });
+          patchStep(step.id, { label });
+        }}
+      />
+    </FormField>
   );
 }
 
@@ -113,21 +145,43 @@ function MouseFields({
   patchConfig: (key: string, value: unknown) => void;
 }) {
   const t = useT();
+  const form = useForm({
+    resolver: zodResolver(mouseFieldsSchema),
+    values: {
+      x: configNumber(step.config, "x", 0),
+      y: configNumber(step.config, "y", 0),
+      button: (configString(step.config, "button", "left") || "left") as
+        | "left"
+        | "right"
+        | "middle",
+    },
+    mode: "onChange",
+  });
+  const xErr = form.formState.errors.x?.message;
+  const yErr = form.formState.errors.y?.message;
   return (
     <>
       <div className="grid grid-cols-2 gap-2">
-        <FormField label={t("edit.field.x")} htmlFor="step-x">
+        <FormField label={t("edit.field.x")} htmlFor="step-x" error={xErr ? t(xErr) : undefined}>
           <NumberField
             id="step-x"
-            value={configNumber(step.config, "x", 0)}
-            onValueChange={(value) => patchConfig("x", value ?? 0)}
+            value={form.watch("x")}
+            onValueChange={(value) => {
+              const x = value ?? 0;
+              void form.setValue("x", x, { shouldValidate: true });
+              patchConfig("x", x);
+            }}
           />
         </FormField>
-        <FormField label={t("edit.field.y")} htmlFor="step-y">
+        <FormField label={t("edit.field.y")} htmlFor="step-y" error={yErr ? t(yErr) : undefined}>
           <NumberField
             id="step-y"
-            value={configNumber(step.config, "y", 0)}
-            onValueChange={(value) => patchConfig("y", value ?? 0)}
+            value={form.watch("y")}
+            onValueChange={(value) => {
+              const y = value ?? 0;
+              void form.setValue("y", y, { shouldValidate: true });
+              patchConfig("y", y);
+            }}
           />
         </FormField>
       </div>
@@ -135,8 +189,12 @@ function MouseFields({
         <FormField label={t("edit.field.button")} htmlFor="step-button">
           <Select
             id="step-button"
-            value={configString(step.config, "button", "left")}
-            onChange={(event) => patchConfig("button", event.target.value)}
+            value={form.watch("button")}
+            onChange={(event) => {
+              const button = event.target.value as "left" | "right" | "middle";
+              void form.setValue("button", button, { shouldValidate: true });
+              patchConfig("button", button);
+            }}
           >
             <option value="left">{t("edit.button.left")}</option>
             <option value="right">{t("edit.button.right")}</option>
@@ -191,13 +249,27 @@ function LogFields({
   patchConfig: (key: string, value: unknown) => void;
 }) {
   const t = useT();
+  const form = useForm({
+    resolver: zodResolver(logMessageSchema),
+    values: { message: configString(step.config, "message", "") },
+    mode: "onChange",
+  });
+  const errorKey = form.formState.errors.message?.message;
   return (
-    <FormField label={t("edit.field.message")} htmlFor="step-message">
+    <FormField
+      label={t("edit.field.message")}
+      htmlFor="step-message"
+      error={errorKey ? t(errorKey) : undefined}
+    >
       <Textarea
         id="step-message"
         rows={3}
-        value={configString(step.config, "message", "")}
-        onChange={(event) => patchConfig("message", event.target.value)}
+        value={form.watch("message")}
+        onChange={(event) => {
+          const message = event.target.value;
+          void form.setValue("message", message, { shouldValidate: true });
+          patchConfig("message", message);
+        }}
       />
     </FormField>
   );
@@ -246,12 +318,27 @@ function OcrFields({
   patchConfig: (key: string, value: unknown) => void;
 }) {
   const t = useT();
+  const form = useForm({
+    resolver: zodResolver(ocrFakeTextSchema),
+    values: { fakeText: configString(step.config, "fakeText", "确认") },
+    mode: "onChange",
+  });
+  const errorKey = form.formState.errors.fakeText?.message;
   return (
-    <FormField label={t("edit.field.fakeText")} htmlFor="step-ocr" hint={t("edit.field.fakeTextHint")}>
+    <FormField
+      label={t("edit.field.fakeText")}
+      htmlFor="step-ocr"
+      hint={t("edit.field.fakeTextHint")}
+      error={errorKey ? t(errorKey) : undefined}
+    >
       <Input
         id="step-ocr"
-        value={configString(step.config, "fakeText", "确认")}
-        onChange={(event) => patchConfig("fakeText", event.target.value)}
+        value={form.watch("fakeText")}
+        onChange={(event) => {
+          const fakeText = event.target.value;
+          void form.setValue("fakeText", fakeText, { shouldValidate: true });
+          patchConfig("fakeText", fakeText);
+        }}
       />
     </FormField>
   );
@@ -265,21 +352,47 @@ function WaitImageFields({
   patchConfig: (key: string, value: unknown) => void;
 }) {
   const t = useT();
+  const form = useForm({
+    resolver: zodResolver(waitImageSchema),
+    values: {
+      text: configString(step.config, "text", ""),
+      timeoutMs: configNumber(step.config, "timeoutMs", 8000),
+    },
+    mode: "onChange",
+  });
+  const textErr = form.formState.errors.text?.message;
+  const timeoutErr = form.formState.errors.timeoutMs?.message;
   return (
     <>
-      <FormField label={t("edit.field.waitImageText")} htmlFor="step-wait-image">
+      <FormField
+        label={t("edit.field.waitImageText")}
+        htmlFor="step-wait-image"
+        error={textErr ? t(textErr) : undefined}
+      >
         <Input
           id="step-wait-image"
-          value={configString(step.config, "text", "")}
-          onChange={(event) => patchConfig("text", event.target.value)}
+          value={form.watch("text")}
+          onChange={(event) => {
+            const text = event.target.value;
+            void form.setValue("text", text, { shouldValidate: true });
+            patchConfig("text", text);
+          }}
         />
       </FormField>
-      <FormField label={t("edit.field.timeoutMs")} htmlFor="step-timeout">
+      <FormField
+        label={t("edit.field.timeoutMs")}
+        htmlFor="step-timeout"
+        error={timeoutErr ? t(timeoutErr) : undefined}
+      >
         <NumberField
           id="step-timeout"
           min={1}
-          value={configNumber(step.config, "timeoutMs", 8000)}
-          onValueChange={(value) => patchConfig("timeoutMs", value ?? 8000)}
+          value={form.watch("timeoutMs")}
+          onValueChange={(value) => {
+            const timeoutMs = value ?? 8000;
+            void form.setValue("timeoutMs", timeoutMs, { shouldValidate: true });
+            patchConfig("timeoutMs", timeoutMs);
+          }}
         />
       </FormField>
     </>
@@ -294,13 +407,30 @@ function IfFields({
   patchConfig: (key: string, value: unknown) => void;
 }) {
   const t = useT();
+  const form = useForm({
+    resolver: zodResolver(ifFieldsSchema),
+    values: {
+      when: (configString(step.config, "when", "ocr.contains") || "ocr.contains") as
+        | "ocr.contains"
+        | "equals"
+        | "truthy",
+      text: configString(step.config, "text", ""),
+      source: configString(step.config, "source", "{{ocr.text}}"),
+    },
+    mode: "onChange",
+  });
+  const sourceErr = form.formState.errors.source?.message;
   return (
     <>
       <FormField label={t("edit.field.when")} htmlFor="step-when">
         <Select
           id="step-when"
-          value={configString(step.config, "when", "ocr.contains")}
-          onChange={(event) => patchConfig("when", event.target.value)}
+          value={form.watch("when")}
+          onChange={(event) => {
+            const when = event.target.value as "ocr.contains" | "equals" | "truthy";
+            void form.setValue("when", when, { shouldValidate: true });
+            patchConfig("when", when);
+          }}
         >
           <option value="ocr.contains">{t("edit.when.contains")}</option>
           <option value="equals">{t("edit.when.equals")}</option>
@@ -310,15 +440,28 @@ function IfFields({
       <FormField label={t("edit.field.matchText")} htmlFor="step-match-text">
         <Input
           id="step-match-text"
-          value={configString(step.config, "text", "")}
-          onChange={(event) => patchConfig("text", event.target.value)}
+          value={form.watch("text")}
+          onChange={(event) => {
+            const text = event.target.value;
+            void form.setValue("text", text, { shouldValidate: true });
+            patchConfig("text", text);
+          }}
         />
       </FormField>
-      <FormField label={t("edit.field.source")} htmlFor="step-source" hint={t("edit.field.sourceHint")}>
+      <FormField
+        label={t("edit.field.source")}
+        htmlFor="step-source"
+        hint={t("edit.field.sourceHint")}
+        error={sourceErr ? t(sourceErr) : undefined}
+      >
         <Input
           id="step-source"
-          value={configString(step.config, "source", "{{ocr.text}}")}
-          onChange={(event) => patchConfig("source", event.target.value)}
+          value={form.watch("source")}
+          onChange={(event) => {
+            const source = event.target.value;
+            void form.setValue("source", source, { shouldValidate: true });
+            patchConfig("source", source);
+          }}
         />
       </FormField>
     </>
@@ -333,21 +476,42 @@ function LoopFields({
   patchConfig: (key: string, value: unknown) => void;
 }) {
   const t = useT();
+  const form = useForm({
+    resolver: zodResolver(loopFieldsSchema),
+    values: {
+      max: configNumber(step.config, "max", 3),
+      until: configString(step.config, "until", ""),
+    },
+    mode: "onChange",
+  });
+  const maxErr = form.formState.errors.max?.message;
   return (
     <>
-      <FormField label={t("edit.field.loopMax")} htmlFor="step-loop-max">
+      <FormField
+        label={t("edit.field.loopMax")}
+        htmlFor="step-loop-max"
+        error={maxErr ? t(maxErr) : undefined}
+      >
         <NumberField
           id="step-loop-max"
           min={0}
-          value={configNumber(step.config, "max", 3)}
-          onValueChange={(value) => patchConfig("max", value ?? 0)}
+          value={form.watch("max")}
+          onValueChange={(value) => {
+            const max = value ?? 0;
+            void form.setValue("max", max, { shouldValidate: true });
+            patchConfig("max", max);
+          }}
         />
       </FormField>
       <FormField label={t("edit.field.until")} htmlFor="step-until" hint={t("edit.field.untilHint")}>
         <Input
           id="step-until"
-          value={configString(step.config, "until", "")}
-          onChange={(event) => patchConfig("until", event.target.value)}
+          value={form.watch("until")}
+          onChange={(event) => {
+            const until = event.target.value;
+            void form.setValue("until", until, { shouldValidate: true });
+            patchConfig("until", until);
+          }}
         />
       </FormField>
     </>

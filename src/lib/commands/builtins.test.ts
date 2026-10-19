@@ -140,7 +140,10 @@ describe("内置命令", () => {
     });
     await registry.run("flow.open", c);
     expect(c.bridge.flowOpen).toHaveBeenCalledWith("/tmp/a.flow.json");
-    expect(loadFlowFile).toHaveBeenCalledWith(sampleFlow, "/tmp/a.flow.json");
+    expect(loadFlowFile).toHaveBeenCalledWith(sampleFlow, "/tmp/a.flow.json", {
+      migratedFrom: 3,
+      migratedTo: 3,
+    });
     expect(c.navigate).toHaveBeenCalledWith("/edit");
     prompt.mockRestore();
   });
