@@ -24,7 +24,7 @@
 // 失败响应（error 对象遵循第 4 节错误模型）
 { "jsonrpc": "2.0", "id": 42, "error": { "code": "engine.flow.validationFailed", "message": "…", "data": { … } } }
 
-// 通知（无 id，无响应）—— M1+ 目标；M0 尚无通知流
+// 通知（无 id，无响应）—— 执行过程中推送；`flow.start` 仍可同步返回摘要
 { "jsonrpc": "2.0", "method": "execution.log", "params": { … } }
 ```
 
@@ -54,10 +54,10 @@
 | `flow.validate` | `{ flow }` 或 `{ path }` | `{ ok, issues[] }` | 已实现 | 静态校验，不执行 |
 | `flow.migrate` | `{ flow }` | `{ flow, migratedFrom, migratedTo }` | M2 | 迁移到当前 schemaVersion |
 | `flow.start` | `{ path \| flow, mode, inputs? }` | 见下 | 已实现（同步） | UI 传入当前模板 `flow`；`inputs.target` / `inputs.locate` 覆盖绑定；全局互斥 |
-| `flow.pause` / `flow.resume` | `{ executionId }` | `{}` | M1 | 暂停/继续 |
+| `flow.pause` / `flow.resume` | `{ executionId }` | `{}` | M1（未实现） | 暂停/继续 |
 | `flow.cancel` | `{ executionId, reason? }` | `{}` | 已实现 | 协作式取消 |
-| `execution.get` | `{ executionId }` | `{ record }` | M1 | 查询单条执行记录 |
-| `execution.list` | `{ limit, offset, filter? }` | `{ records[], total }` | M1 | 历史分页 |
+| `execution.get` | `{ executionId }` | `{ record }` | 已实现 | 查询单条执行记录 |
+| `execution.list` | `{ limit, offset, filter? }` | `{ records[], total }` | 已实现 | 历史分页 |
 
 **M0 `flow.start` 现实**：调用同步跑完后返回（含 `executionId`、`finalState`、`nodeRuns` 等摘要），**尚无**进度通知。目标态（M1+）：立即返回 `{ executionId }`，进度经 §3.3 通知推送；壳侧对长调用放开 RPC 超时（见 §6）。
 
@@ -65,11 +65,11 @@
 
 | 通知 | 载荷要点 | 落地 | 时机 |
 | --- | --- | --- | --- |
-| `execution.stateChanged` | `{ executionId, from, to, traceId }` | M1 | 状态机每次迁移 |
-| `execution.nodeStarted` | `{ executionId, nodeId, traceId }` | M1 | 节点进入执行 |
-| `execution.nodeFinished` | `{ executionId, nodeId, status, durationMs, outputsSummary }` | M1 | 节点结束 |
-| `execution.log` | `{ executionId, level, message, fields, traceId }` | M1 | 结构化日志流 |
-| `engine.heartbeat` | `{ uptimeMs, activeExecutions }` | M1 | 每 30s |
+| `execution.stateChanged` | `{ executionId, from, to, traceId }` | 已实现 | 状态机每次迁移（仍随同步 `flow.start` 中途推送） |
+| `execution.nodeStarted` | `{ executionId, nodeId, traceId }` | 已实现 | 节点进入执行 |
+| `execution.nodeFinished` | `{ executionId, nodeId, status, durationMs, outputsSummary }` | 已实现 | 节点结束 |
+| `execution.log` | `{ executionId, level, message, fields, traceId }` | 已实现 | 结构化日志流 |
+| `engine.heartbeat` | `{ uptimeMs, activeExecutions }` | M1（未实现） | 每 30s |
 ## 4. 错误模型
 
 所有层的错误统一为下述结构（JSON Schema 见 `schemas/error.schema.json`）：
@@ -134,7 +134,7 @@
 | `flow_cancel` | `{ executionId }` | — | `flow.cancel` | 已实现 |
 | `flow_open` | — | `{ path, flow }` | 文件对话框 + `flow.migrate` | M2 |
 | `flow_save` | `{ path, flow }` | — | 壳写盘（先过 `flow.validate`） | M2 |
-| `execution_list` | `{ limit, offset }` | `ExecutionPage` | `execution.list` | M1 |
+| `execution_list` | `{ limit, offset }` | `ExecutionPage` | `execution.list` | 已实现 |
 | `secret_set` / `secret_get` / `secret_delete` | `{ key, value? }` | — | 壳内 keyring，不过引擎 | M4 |
 | `prefs_get` | — | `ShellPrefs` | 读 `prefs.json` | 已实现 |
 | `prefs_set` | `{ prefs }` | `ShellPrefs` | 写盘 + 同步开机自启 | 已实现 |

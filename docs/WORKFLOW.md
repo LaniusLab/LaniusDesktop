@@ -52,7 +52,7 @@ LANIUS_ENGINE_CMD=E:\path\to\engine\.venv\Scripts\python.exe -m lanius_engine
 | 仅壳 | sidecar 生命周期、无边框窗口、偏好落盘、错误规范化 | [§4.4](#44-仅壳) |
 | 仅文档 | 域文档、ADR、本文件 | [§4.5](#45-仅文档) |
 
-当前里程碑是 **M0**。ROADMAP 里标「规划 · Mx」且 x>0 的能力：可以补文档与 ADR 登记，**不实现**。
+当前里程碑是 **M1**。ROADMAP 里标「规划 · Mx」且 x>1 的能力：可以补文档与 ADR 登记，**不实现**（M5 已明确允许的无签名更新切片除外）。
 
 ## 4. 回路
 

@@ -13,6 +13,8 @@ export type {
   EngineEvent,
   EngineInfo,
   EngineStatus,
+  ExecutionHistoryRecord,
+  ExecutionPage,
   ExecutionPhase,
   FlowNodeRun,
   FlowRunResult,

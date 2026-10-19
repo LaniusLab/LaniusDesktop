@@ -124,6 +124,29 @@ pub async fn flow_cancel(
         .map_err(|e| e.with_trace(trace_id))
 }
 
+#[tauri::command]
+pub async fn execution_list(
+    state: State<'_, ShellState>,
+    limit: Option<u32>,
+    offset: Option<u32>,
+) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    let client = engine(&state)
+        .await
+        .map_err(|e| e.with_trace(trace_id.clone()))?;
+    client
+        .call(
+            "execution.list",
+            json!({
+                "limit": limit.unwrap_or(50),
+                "offset": offset.unwrap_or(0),
+            }),
+            &trace_id,
+        )
+        .await
+        .map_err(|e| e.with_trace(trace_id))
+}
+
 fn lock_prefs(state: &ShellState) -> std::sync::MutexGuard<'_, ShellPrefs> {
     state.prefs.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }

@@ -1,7 +1,7 @@
 # Python 引擎设计
 
 > 状态：已评审 · 最后更新：2026-09-18
-> 实现进度：目标设计如下；模块树中标注 `（规划）` 的尚未落地。当前里程碑见 [ROADMAP.md](ROADMAP.md)（**M0**）。
+> 实现进度：目标设计如下；模块树中标注 `（规划）` 的尚未落地。当前里程碑见 [ROADMAP.md](ROADMAP.md)（**M1**）。
 
 引擎（`lanius-engine`）是全部业务语义的所在：流程校验、执行、节点实现、平台自动化。它以 sidecar 形态运行，通过 stdio JSON-RPC 与壳通信（见 [PROTOCOL.md](PROTOCOL.md)）。
 
@@ -23,7 +23,7 @@ engine/src/lanius_engine/
 ├── nodes/
 │   ├── base.py        # Node 协议：inputs/outputs/config schema/execute
 │   ├── registry.py    # 节点注册表（type → 类）
-│   └── core/          # 已落地：log、wait、press、mouse；（规划 · M1）flow/数据/fs
+│   └── core/          # 已落地：log、wait、press、mouse、data.*、vision.mock；（规划）fs / assert
 ├── drivers/
 │   ├── base.py        # Driver 抽象接口
 │   ├── mock.py        # Mock driver（CI/测试/dry-run 用）
@@ -31,12 +31,12 @@ engine/src/lanius_engine/
 │   ├── macos.py       # （规划 · M4）pyobjc
 │   └── linux.py       # （规划 · M4）pyatspi
 ├── runtime/
-│   ├── executor.py    # 执行器：有序 steps + 状态机
+│   ├── executor.py    # 执行器：有序 steps + 状态机 + 嵌套 control
 │   ├── state.py       # 执行状态机定义
 │   ├── scope.py       # 变量作用域链
 │   └── cancel.py      # 协作式取消原语
 ├── models/            # Pydantic v2 模型（对齐 schemas/）
-├── history.py         # （规划 · M1）SQLite 执行历史
+├── history.py         # 已落地：SQLite 执行历史（execution.get/list）
 ├── cli.py             # 调试 CLI：validate / run 按 steps（含 v1 迁移）
 └── logging.py         # structlog 配置（JSON、traceId 注入）
 ```

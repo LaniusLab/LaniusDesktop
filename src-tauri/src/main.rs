@@ -78,6 +78,7 @@ fn main() {
             commands::engine_call,
             commands::flow_run,
             commands::flow_cancel,
+            commands::execution_list,
             commands::prefs_get,
             commands::prefs_set,
             commands::shell_debug_info,

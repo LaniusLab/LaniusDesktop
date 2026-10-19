@@ -130,6 +130,10 @@ export function createMockBridge(): Bridge {
       // mock 执行太短，取消通常赶不上；契约保留
     },
 
+    async executionList() {
+      return { records: [], total: 0 };
+    },
+
     onEngineEvent(handler) {
       handlers.add(handler);
       handler({ kind: "status", status: "starting" });

@@ -39,6 +39,23 @@ export interface FlowRunResult {
   error?: { code?: string; message?: string } | null;
 }
 
+export interface ExecutionHistoryRecord {
+  executionId: string;
+  flowId: string;
+  mode: "run" | "dryRun" | string;
+  state: string;
+  startedAtMs: number;
+  finishedAtMs: number;
+  traceId: string;
+  error?: { code?: string; message?: string } | null;
+  nodeRuns: FlowNodeRun[];
+}
+
+export interface ExecutionPage {
+  records: ExecutionHistoryRecord[];
+  total: number;
+}
+
 export interface EngineEvent {
   kind: "status" | "execution" | "log";
   status?: EngineStatus;
@@ -63,6 +80,7 @@ export interface Bridge {
   engineInfo(): Promise<EngineInfo>;
   flowRun(flow: FlowFile, mode: "run" | "dryRun"): Promise<FlowRunResult>;
   flowCancel(executionId: string): Promise<void>;
+  executionList(limit?: number, offset?: number): Promise<ExecutionPage>;
   onEngineEvent(handler: (event: EngineEvent) => void): () => void;
   prefsGet(): Promise<ShellPrefs>;
   prefsSet(prefs: ShellPrefs): Promise<ShellPrefs>;
