@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import time
 import uuid
 from typing import Any
@@ -50,6 +52,7 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
                 "fs.readWrite",
                 "secrets.env",
                 "driver.elementFind",
+                "flow.inspect",
                 f"driver.{driver_name}",
             ],
             "nodeTypes": registry.types(),
@@ -215,6 +218,19 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
             )
         return store.list(limit=limit, offset=offset, filter=hist_filter)
 
+    async def flow_inspect(params: dict[str, Any]) -> dict[str, Any]:
+        """内容哈希 + 危险步骤（信任分级 / 确认对话框）。"""
+        flow = migrate_to_current(_parse_flow(params))
+        dumped = flow.model_dump(mode="json", by_alias=True)
+        canonical = json.dumps(dumped, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        content_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        dangerous = _collect_dangerous_steps(flow.steps, registry)
+        return {
+            "flowId": flow.id,
+            "contentHash": content_hash,
+            "dangerousSteps": dangerous,
+        }
+
     async def driver_element_find(params: dict[str, Any]) -> dict[str, Any]:
         """选择器测试：绑窗后 find_element，不点击。"""
         raw_match = params.get("match")
@@ -290,6 +306,7 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
     server.register("engine.shutdown", shutdown)
     server.register("flow.validate", flow_validate)
     server.register("flow.migrate", flow_migrate)
+    server.register("flow.inspect", flow_inspect)
     server.register("flow.start", flow_start)
     server.register("flow.pause", flow_pause)
     server.register("flow.resume", flow_resume)
@@ -297,6 +314,42 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
     server.register("execution.get", execution_get)
     server.register("execution.list", execution_list)
     server.register("driver.elementFind", driver_element_find)
+
+
+def _collect_dangerous_steps(
+    steps: list[FlowStep], registry: Any
+) -> list[dict[str, Any]]:
+    """收集 danger_level=destructive 的叶子步骤（含嵌套）。"""
+    out: list[dict[str, Any]] = []
+
+    def walk(items: list[FlowStep]) -> None:
+        for step in items:
+            if step.disabled:
+                continue
+            node_type = step.node_type()
+            if step.kind != "control" and node_type:
+                node_cls = registry.get(node_type)
+                level = getattr(node_cls, "danger_level", "safe") if node_cls else "safe"
+                if level == "destructive":
+                    out.append(
+                        {
+                            "nodeId": step.id,
+                            "type": node_type,
+                            "dangerLevel": level,
+                            "label": step.label or step.id,
+                        }
+                    )
+            if step.then:
+                walk(step.then)
+            if step.else_:
+                walk(step.else_)
+            if step.body:
+                walk(step.body)
+            if step.catch:
+                walk(step.catch)
+
+    walk(steps)
+    return out
 
 
 def _validate_steps(

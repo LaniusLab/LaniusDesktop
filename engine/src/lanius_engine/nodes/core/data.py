@@ -32,6 +32,7 @@ class SetVarNode:
     type: ClassVar[str] = "data.setVar"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = False
+    danger_level: ClassVar[str] = 'safe'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {"value": Port(type="any")}
     config_schema: ClassVar[builtins.type[BaseModel]] = SetVarConfig
@@ -73,6 +74,7 @@ class TemplateNode:
     type: ClassVar[str] = "data.template"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = False
+    danger_level: ClassVar[str] = 'safe'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {"value": Port(type="string")}
     config_schema: ClassVar[builtins.type[BaseModel]] = TemplateConfig

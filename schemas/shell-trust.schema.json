@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/shell-trust.schema.json",
+  "title": "TrustCheckResult",
+  "description": "流程信任记录：flowId + contentHash；哈希失配即未信任（SECURITY.md §4）",
+  "type": "object",
+  "required": ["flowId", "contentHash", "trusted"],
+  "properties": {
+    "flowId": { "type": "string", "minLength": 1 },
+    "contentHash": { "type": "string", "minLength": 1 },
+    "trusted": { "type": "boolean" },
+    "trustedAt": { "type": ["number", "null"] }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "trustRecord": {
+      "type": "object",
+      "required": ["flowId", "contentHash", "trustedAt"],
+      "properties": {
+        "flowId": { "type": "string", "minLength": 1 },
+        "contentHash": { "type": "string", "minLength": 1, "description": "SHA-256 hex（引擎 flow.inspect）" },
+        "trustedAt": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "trustListResult": {
+      "type": "object",
+      "required": ["records"],
+      "properties": {
+        "records": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/trustRecord" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "trustCheckParams": {
+      "type": "object",
+      "required": ["flowId", "contentHash"],
+      "properties": {
+        "flowId": { "type": "string", "minLength": 1 },
+        "contentHash": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "trustCheckResult": {
+      "type": "object",
+      "required": ["flowId", "contentHash", "trusted"],
+      "properties": {
+        "flowId": { "type": "string" },
+        "contentHash": { "type": "string" },
+        "trusted": { "type": "boolean" },
+        "trustedAt": { "type": ["number", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "trustMarkParams": {
+      "type": "object",
+      "required": ["flowId", "contentHash"],
+      "properties": {
+        "flowId": { "type": "string", "minLength": 1 },
+        "contentHash": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "trustMarkResult": {
+      "type": "object",
+      "required": ["flowId", "contentHash", "trustedAt"],
+      "properties": {
+        "flowId": { "type": "string" },
+        "contentHash": { "type": "string" },
+        "trustedAt": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "trustRevokeParams": {
+      "type": "object",
+      "required": ["flowId"],
+      "properties": {
+        "flowId": { "type": "string", "minLength": 1 },
+        "contentHash": { "type": "string", "description": "省略则撤销该 flow 全部哈希" }
+      },
+      "additionalProperties": false
+    },
+    "trustRevokeResult": {
+      "type": "object",
+      "required": ["flowId", "removed"],
+      "properties": {
+        "flowId": { "type": "string" },
+        "removed": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -27,6 +27,7 @@ const ALLOWED_METHODS: &[&str] = &[
     "engine.ping",
     "flow.validate",
     "flow.migrate",
+    "flow.inspect",
     "flow.start",
     "flow.pause",
     "flow.resume",

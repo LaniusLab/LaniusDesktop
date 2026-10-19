@@ -1,5 +1,6 @@
 import type { Bridge, EngineStatus, ExecutionPhase, FlowRunResult } from "@/lib/bridge";
 import type { FlowFile } from "@/lib/gen/flow";
+import type { ShellPrefs } from "@/lib/gen/shell-prefs";
 
 // 命令求值上下文：显式注入，不读全局单例，保证可测试（ADR-0007）
 export interface CommandContext {
@@ -32,6 +33,7 @@ export interface CommandContext {
   };
   navigate: (to: string) => void;
   ui: {
+    prefs: ShellPrefs;
     toggleTheme: () => void;
     setSearchOpen: (open: boolean) => void;
     setSettingsOpen: (open: boolean) => void;

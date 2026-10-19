@@ -5,6 +5,7 @@ mod error;
 mod prefs;
 mod secrets;
 mod sidecar;
+mod trust;
 mod updater;
 
 use tauri::Manager;
@@ -88,6 +89,10 @@ fn main() {
             commands::secret_set,
             commands::secret_get,
             commands::secret_delete,
+            commands::trust_list,
+            commands::trust_check,
+            commands::trust_mark,
+            commands::trust_revoke,
             commands::shell_debug_info,
             commands::logs_tail,
             commands::updater_list,

@@ -35,6 +35,8 @@ pub struct ShellPrefs {
     pub close_behavior: String,
     pub autostart: bool,
     pub auto_update: bool,
+    #[serde(default)]
+    pub block_all_destructive: bool,
     pub shortcuts: ShortcutPrefs,
 }
 
@@ -49,6 +51,7 @@ impl Default for ShellPrefs {
             close_behavior: "quit".into(),
             autostart: false,
             auto_update: false,
+            block_all_destructive: false,
             shortcuts: ShortcutPrefs {
                 palette: "Mod+K".into(),
                 run: "Mod+Enter".into(),

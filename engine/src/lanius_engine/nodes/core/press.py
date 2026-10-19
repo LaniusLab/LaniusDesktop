@@ -17,6 +17,7 @@ class PressNode:
     type: ClassVar[str] = "keyboard.press"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = True
+    danger_level: ClassVar[str] = 'caution'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {}
     config_schema: ClassVar[builtins.type[BaseModel]] = PressConfig

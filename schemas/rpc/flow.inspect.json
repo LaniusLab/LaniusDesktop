@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/rpc/flow.inspect.json",
+  "title": "flow.inspect",
+  "description": "内容哈希 + 危险步骤清单（信任分级 / 确认对话框）",
+  "$defs": {
+    "params": {
+      "type": "object",
+      "required": ["flow"],
+      "properties": {
+        "flow": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "required": ["flowId", "contentHash", "dangerousSteps"],
+      "properties": {
+        "flowId": { "type": "string" },
+        "contentHash": { "type": "string" },
+        "dangerousSteps": { "type": "array", "items": { "type": "object" } }
+      },
+      "additionalProperties": false
+    }
+  }
+}

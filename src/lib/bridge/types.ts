@@ -14,6 +14,12 @@ import type {
   SecretSetResult,
 } from "@/lib/gen/shell-secret";
 import type {
+  TrustCheckResult,
+  TrustListResult,
+  TrustMarkResult,
+  TrustRevokeResult,
+} from "@/lib/gen/shell-trust";
+import type {
   UpdaterApplyResult,
   UpdaterCheckResult,
   UpdaterDownloadResult,
@@ -99,6 +105,19 @@ export interface FlowValidateResult {
   issues: FlowValidationIssue[];
 }
 
+export interface FlowDangerousStep {
+  nodeId: string;
+  type: string;
+  dangerLevel: string;
+  label: string;
+}
+
+export interface FlowInspectResult {
+  flowId: string;
+  contentHash: string;
+  dangerousSteps: FlowDangerousStep[];
+}
+
 export interface Bridge {
   engineInfo(): Promise<EngineInfo>;
   flowRun(flow: FlowFile, mode: "run" | "dryRun"): Promise<FlowRunResult>;
@@ -111,6 +130,8 @@ export interface Bridge {
   flowSave(path: string, flow: FlowFile): Promise<FlowSaveResult>;
   /** 静态校验；结果钉到步骤列表 */
   flowValidate(flow: FlowFile): Promise<FlowValidateResult>;
+  /** 内容哈希 + 危险步骤 */
+  flowInspect(flow: FlowFile): Promise<FlowInspectResult>;
   /** 元素定位器探测（绑窗 + find_element，不点击） */
   elementFind(params: DriverElementFindParams): Promise<DriverElementFindResult>;
   onEngineEvent(handler: (event: EngineEvent) => void): () => void;
@@ -122,6 +143,10 @@ export interface Bridge {
   /** 取值仅供引擎回调；凭据页勿展示 */
   secretGet(key: string): Promise<SecretGetResult>;
   secretDelete(key: string): Promise<SecretDeleteResult>;
+  trustList(): Promise<TrustListResult>;
+  trustCheck(flowId: string, contentHash: string): Promise<TrustCheckResult>;
+  trustMark(flowId: string, contentHash: string): Promise<TrustMarkResult>;
+  trustRevoke(flowId: string, contentHash?: string): Promise<TrustRevokeResult>;
   debugInfo(): Promise<ShellDebugInfo>;
   logsTail(): Promise<string>;
   updaterList(): Promise<UpdaterListResult>;

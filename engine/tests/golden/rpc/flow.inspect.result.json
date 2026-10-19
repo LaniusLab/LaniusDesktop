@@ -1,0 +1,12 @@
+{
+  "flowId": "flow_demo",
+  "contentHash": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "dangerousSteps": [
+    {
+      "nodeId": "write1",
+      "type": "fs.writeText",
+      "dangerLevel": "destructive",
+      "label": "写文件"
+    }
+  ]
+}

@@ -223,6 +223,17 @@ function GeneralSection() {
           ]}
         />
       </SectionLabel>
+
+      <SettingRow
+        label={t("settings.blockDestructive")}
+        description={t("settings.blockDestructiveHint")}
+      >
+        <Switch
+          checked={prefs.blockAllDestructive}
+          onCheckedChange={(blockAllDestructive) => patchPrefs({ blockAllDestructive })}
+          aria-label={t("settings.blockDestructive")}
+        />
+      </SettingRow>
     </div>
   );
 }

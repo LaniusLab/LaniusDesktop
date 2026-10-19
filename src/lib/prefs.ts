@@ -13,6 +13,7 @@ export const DEFAULT_PREFS: ShellPrefs = {
   closeBehavior: "quit",
   autostart: false,
   autoUpdate: false,
+  blockAllDestructive: false,
   shortcuts: {
     palette: "Mod+K",
     run: "Mod+Enter",
