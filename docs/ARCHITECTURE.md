@@ -143,7 +143,7 @@ LaniusDesktop/
 │   │   ├── __main__.py         # stdio JSON-RPC 服务循环
 │   │   ├── rpc/                # 协议层（注册制方法表）
 │   │   ├── nodes/              # 节点基类 + 注册表 + 内置节点（core.log / wait）
-│   │   ├── drivers/            # base / mock；（规划 · M4）windows / macos / linux
+│   │   ├── drivers/            # base / mock / factory / capabilities；windows / macos / linux（M4）
 │   │   ├── runtime/            # 执行器、状态机、作用域、取消
 │   │   ├── models/             # Pydantic 模型（对齐 schemas/）
 │   │   ├── history.py          # （规划 · M1）SQLite 执行历史

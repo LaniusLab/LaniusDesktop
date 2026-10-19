@@ -24,6 +24,16 @@ dev = [
 pack = [
   "pyinstaller>=6.3",
 ]
+windows = [
+  "pywinauto>=0.6.8",
+]
+macos = [
+  "pyobjc-framework-ApplicationServices>=10.0",
+  "pyobjc-framework-Quartz>=10.0",
+]
+linux = [
+  "pyatspi>=2.55",
+]
 
 [project.scripts]
 lanius-engine = "lanius_engine.cli:main"
