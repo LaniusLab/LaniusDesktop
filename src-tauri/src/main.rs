@@ -1,6 +1,7 @@
 //! Lanius Desktop 壳入口。职责：装配插件、守护 sidecar、暴露薄 invoke 层。
 
 mod commands;
+mod diagnostics;
 mod error;
 mod prefs;
 mod secrets;
@@ -95,6 +96,7 @@ fn main() {
             commands::trust_revoke,
             commands::shell_debug_info,
             commands::logs_tail,
+            commands::shell_export_diagnostics,
             commands::updater_list,
             commands::updater_check,
             commands::updater_download,

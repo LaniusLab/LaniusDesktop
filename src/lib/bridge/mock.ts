@@ -487,6 +487,23 @@ export function createMockBridge(): Bridge {
       return "";
     },
 
+    async exportDiagnostics() {
+      return {
+        path: "/tmp/lanius-diagnostics-mock",
+        bytes: 128,
+        filesIncluded: [
+          "README.txt",
+          "debug_info.json",
+          "prefs.json",
+          "secret_names.json",
+          "trust_index.json",
+        ],
+        createdAt: Date.now() / 1000,
+        archived: false,
+        archivePath: null,
+      };
+    },
+
     async updaterList() {
       return {
         currentVersion: "0.2.0",

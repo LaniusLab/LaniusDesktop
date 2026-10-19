@@ -2,6 +2,7 @@
 // 本文件只保留桥接自身的元类型。
 
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
+import type { DiagnosticsExportResult } from "@/lib/gen/shell-diagnostics";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
 import type {
   DriverElementFindParams,
@@ -149,6 +150,8 @@ export interface Bridge {
   trustRevoke(flowId: string, contentHash?: string): Promise<TrustRevokeResult>;
   debugInfo(): Promise<ShellDebugInfo>;
   logsTail(): Promise<string>;
+  /** 本机诊断包（无遥测；不含凭据明文） */
+  exportDiagnostics(): Promise<DiagnosticsExportResult>;
   updaterList(): Promise<UpdaterListResult>;
   updaterCheck(): Promise<UpdaterCheckResult>;
   updaterDownload(tag: string, assetName?: string): Promise<UpdaterDownloadResult>;

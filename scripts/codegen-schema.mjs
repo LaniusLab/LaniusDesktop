@@ -130,6 +130,7 @@ const outputs = [
   generate("schemas/flow.schema.json", "flow.ts", "FlowFile"),
   generate("schemas/shell-prefs.schema.json", "shell-prefs.ts", "ShellPrefs"),
   generate("schemas/shell-debug.schema.json", "shell-debug.ts", "ShellDebugInfo"),
+  generate("schemas/shell-diagnostics.schema.json", "shell-diagnostics.ts", "DiagnosticsExportResult"),
   generate("schemas/shell-updater.schema.json", "shell-updater.ts", "UpdaterListResult"),
   generate("schemas/shell-secret.schema.json", "shell-secret.ts", "SecretListResult"),
   generate("schemas/element-locator.schema.json", "element-locator.ts", "DriverElementFindResult"),

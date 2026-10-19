@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/shell-diagnostics.schema.json",
+  "title": "DiagnosticsExportResult",
+  "description": "本机诊断包导出结果（无遥测；不含凭据明文）。见 SECURITY.md / ROADMAP M5。",
+  "type": "object",
+  "required": ["path", "bytes", "filesIncluded", "createdAt", "archived"],
+  "properties": {
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "诊断目录绝对路径（始终写出）"
+    },
+    "bytes": {
+      "type": "number",
+      "minimum": 0,
+      "description": "目录内文件合计字节数（不含可选归档本身）"
+    },
+    "filesIncluded": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "相对诊断目录的文件名列表"
+    },
+    "createdAt": {
+      "type": "number",
+      "description": "导出完成时间（Unix 秒）"
+    },
+    "archived": {
+      "type": "boolean",
+      "description": "是否成功打出可选归档（tar.gz / zip）"
+    },
+    "archivePath": {
+      "type": ["string", "null"],
+      "description": "归档绝对路径；未归档时为 null"
+    }
+  },
+  "additionalProperties": false
+}
