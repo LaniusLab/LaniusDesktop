@@ -60,6 +60,22 @@ describe("设置弹窗", () => {
     expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
   });
 
+  it("常规页可列出并撤销信任记录", async () => {
+    const { bridge } = await import("@/lib/bridge");
+    const hash = "a".repeat(64);
+    await bridge.trustMark("settings-demo", hash);
+    renderSettings();
+    fireEvent.click(screen.getByRole("tab", { name: "常规" }));
+    await waitFor(() => {
+      expect(screen.getByText("settings-demo")).toBeInTheDocument();
+      expect(screen.getByText(/aaaaaaaaaaaa/)).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /撤销|Revoke/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/还没有标记为可信|No trusted flows/i)).toBeInTheDocument();
+    });
+  });
+
   it("桌面页可以检查更新并列出 GitHub 版本", async () => {
     renderSettings();
     fireEvent.click(screen.getByRole("tab", { name: "桌面" }));

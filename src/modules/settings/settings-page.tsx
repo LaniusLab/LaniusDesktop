@@ -234,7 +234,63 @@ function GeneralSection() {
           aria-label={t("settings.blockDestructive")}
         />
       </SettingRow>
+
+      <TrustListSection />
     </div>
+  );
+}
+
+/** 本机信任索引：只显示 flowId + hash 前缀；可撤销（SECURITY.md §4）。 */
+function TrustListSection() {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const trust = useQuery({ queryKey: ["trustList"], queryFn: () => bridge.trustList() });
+  const revoke = useMutation({
+    mutationFn: (input: { flowId: string; contentHash: string }) =>
+      bridge.trustRevoke(input.flowId, input.contentHash),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["trustList"] });
+      await queryClient.invalidateQueries({ queryKey: ["trustCheck"] });
+    },
+  });
+
+  return (
+    <SectionLabel title={t("settings.trust")} hint={t("settings.trust.hint")}>
+      {trust.isPending ? (
+        <p className="text-sm text-fg-muted">{t("engine.starting")}</p>
+      ) : null}
+      {trust.data && trust.data.records.length === 0 ? (
+        <p className="text-sm text-fg-muted">{t("settings.trust.empty")}</p>
+      ) : null}
+      {trust.data && trust.data.records.length > 0 ? (
+        <ul className="flex flex-col gap-2">
+          {trust.data.records.map((record) => (
+            <li
+              key={`${record.flowId}:${record.contentHash}`}
+              className="flex items-center justify-between gap-3 rounded-xl border border-line px-3 py-2"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-mono text-xs text-fg">{record.flowId}</p>
+                <p className="truncate font-mono text-[11px] text-fg-faint">
+                  {record.contentHash.slice(0, 12)}…
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={revoke.isPending}
+                aria-label={t("settings.trust.revoke")}
+                onClick={() =>
+                  revoke.mutate({ flowId: record.flowId, contentHash: record.contentHash })
+                }
+              >
+                {t("settings.trust.revoke")}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </SectionLabel>
   );
 }
 
