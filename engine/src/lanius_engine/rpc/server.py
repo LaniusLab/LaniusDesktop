@@ -9,6 +9,7 @@ import json
 import sys
 import time
 from collections.abc import Awaitable, Callable
+from contextvars import ContextVar
 from typing import Any
 
 from lanius_engine.logging import get_logger
@@ -20,12 +21,20 @@ Handler = Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]
 
 logger = get_logger(module="rpc")
 
+# 当前请求的 traceId，供 notify 与历史落盘继承（PROTOCOL.md §5）
+_current_trace_id: ContextVar[str] = ContextVar("rpc_trace_id", default="")
+
+
+def current_trace_id() -> str:
+    return _current_trace_id.get()
+
 
 class RpcServer:
     def __init__(self) -> None:
         self._methods: dict[str, Handler] = {}
         self._started_at = time.monotonic()
         self._shutdown = asyncio.Event()
+        self._out = sys.stdout
 
     def register(self, name: str, handler: Handler) -> None:
         if name in self._methods:
@@ -42,6 +51,15 @@ class RpcServer:
 
     def stop(self) -> None:
         self._shutdown.set()
+
+    def notify(self, method: str, params: dict[str, Any]) -> None:
+        """引擎 → 壳通知帧（无 id）。自动补 traceId。"""
+        payload = dict(params)
+        if "traceId" not in payload:
+            tid = current_trace_id()
+            if tid:
+                payload["traceId"] = tid
+        self._write_frame({"jsonrpc": "2.0", "method": method, "params": payload})
 
     async def serve(self) -> int:
         loop = asyncio.get_running_loop()
@@ -84,6 +102,7 @@ class RpcServer:
                 frame_id, -32601, "Method not found", {"methodName": method}
             )
 
+        token = _current_trace_id.set(trace_id)
         try:
             result = await handler(params)
         except LaniusError as err:
@@ -98,6 +117,8 @@ class RpcServer:
                 trace_id=trace_id,
             )
             return {"jsonrpc": "2.0", "id": frame_id, "error": error.to_rpc_error()}
+        finally:
+            _current_trace_id.reset(token)
 
         if frame_id is None:  # 通知无响应
             return None
@@ -113,5 +134,5 @@ class RpcServer:
 
     def _write_frame(self, frame: dict[str, Any]) -> None:
         payload = json.dumps(frame, ensure_ascii=False, separators=(",", ":"))
-        sys.stdout.write(payload + "\n")
-        sys.stdout.flush()
+        self._out.write(payload + "\n")
+        self._out.flush()
