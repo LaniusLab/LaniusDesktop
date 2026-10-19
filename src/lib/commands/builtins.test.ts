@@ -14,10 +14,28 @@ const sampleFlow = toFlowFile({
 
 function ctx(partial: Partial<CommandContext> = {}): CommandContext {
   return {
-    bridge: { flowRun: vi.fn().mockResolvedValue({ executionId: "e1" }) } as unknown as CommandContext["bridge"],
+    bridge: {
+      flowRun: vi.fn().mockResolvedValue({ executionId: "e1" }),
+      flowOpen: vi.fn().mockResolvedValue({
+        path: "/tmp/a.flow.json",
+        flow: sampleFlow,
+        migratedFrom: 3,
+        migratedTo: 3,
+      }),
+      flowSave: vi.fn().mockResolvedValue({ path: "/tmp/a.flow.json" }),
+    } as unknown as CommandContext["bridge"],
     engine: { status: "ready" },
     execution: { phase: "idle", beginRun: vi.fn(), ingestRunResult: vi.fn() },
-    editor: { dirty: false, hasTarget: true, toFlowFile: () => sampleFlow, saveTemplate: vi.fn() },
+    editor: {
+      dirty: false,
+      hasTarget: true,
+      filePath: undefined,
+      toFlowFile: () => sampleFlow,
+      saveTemplate: vi.fn(),
+      loadFlowFile: vi.fn(),
+      setFilePath: vi.fn(),
+      markSaved: vi.fn(),
+    },
     navigate: vi.fn(),
     ui: { toggleTheme: vi.fn(), setSearchOpen: vi.fn(), setSettingsOpen: vi.fn() },
     ...partial,
@@ -69,9 +87,61 @@ describe("内置命令", () => {
 
   it("未选目标窗口时不能试一次，仍可保存草稿", async () => {
     const save = vi.fn();
-    const blocked = ctx({ editor: { dirty: true, hasTarget: false, toFlowFile: () => sampleFlow, saveTemplate: save } });
+    const blocked = ctx({
+      editor: {
+        dirty: true,
+        hasTarget: false,
+        filePath: undefined,
+        toFlowFile: () => sampleFlow,
+        saveTemplate: save,
+        loadFlowFile: vi.fn(),
+        setFilePath: vi.fn(),
+        markSaved: vi.fn(),
+      },
+    });
     expect(registry.list(blocked).find((cmd) => cmd.id === "flow.run")?.enabled).toBe(false);
     await registry.run("flow.save", blocked);
     expect(save).toHaveBeenCalledOnce();
+  });
+
+  it("有 filePath 时 flow.save 走桥接写盘", async () => {
+    const markSaved = vi.fn();
+    const c = ctx({
+      editor: {
+        dirty: true,
+        hasTarget: true,
+        filePath: "/tmp/a.flow.json",
+        toFlowFile: () => sampleFlow,
+        saveTemplate: vi.fn(),
+        loadFlowFile: vi.fn(),
+        setFilePath: vi.fn(),
+        markSaved,
+      },
+    });
+    await registry.run("flow.save", c);
+    expect(c.bridge.flowSave).toHaveBeenCalledWith("/tmp/a.flow.json", sampleFlow);
+    expect(markSaved).toHaveBeenCalledOnce();
+  });
+
+  it("flow.open 载入流程并跳转模板页", async () => {
+    const loadFlowFile = vi.fn();
+    const prompt = vi.spyOn(window, "prompt").mockReturnValue("/tmp/a.flow.json");
+    const c = ctx({
+      editor: {
+        dirty: false,
+        hasTarget: true,
+        filePath: undefined,
+        toFlowFile: () => sampleFlow,
+        saveTemplate: vi.fn(),
+        loadFlowFile,
+        setFilePath: vi.fn(),
+        markSaved: vi.fn(),
+      },
+    });
+    await registry.run("flow.open", c);
+    expect(c.bridge.flowOpen).toHaveBeenCalledWith("/tmp/a.flow.json");
+    expect(loadFlowFile).toHaveBeenCalledWith(sampleFlow, "/tmp/a.flow.json");
+    expect(c.navigate).toHaveBeenCalledWith("/edit");
+    prompt.mockRestore();
   });
 });

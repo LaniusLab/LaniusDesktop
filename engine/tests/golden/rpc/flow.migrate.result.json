@@ -1,0 +1,10 @@
+{
+  "flow": {
+    "schemaVersion": 3,
+    "id": "migrated",
+    "name": "migrated",
+    "steps": []
+  },
+  "migratedFrom": 2,
+  "migratedTo": 3
+}

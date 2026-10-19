@@ -55,7 +55,13 @@ afterEach(async () => {
   const { defaultStoredTemplate } = await import("@/lib/template-store");
   const { useExecutionStore } = await import("@/stores/execution");
   const editor = defaultStoredTemplate();
-  useEditorStore.setState({ ...editor, selectedStepId: editor.steps[0]?.id });
+  useEditorStore.setState({
+    ...editor,
+    selectedStepId: editor.steps[0]?.id,
+    filePath: undefined,
+    flowId: "session-template",
+    flowName: "当前模板",
+  });
   useEditorStore.temporal.getState().clear();
   useExecutionStore.setState({
     engineStatus: "starting",

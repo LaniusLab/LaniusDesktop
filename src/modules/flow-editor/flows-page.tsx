@@ -1,4 +1,4 @@
-import { Play, Redo2, Save, Undo2, Wand2 } from "lucide-react";
+import { FolderOpen, Play, Redo2, Save, Undo2, Wand2 } from "lucide-react";
 import { useState } from "react";
 
 import { currentContext } from "@/lib/commands/context";
@@ -18,6 +18,7 @@ type CenterTab = "strip" | "mind";
 /** 模板页：指令条缩进 + 插入菜单 + 只读导图预览。 */
 export function FlowsPage() {
   const dirty = useEditorStore((s) => s.dirty);
+  const filePath = useEditorStore((s) => s.filePath);
   const processId = useEditorStore((s) => s.processId);
   const locate = useEditorStore((s) => s.locate);
   const bindProcess = useEditorStore((s) => s.bindProcess);
@@ -75,10 +76,22 @@ export function FlowsPage() {
               </TooltipTrigger>
               <TooltipContent>{t("edit.redo")}</TooltipContent>
             </Tooltip>
+            <Button variant="secondary" size="sm" aria-label={t("cmd.flow.open")} onClick={() => runCommand("flow.open")}>
+              <FolderOpen />
+              {t("edit.open")}
+            </Button>
             <Button variant="secondary" size="sm" aria-label={t("cmd.flow.save")} onClick={() => runCommand("flow.save")}>
               <Save />
               {t("edit.save")}
             </Button>
+            <Button variant="ghost" size="sm" aria-label={t("cmd.flow.saveAs")} onClick={() => runCommand("flow.saveAs")}>
+              {t("edit.saveAs")}
+            </Button>
+            {filePath ? (
+              <span className="text-fg-muted max-w-48 truncate text-xs" title={filePath}>
+                {filePath}
+              </span>
+            ) : null}
             <Button variant="secondary" size="sm" onClick={() => runCommand("flow.dryRun")}>
               <Wand2 />
               {t("start.dryRun")}

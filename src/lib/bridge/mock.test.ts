@@ -34,6 +34,22 @@ describe("mockBridge", () => {
       ],
     });
     await expect(bridge.flowCancel("x")).resolves.toBeUndefined();
+    const sample = {
+      schemaVersion: 2 as const,
+      id: "file-1",
+      name: "磁盘流程",
+      steps: [{ id: "a", kind: "preset" as const, type: "core.log", label: "记", config: { message: "x" } }],
+    };
+    await expect(bridge.flowSave("/tmp/demo.flow.json", sample)).resolves.toEqual({
+      path: "/tmp/demo.flow.json",
+    });
+    await expect(bridge.flowOpen("/tmp/demo.flow.json")).resolves.toMatchObject({
+      path: "/tmp/demo.flow.json",
+      flow: { schemaVersion: 3, id: "file-1" },
+      migratedFrom: 2,
+      migratedTo: 3,
+    });
+    await expect(bridge.flowOpen("")).rejects.toThrow(/path/);
     const prefs = await bridge.prefsGet();
     await expect(bridge.prefsSet(prefs)).resolves.toMatchObject({ theme: prefs.theme });
     await expect(bridge.debugInfo()).resolves.toMatchObject({ appVersion: expect.any(String) });

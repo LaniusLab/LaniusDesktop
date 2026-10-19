@@ -39,6 +39,9 @@ describe("模板页", () => {
       locate: first?.recommended,
       selectedStepId: createDemoSteps()[0]?.id,
       dirty: false,
+      filePath: undefined,
+      flowId: "session-template",
+      flowName: "当前模板",
     });
     useKeymapStore.setState(createDefaultKeymapState());
   });

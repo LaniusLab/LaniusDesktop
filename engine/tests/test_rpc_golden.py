@@ -15,6 +15,7 @@ METHOD_SCHEMAS = [
     "engine.hello.json",
     "engine.ping.json",
     "flow.start.json",
+    "flow.migrate.json",
     "execution.get.json",
     "execution.list.json",
     "notifications.json",
@@ -59,6 +60,14 @@ def test_golden_flow_start_matches_schema_required() -> None:
     golden = _load(GOLDEN / "flow.start.result.json")
     for key in _required_of(schema, "result"):
         assert key in golden
+
+
+def test_golden_flow_migrate_matches_schema_required() -> None:
+    schema = _load(SCHEMAS / "flow.migrate.json")
+    golden = _load(GOLDEN / "flow.migrate.result.json")
+    for key in _required_of(schema, "result"):
+        assert key in golden
+    assert golden["migratedFrom"] <= golden["migratedTo"]
 
 
 def test_golden_state_changed_notification() -> None:

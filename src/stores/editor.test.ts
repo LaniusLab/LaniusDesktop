@@ -81,6 +81,38 @@ describe("editor store", () => {
     }
     expect(raw).toContain("多等一会");
   });
+
+  it("loadFlowFile 写入步骤与 filePath", () => {
+    useEditorStore.getState().loadFlowFile(
+      {
+        schemaVersion: 3,
+        id: "from-disk",
+        name: "磁盘模板",
+        keymapProfileId: "default",
+        target: {
+          match: { exe: "notepad.exe", title: "", className: "" },
+          locate: { channel: "a11y", source: "user", capture: "client", visionPack: "template" },
+        },
+        steps: [
+          {
+            id: "log1",
+            kind: "preset",
+            type: "core.log",
+            label: "来自文件",
+            config: { message: "hi" },
+          },
+        ],
+      },
+      "/tmp/from-disk.flow.json",
+    );
+    const state = useEditorStore.getState();
+    expect(state.filePath).toBe("/tmp/from-disk.flow.json");
+    expect(state.flowId).toBe("from-disk");
+    expect(state.flowName).toBe("磁盘模板");
+    expect(state.processId).toBe("notepad");
+    expect(state.steps[0]?.label).toBe("来自文件");
+    expect(state.dirty).toBe(false);
+  });
 });
 
 describe("stepIssueKey", () => {

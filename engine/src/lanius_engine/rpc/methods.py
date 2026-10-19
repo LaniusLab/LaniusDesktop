@@ -72,6 +72,16 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
         _validate_steps(flow.steps, known, issues)
         return {"ok": not any(i["severity"] == "error" for i in issues), "issues": issues}
 
+    async def flow_migrate(params: dict[str, Any]) -> dict[str, Any]:
+        raw = _parse_flow(params)
+        migrated_from = raw.schema_version
+        migrated = migrate_to_current(raw)
+        return {
+            "flow": migrated.model_dump(mode="json", by_alias=True),
+            "migratedFrom": migrated_from,
+            "migratedTo": migrated.schema_version,
+        }
+
     async def flow_start(params: dict[str, Any]) -> dict[str, Any]:
         """立即返回 executionId；执行在后台跑，进度走通知，终态落历史。"""
         flow = _parse_flow(params)
@@ -203,6 +213,7 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
     server.register("engine.ping", ping)
     server.register("engine.shutdown", shutdown)
     server.register("flow.validate", flow_validate)
+    server.register("flow.migrate", flow_migrate)
     server.register("flow.start", flow_start)
     server.register("flow.pause", flow_pause)
     server.register("flow.resume", flow_resume)
