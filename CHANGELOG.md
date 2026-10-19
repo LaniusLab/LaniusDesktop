@@ -7,8 +7,8 @@
 
 ### Changed
 
-- CI：代码检查仅在 `main`（及面向 `main` 的 PR）运行；Windows 打包仅在 push 到 `release` 时运行。
-- Release：关闭 macOS / Linux 打包矩阵，仅发布 Windows 安装包；Release 正文由本 Changelog 生成。
+- CI：代码检查仅在 `main`（及面向 `main` 的 PR）运行。
+- Release：仅 Windows。触发 = **merge/push 到 `release`** 且 Changelog 含当前 `package.json` 版本节 + `<!-- release:publish -->`（尚无对应 tag）；tag/Release 为产物。模式对齐 Minecraft-Utilities `desktop-release`。
 
 ## [0.2.0] - 2026-10-19
 

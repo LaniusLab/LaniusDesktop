@@ -156,9 +156,9 @@ const ordered = serializeParallelBranches(graph);
 | 分支 | 用途 | 合并方式 |
 | --- | --- | --- |
 | `main` | 日常开发集成；跑代码检查 CI | **仅允许 PR 合并**（禁止直接 push 工作流） |
-| `release` | 发布集成；合并后触发 Windows 打包 | **仅允许 PR 合并**（禁止直接 push 工作流） |
+| `release` | 发布集成线；**满足 Changelog 门禁时**才打 Windows 包 | **仅允许 PR 合并**（禁止直接 push 工作流） |
 
-推荐路径：功能分支 → PR → `main`（CI：lint / typecheck / test / engine / shell）→ 发版时再 PR → `release`（打包：仅 Windows）。
+推荐路径：功能分支 → PR → `main`（CI）→ 发版 PR → `release`。模式对齐 [Lexcubia/Minecraft-Utilities](https://github.com/Lexcubia/Minecraft-Utilities) 的 `desktop-release` detect（分支改为 `release`，平台仅 Windows）。
 
 ### GitHub 分支保护（须在仓库 Settings 配置）
 
@@ -169,13 +169,17 @@ Actions 无法代替 branch protection。请在 GitHub → Settings → Branches
 3. **Do not allow bypassing the above settings**（管理员也不绕过，除非应急）
 4. **Restrict force pushes** / **Restrict deletions**
 
-`release` 可不强制要求与 `main` 相同的 status checks（打包本身是门禁），但仍须 **Require a pull request before merging**，避免未审直推触发安装包。
+`release` 可不强制要求与 `main` 相同的 status checks，但仍须 **Require a pull request before merging**。
 
 ## 发布流程
 
-1. 在 `main` 上：根 `package.json` 改版本 → `pnpm version:sync` → 更新根目录 [`CHANGELOG.md`](CHANGELOG.md)（Keep a Changelog；把 `[Unreleased]` 迁到新版本章节）
-2. 开 PR 将待发布提交合并进 `release`（**不要**指望「打开 PR」就打包；只有 **merge/push 到 `release`** 才触发）
-3. `.github/workflows/release.yml` 在 `release` 上构建 **Windows** 安装包，并用 `scripts/release-changelog.mjs` 从 `CHANGELOG.md` 生成 GitHub Release 正文（草稿；tag = `v` + `package.json` version）
-4. 校验草稿 Release 后手动发布；校验和与 SBOM、签名通道属后续里程碑（见 ROADMAP M5）
+**触发（须同时满足）**：`push`/`merge` 到 `release`，且 `CHANGELOG.md` 含与 `package.json` version 对应的 `## [x.y.z]` 小节，且该小节含 `<!-- release:publish -->`，且尚无 git tag `v{x.y.z}`。缺任一条件则 **跳过打包**（不失败）。**不要用 tag push 当触发器**；tag 由打包成功后的 GitHub Release 创建（发布产物）。
 
-macOS / Linux 安装包当前**不**在流水线中构建。本地预览发布说明：`pnpm changelog:release`。
+1. 在 `main`：改根 `package.json` version → `pnpm version:sync` → 更新 [`CHANGELOG.md`](CHANGELOG.md)（把 `[Unreleased]` 迁到 `## [x.y.z]`，并在该节写入一行 `<!-- release:publish -->`）
+2. PR 合并进 `release`（打开 PR 本身不打包）
+3. `.github/workflows/release.yml` detect 通过后：构建 **Windows** 包 → Changelog 写入 Release 正文 → 创建草稿 GitHub Release（含 tag）并上传 **assets**；另保留 workflow artifact 30 天
+4. 人工校验草稿后发布；校验和 / SBOM / 签名见 ROADMAP M5
+
+产物：GitHub Release 附件（MSI/NSIS 等）+ Actions Artifacts `lanius-windows-vX.Y.Z`。
+
+macOS / Linux 当前不构建。本地：`pnpm changelog:release`；门禁预检：`node scripts/assert-changelog-release.mjs`。

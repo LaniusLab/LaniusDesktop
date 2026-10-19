@@ -1,23 +1,95 @@
 name: Release
 
-# 打包门禁：仅在合并进 release 分支后的 push 上运行（不对「打开指向 release 的 PR」打包）。
-# 当前只构建 Windows；macOS / Linux 打包已关闭。
+# 打包门禁（对齐 Lexcubia/Minecraft-Utilities desktop-release 的 detect 思路）：
+# 1) push/合并到长期分支 `release`（打开指向 release 的 PR 不打包）
+# 2) package.json 的 version 在 CHANGELOG.md 中有 `## [x.y.z]` 小节，且含 `<!-- release:publish -->`
+# 3) 尚不存在 git tag `v{x.y.z}`（tag 由本流水线在发布时创建，不是触发条件）
+# 仅 Windows；产物进 GitHub Release assets，并保留 workflow artifact。
 on:
   push:
     branches: [release]
-  workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: release-windows
+  group: release-windows-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
+  detect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      release: ${{ steps.pick.outputs.release }}
+      version: ${{ steps.pick.outputs.version }}
+      tag: ${{ steps.pick.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect publish intent
+        id: pick
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+
+          if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists; skip packaging."
+            echo "release=false" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          python3 <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+          import sys
+
+          ver = json.loads(pathlib.Path("package.json").read_text(encoding="utf-8"))["version"]
+          out = pathlib.Path(os.environ["GITHUB_OUTPUT"])
+          marker = "<!-- release:publish -->"
+
+          try:
+              text = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8")
+          except FileNotFoundError:
+              print("CHANGELOG.md missing; skip packaging.")
+              out.open("a", encoding="utf-8").write("release=false\n")
+              sys.exit(0)
+
+          heading = re.compile(rf"^## \[{re.escape(ver)}\][^\n]*\n", re.MULTILINE)
+          m = heading.search(text)
+          if not m:
+              print(
+                  f"CHANGELOG.md has no section ## [{ver}] for package.json version; skip packaging."
+              )
+              out.open("a", encoding="utf-8").write("release=false\n")
+              sys.exit(0)
+
+          rest = text[m.end() :]
+          m2 = re.search(r"^## ", rest, re.MULTILINE)
+          body = rest[: m2.start()] if m2 else rest
+          if marker not in body:
+              print(
+                  f"CHANGELOG ## [{ver}] lacks {marker}; skip packaging "
+                  "(add the marker when this version should ship)."
+              )
+              out.open("a", encoding="utf-8").write("release=false\n")
+              sys.exit(0)
+
+          print(f"Will package Windows build for {ver} (changelog section + marker; tag absent).")
+          out.open("a", encoding="utf-8").write("release=true\n")
+          PY
+
   release:
-    # 防止从非 release 分支误触 workflow_dispatch 打出安装包
-    if: github.ref == 'refs/heads/release'
+    needs: detect
+    if: needs.detect.outputs.release == 'true'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,27 +115,15 @@ jobs:
       - name: Version sync check
         run: pnpm version:sync:check
 
-      - name: Resolve release tag
-        id: meta
-        shell: bash
-        run: |
-          VERSION="$(node -p "require('./package.json').version")"
-          if [ -z "$VERSION" ]; then
-            echo "package.json version is empty" >&2
-            exit 1
-          fi
-          TAG="v${VERSION}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Release tag: $TAG (from package.json)"
-
       - name: Build changelog for release notes
         id: changelog
         shell: bash
         run: |
           node scripts/release-changelog.mjs \
-            --version "${{ steps.meta.outputs.version }}" \
+            --version "${{ needs.detect.outputs.version }}" \
             --out changelog-section.md
+          # 去掉发布标记，避免出现在 GitHub Release 正文（Windows runner 上用 node，避免 sed -i 差异）
+          node -e "const fs=require('fs'); const p='changelog-section.md'; fs.writeFileSync(p, fs.readFileSync(p,'utf8').replace(/<!--\\s*release:publish\\s*-->/g,''));"
           {
             cat changelog-section.md
             echo ""
@@ -86,14 +146,26 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Build and publish (Windows)
+        id: tauri
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ steps.meta.outputs.tag }}
-          releaseName: "Lanius ${{ steps.meta.outputs.tag }}"
+          # tag 是发布产物（由本 job 创建），不是触发条件
+          tagName: ${{ needs.detect.outputs.tag }}
+          releaseName: "Lanius ${{ needs.detect.outputs.tag }}"
           releaseBody: ${{ steps.changelog.outputs.body }}
           releaseDraft: true
           prerelease: false
           args: ""
           projectPath: src-tauri
+
+      - name: Upload Windows package as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lanius-windows-${{ needs.detect.outputs.tag }}
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: warn
+          retention-days: 30
