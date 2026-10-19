@@ -21,6 +21,7 @@
     "changelog:release": "node scripts/release-changelog.mjs",
     "engine:test": "pytest engine/tests",
     "engine:lint": "ruff check engine && mypy engine/src",
+    "engine:pack": "node scripts/pack-engine.mjs",
     "check": "pnpm codegen:check && pnpm lint && pnpm typecheck && pnpm test",
     "verify": "pnpm check && pnpm engine:lint && pnpm engine:test",
     "verify:shell": "cargo check --manifest-path src-tauri/Cargo.toml"
