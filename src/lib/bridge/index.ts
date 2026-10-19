@@ -17,6 +17,8 @@ export type {
   ExecutionPhase,
   FlowNodeRun,
   FlowRunResult,
+  FlowValidateResult,
+  FlowValidationIssue,
   UpdaterResult,
   UpdaterStatus,
 } from "./types";

@@ -2,19 +2,16 @@ import { DEFAULT_PREFS, mergePrefs } from "@/lib/prefs";
 import type { FlowFile } from "@/lib/gen/flow";
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
-import type { Bridge, EngineEvent, EngineInfo, FlowNodeRun } from "./types";
+import type {
+  Bridge,
+  EngineEvent,
+  EngineInfo,
+  FlowNodeRun,
+  FlowValidationIssue,
+  FlowValidateResult,
+} from "./types";
 
 const MOCK_SCHEMA_VERSION = 3;
-
-function bumpMockFlow(flow: FlowFile): { flow: FlowFile; migratedFrom: number; migratedTo: number } {
-  const migratedFrom = flow.schemaVersion;
-  const migratedTo = Math.max(migratedFrom, MOCK_SCHEMA_VERSION);
-  return {
-    flow: { ...flow, schemaVersion: migratedTo },
-    migratedFrom,
-    migratedTo,
-  };
-}
 
 /*
  * 浏览器开发 mock：pnpm dev 脱离 Tauri 运行时，用定时器模拟
@@ -26,8 +23,89 @@ const MOCK_INFO: EngineInfo = {
   protocolVersion: "0.1.0",
   engineVersion: "0.1.0-mock",
   capabilities: ["dryRun", "template.steps", "locate.a11y"],
-  nodeTypes: ["core.log", "core.wait", "keyboard.press", "mouse.click", "mouse.dblclick", "mouse.move"],
+  nodeTypes: [
+    "core.log",
+    "core.wait",
+    "keyboard.press",
+    "keyboard.type",
+    "mouse.click",
+    "mouse.dblclick",
+    "mouse.move",
+  ],
 };
+
+const MOCK_KNOWN_TYPES = new Set([
+  ...MOCK_INFO.nodeTypes,
+  "flow.if",
+  "flow.loop",
+  "flow.wait",
+  "flow.subflow",
+  "flow.tryCatch",
+]);
+
+function validateMockFlow(flow: FlowFile): FlowValidateResult {
+  const issues: FlowValidationIssue[] = [];
+  const walk = (steps: NonNullable<FlowFile["steps"]>) => {
+    for (const step of steps) {
+      const nodeType = step.type ?? (step.kind === "binding" ? "keyboard.press" : "");
+      if (!nodeType || !MOCK_KNOWN_TYPES.has(nodeType)) {
+        issues.push({
+          severity: "error",
+          code: "engine.flow.unknownNodeType",
+          nodeId: step.id,
+          message: `未知节点类型: ${nodeType || step.kind}`,
+        });
+      } else if (step.kind === "binding") {
+        const keys = String(step.keys ?? step.config?.keys ?? "").trim();
+        if (!keys) {
+          issues.push({
+            severity: "error",
+            code: "engine.flow.validationFailed",
+            nodeId: step.id,
+            message: "缺按键。在右侧「发出的键」里补上。",
+          });
+        }
+      }
+      if (nodeType === "core.wait") {
+        const ms = step.config?.ms;
+        if (typeof ms === "number" && ms < 0) {
+          issues.push({
+            severity: "error",
+            code: "engine.flow.validationFailed",
+            nodeId: step.id,
+            message: "等待时间不能是负数。",
+          });
+        }
+      }
+      if (nodeType === "keyboard.type") {
+        const text = String(step.config?.text ?? "").trim();
+        if (!text) {
+          issues.push({
+            severity: "error",
+            code: "engine.flow.validationFailed",
+            nodeId: step.id,
+            message: "文本内容不能为空。",
+          });
+        }
+      }
+      if (step.then) walk(step.then);
+      if (step.else) walk(step.else);
+      if (step.body) walk(step.body);
+    }
+  };
+  walk(flow.steps ?? []);
+  return { ok: !issues.some((issue) => issue.severity === "error"), issues };
+}
+
+function bumpMockFlow(flow: FlowFile): { flow: FlowFile; migratedFrom: number; migratedTo: number } {
+  const migratedFrom = flow.schemaVersion;
+  const migratedTo = Math.max(migratedFrom, MOCK_SCHEMA_VERSION);
+  return {
+    flow: { ...flow, schemaVersion: migratedTo },
+    migratedFrom,
+    migratedTo,
+  };
+}
 
 const MOCK_DEBUG: ShellDebugInfo = {
   appVersion: "0.1.0",
@@ -174,6 +252,10 @@ export function createMockBridge(): Bridge {
       }
       files.set(trimmed, flow);
       return { path: trimmed };
+    },
+
+    async flowValidate(flow) {
+      return validateMockFlow(flow);
     },
 
     onEngineEvent(handler) {

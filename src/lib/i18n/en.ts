@@ -129,6 +129,7 @@ export const en: Record<string, string> = {
   "edit.issue.wait": "Wait time cannot be negative.",
   "edit.issue.text": "Text cannot be empty.",
   "edit.issue.badge": "Needs fix",
+  "edit.issue.listHint": "{count} to fix · click to jump",
   "edit.run.running": "Running",
   "edit.run.done": "Done",
   "edit.run.skipped": "Skipped",

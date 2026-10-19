@@ -73,5 +73,7 @@ afterEach(async () => {
     activeStepId: undefined,
     pendingRun: undefined,
   });
+  const { useValidationStore } = await import("@/stores/validation");
+  useValidationStore.getState().clear();
   applyAppearance(DEFAULT_PREFS);
 });

@@ -129,6 +129,7 @@ export const zhCN: Record<string, string> = {
   "edit.issue.wait": "等待时间不能是负数。",
   "edit.issue.text": "文本内容不能为空。",
   "edit.issue.badge": "待补",
+  "edit.issue.listHint": "{count} 处待补 · 点选定位",
   "edit.run.running": "正在执行",
   "edit.run.done": "完成",
   "edit.run.skipped": "跳过",

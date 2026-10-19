@@ -1,6 +1,7 @@
 import { FolderOpen, Play, Redo2, Save, Undo2, Wand2 } from "lucide-react";
 import { useState } from "react";
 
+import { useFlowValidation } from "@/hooks/use-flow-validation";
 import { currentContext } from "@/lib/commands/context";
 import { registry } from "@/lib/commands/registry";
 import { PROCESS_CATALOG } from "@/lib/targets";
@@ -8,6 +9,7 @@ import { TemplateInspector } from "@/modules/flow-editor/inspector";
 import { MindMapPreview } from "@/modules/flow-editor/mind-map-preview";
 import { TemplatePalette } from "@/modules/flow-editor/palette";
 import { TemplateSequence } from "@/modules/flow-editor/sequence";
+import { ValidationIssueList } from "@/modules/flow-editor/validation-issues";
 import { redoEdit, undoEdit, useEditorStore } from "@/stores/editor";
 import { useExecutionStore } from "@/stores/execution";
 import { useT, useUiStore } from "@/stores/ui";
@@ -17,6 +19,7 @@ type CenterTab = "strip" | "mind";
 
 /** 模板页：指令条缩进 + 插入菜单 + 只读导图预览。 */
 export function FlowsPage() {
+  useFlowValidation();
   const dirty = useEditorStore((s) => s.dirty);
   const filePath = useEditorStore((s) => s.filePath);
   const processId = useEditorStore((s) => s.processId);
@@ -144,6 +147,7 @@ export function FlowsPage() {
                   ]}
                 />
               </div>
+              {centerTab === "strip" ? <ValidationIssueList /> : null}
               <div className="min-h-0 flex-1">
                 {centerTab === "strip" ? <TemplateSequence /> : <MindMapPreview />}
               </div>

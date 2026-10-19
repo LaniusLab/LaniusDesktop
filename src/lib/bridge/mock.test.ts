@@ -50,6 +50,17 @@ describe("mockBridge", () => {
       migratedTo: 3,
     });
     await expect(bridge.flowOpen("")).rejects.toThrow(/path/);
+    await expect(
+      bridge.flowValidate({
+        schemaVersion: 3,
+        id: "bad",
+        name: "bad",
+        steps: [{ id: "k", kind: "binding", type: "keyboard.press", label: "空", keys: "" }],
+      }),
+    ).resolves.toMatchObject({
+      ok: false,
+      issues: [expect.objectContaining({ nodeId: "k", code: "engine.flow.validationFailed" })],
+    });
     const prefs = await bridge.prefsGet();
     await expect(bridge.prefsSet(prefs)).resolves.toMatchObject({ theme: prefs.theme });
     await expect(bridge.debugInfo()).resolves.toMatchObject({ appVersion: expect.any(String) });
