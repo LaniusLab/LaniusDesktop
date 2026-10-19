@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import subprocess
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -26,16 +27,27 @@ class WindowsBackend(Protocol):
 
     def clipboard_set(self, text: str) -> None: ...
 
+    def launch(self, cmd: str | list[str]) -> int: ...
+
+    def terminate(self, pid: int) -> None: ...
+
+    def find_element(self, locator: dict[str, Any]) -> str: ...
+
+    def element_click(self, locator: dict[str, Any]) -> None: ...
+
 
 @dataclass
 class RecordingWindowsBackend:
-    """单测假后端：记录调用并维护简易窗口/剪贴板状态。"""
+    """单测假后端：记录调用并维护简易窗口/剪贴板/进程/元素状态。"""
 
     calls: list[tuple[str, tuple[Any, ...]]] = field(default_factory=list)
     clipboard: str = ""
     windows: dict[str, dict[str, Any]] = field(default_factory=dict)
+    elements: dict[str, dict[str, Any]] = field(default_factory=dict)
+    processes: dict[int, str | list[str]] = field(default_factory=dict)
     cursor: tuple[int, int] = (0, 0)
     bound_handle: str | None = None
+    _next_pid: int = 2000
 
     def click(self, x: int, y: int, button: str) -> None:
         self.calls.append(("click", (x, y, button)))
@@ -83,6 +95,52 @@ class RecordingWindowsBackend:
         self.calls.append(("clipboard_set", (text,)))
         self.clipboard = text
 
+    def launch(self, cmd: str | list[str]) -> int:
+        self.calls.append(("launch", (cmd,)))
+        self._next_pid += 1
+        pid = self._next_pid
+        self.processes[pid] = cmd
+        exe = cmd[0] if isinstance(cmd, list) else str(cmd).split()[0]
+        bare = exe.rsplit("\\", maxsplit=1)[-1].rsplit("/", maxsplit=1)[-1]
+        handle = f"hwnd-{pid}"
+        self.windows[handle] = {
+            "title": "无标题 - 记事本" if "notepad" in bare.casefold() else bare,
+            "exe": bare,
+            "className": "Notepad" if "notepad" in bare.casefold() else "",
+            "pid": pid,
+        }
+        return pid
+
+    def terminate(self, pid: int) -> None:
+        self.calls.append(("terminate", (pid,)))
+        self.processes.pop(pid, None)
+        gone = [h for h, info in self.windows.items() if info.get("pid") == pid]
+        for handle in gone:
+            self.windows.pop(handle, None)
+
+    def find_element(self, locator: dict[str, Any]) -> str:
+        self.calls.append(("find_element", (locator,)))
+        name = str(locator.get("name", locator.get("title", "")))
+        auto_id = str(locator.get("automationId", locator.get("auto_id", "")))
+        for eid, info in self.elements.items():
+            if name and name == str(info.get("name", "")):
+                return eid
+            if auto_id and auto_id == str(info.get("automationId", "")):
+                return eid
+        if self.elements:
+            raise LookupError(f"element not found: {locator}")
+        eid = "el-1"
+        self.elements[eid] = {
+            "name": name,
+            "automationId": auto_id,
+            "controlType": locator.get("controlType", ""),
+        }
+        return eid
+
+    def element_click(self, locator: dict[str, Any]) -> None:
+        eid = self.find_element(locator)
+        self.calls.append(("element_click", (locator, eid)))
+
 
 class PywinautoBackend:
     """真实 pywinauto（UIA）绑定；仅在 win32 + 已安装 extra 时构造。"""
@@ -96,6 +154,8 @@ class PywinautoBackend:
         self._keyboard = keyboard
         self._clipboard = pw_clipboard
         self._windows: dict[str, Any] = {}
+        self._elements: dict[str, Any] = {}
+        self._procs: dict[int, Any] = {}
 
     def click(self, x: int, y: int, button: str) -> None:
         btn = button if button in ("left", "right", "middle") else "left"
@@ -189,3 +249,65 @@ class PywinautoBackend:
                 win32clipboard.CloseClipboard()
         except Exception as exc:
             raise RuntimeError("clipboard set unavailable") from exc
+
+    def launch(self, cmd: str | list[str]) -> int:
+        from pywinauto import Application  # type: ignore[import-not-found]
+
+        args = cmd if isinstance(cmd, list) else [cmd]
+        app = Application(backend="uia").start(" ".join(args))
+        pid = int(app.process)
+        self._procs[pid] = app
+        try:
+            win = app.top_window()
+            handle = str(int(win.handle))
+            self._windows[handle] = win
+        except Exception:
+            pass
+        return pid
+
+    def terminate(self, pid: int) -> None:
+        app = self._procs.pop(pid, None)
+        if app is not None:
+            try:
+                app.kill()
+                return
+            except Exception:
+                pass
+        subprocess.run(
+            ["taskkill", "/PID", str(pid), "/F"],
+            check=False,
+            capture_output=True,
+        )
+
+    def find_element(self, locator: dict[str, Any]) -> str:
+        name = str(locator.get("name", locator.get("title", ""))).strip()
+        auto_id = str(locator.get("automationId", locator.get("auto_id", ""))).strip()
+        control_type = str(locator.get("controlType", "")).strip()
+        root = None
+        if self._windows:
+            root = next(iter(self._windows.values()))
+        if root is None:
+            raise LookupError(f"element not found (no active window): {locator}")
+        spec: dict[str, Any] = {}
+        if name:
+            spec["title"] = name
+        if auto_id:
+            spec["auto_id"] = auto_id
+        if control_type:
+            spec["control_type"] = control_type
+        try:
+            el = root.child_window(**spec)
+            if not el.exists(timeout=1):
+                raise LookupError(f"element not found: {locator}")
+            eid = str(id(el))
+            self._elements[eid] = el
+            return eid
+        except LookupError:
+            raise
+        except Exception as exc:
+            raise LookupError(f"element not found: {locator}") from exc
+
+    def element_click(self, locator: dict[str, Any]) -> None:
+        eid = self.find_element(locator)
+        el = self._elements[eid]
+        el.click_input()

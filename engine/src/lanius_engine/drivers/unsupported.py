@@ -71,3 +71,15 @@ class UnsupportedDriver(Driver):
 
     async def clipboard_set(self, text: str) -> None:
         self._fail("clipboard")
+
+    async def launch(self, cmd: str | list[str]) -> int:
+        self._fail("process.launch")
+
+    async def terminate(self, pid: int) -> None:
+        self._fail("process.terminate")
+
+    async def find_element(self, locator: dict[str, Any]) -> str:
+        self._fail("element.find")
+
+    async def element_click(self, locator: dict[str, Any]) -> None:
+        self._fail("element.click")

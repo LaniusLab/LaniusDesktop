@@ -67,8 +67,13 @@ class WindowsDriver(Driver):
         try:
             return await asyncio.to_thread(fn, *args)
         except LookupError as exc:
+            code = (
+                "engine.driver.elementNotFound"
+                if capability.startswith("element.")
+                else "engine.driver.windowNotFound"
+            )
             raise LaniusError.of(
-                "engine.driver.windowNotFound",
+                code,
                 str(exc),
                 details={"capability": capability},
                 retryable=True,
@@ -113,3 +118,17 @@ class WindowsDriver(Driver):
 
     async def clipboard_set(self, text: str) -> None:
         await self._call("clipboard", "clipboard_set", text)
+
+    async def launch(self, cmd: str | list[str]) -> int:
+        pid = await self._call("process.launch", "launch", cmd)
+        return int(pid)
+
+    async def terminate(self, pid: int) -> None:
+        await self._call("process.terminate", "terminate", pid)
+
+    async def find_element(self, locator: dict[str, Any]) -> str:
+        eid = await self._call("element.find", "find_element", locator)
+        return str(eid)
+
+    async def element_click(self, locator: dict[str, Any]) -> None:
+        await self._call("element.click", "element_click", locator)
