@@ -29,9 +29,10 @@ engine/src/lanius_engine/
 │   ├── mock.py          # Mock driver（CI/测试/dry-run 用）
 │   ├── capabilities.py  # 三平台能力矩阵
 │   ├── factory.py       # LANIUS_DRIVER / create_driver
-│   ├── windows.py       # pywinauto（M4：选择与错误码已接线；绑定实现推进中）
-│   ├── macos.py         # pyobjc 子集占位
-│   └── linux.py         # pyatspi 子集占位
+│   ├── windows.py           # pywinauto UIA 绑定（可注入 backend 测路径）
+│   ├── windows_backend.py   # PywinautoBackend + RecordingWindowsBackend
+│   ├── macos.py             # pyobjc 子集占位
+│   └── linux.py             # pyatspi 子集占位
 ├── runtime/
 │   ├── executor.py    # 执行器：有序 steps + 状态机
 │   ├── state.py       # 执行状态机定义
@@ -63,7 +64,7 @@ engine/src/lanius_engine/
 
 | 平台 | 库 | 状态 |
 | --- | --- | --- |
-| Windows | pywinauto（UIA 后端） | M4 首批：工厂可选；optional extra `[windows]`；绑定实现推进中 |
+| Windows | pywinauto（UIA 后端） | M4：`WindowsDriver` 已绑键鼠/窗口/剪贴板；`asyncio.to_thread`；optional `[windows]` |
 | macOS | pyobjc（AX API） | M4 能力子集占位（需辅助功能授权引导） |
 | Linux | pyatspi（AT-SPI2） | M4 能力子集占位 |
 | 任意 | mock | 默认；CI 与 dry-run |

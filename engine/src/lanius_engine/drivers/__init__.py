@@ -5,6 +5,7 @@ from lanius_engine.drivers.linux import LinuxDriver
 from lanius_engine.drivers.macos import MacosDriver
 from lanius_engine.drivers.mock import MockDriver
 from lanius_engine.drivers.windows import WindowsDriver
+from lanius_engine.drivers.windows_backend import RecordingWindowsBackend
 
 __all__ = [
     "Driver",
@@ -12,6 +13,7 @@ __all__ = [
     "MacosDriver",
     "MockDriver",
     "PLATFORM_MATRIX",
+    "RecordingWindowsBackend",
     "WindowsDriver",
     "create_driver",
     "resolve_driver_name",
