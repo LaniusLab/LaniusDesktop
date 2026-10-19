@@ -19,6 +19,11 @@ from lanius_engine.nodes.base import NodeContext
 from lanius_engine.nodes.registry import NodeRegistry
 from lanius_engine.runtime.cancel import FlowCancelled
 from lanius_engine.runtime.scope import ScopeChain, interpolate
+from lanius_engine.runtime.secrets import (
+    SecretProvider,
+    create_secret_provider,
+    get_secret_registry,
+)
 from lanius_engine.runtime.state import ExecutionState, ExecutionStateMachine
 
 EventHook = Callable[[str, dict[str, Any]], None]
@@ -44,9 +49,16 @@ class ExecutionRecord:
 
 
 class Executor:
-    def __init__(self, registry: NodeRegistry, driver: Driver) -> None:
+    def __init__(
+        self,
+        registry: NodeRegistry,
+        driver: Driver,
+        *,
+        secrets: SecretProvider | None = None,
+    ) -> None:
         self._registry = registry
         self._driver = driver
+        self._secrets = secrets if secrets is not None else create_secret_provider()
         self._lock = asyncio.Lock()
         self._cancel: asyncio.Event | None = None
         # set = 可运行；clear = 暂停中（协作式，在安全点等待）
@@ -181,7 +193,11 @@ class Executor:
         logger = get_logger(executionId=execution_id)
 
         def emit(event: str, payload: dict[str, Any]) -> None:
-            on_event(event, {"executionId": execution_id, **payload})
+            # 通知载荷过脱敏：已解析凭据明文 / Authorization → ***
+            safe = get_secret_registry().redact(payload)
+            if not isinstance(safe, dict):
+                safe = dict(payload)
+            on_event(event, {"executionId": execution_id, **safe})
 
         async def await_pause() -> None:
             await self._await_pause(machine=machine, emit=emit, cancel_event=cancel_event)
@@ -525,6 +541,7 @@ class Executor:
             inputs={},
             emit=emit,
             await_pause=await_pause,
+            secrets=self._secrets,
         )
         instance = node_cls()
         try:

@@ -22,6 +22,7 @@ from lanius_engine.models import (
 from lanius_engine.nodes.registry import default_registry
 from lanius_engine.rpc.server import RpcServer
 from lanius_engine.runtime.executor import Executor
+from lanius_engine.runtime.secrets import create_secret_provider
 
 _log = get_logger(module="rpc.methods")
 
@@ -30,7 +31,8 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
     registry = default_registry()
     driver = create_driver()
     driver_name = resolve_driver_name()
-    executor = Executor(registry, driver)
+    secrets = create_secret_provider()
+    executor = Executor(registry, driver, secrets=secrets)
     store = history if history is not None else ExecutionHistory()
 
     async def hello(params: dict[str, Any]) -> dict[str, Any]:
@@ -46,6 +48,7 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
                 "execution.history",
                 "execution.pause",
                 "fs.readWrite",
+                "secrets.env",
                 f"driver.{driver_name}",
             ],
             "nodeTypes": registry.types(),

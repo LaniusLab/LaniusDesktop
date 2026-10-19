@@ -256,9 +256,16 @@ def _maybe_json(raw: str | None) -> Any:
 
 
 def truncate_summary(value: Any) -> dict[str, Any] | Any:
-    """单字段 > 4 KiB 截断并标记 truncated（ENGINE.md §6）。"""
-    text = json.dumps(value, ensure_ascii=False) if not isinstance(value, str) else value
+    """脱敏后截断：单字段 > 4 KiB 标记 truncated（ENGINE.md §6 / SECURITY.md §6）。"""
+    from lanius_engine.runtime.secrets import get_secret_registry
+
+    scrubbed = get_secret_registry().redact(value)
+    text = (
+        json.dumps(scrubbed, ensure_ascii=False)
+        if not isinstance(scrubbed, str)
+        else scrubbed
+    )
     if len(text.encode("utf-8")) <= SUMMARY_LIMIT:
-        return value
+        return scrubbed
     clipped = text.encode("utf-8")[:SUMMARY_LIMIT].decode("utf-8", errors="ignore")
     return {"truncated": True, "preview": clipped}

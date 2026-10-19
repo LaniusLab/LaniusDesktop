@@ -27,7 +27,8 @@ Lanius 的本质是"替用户操作电脑"，安全模型围绕两个事实构�
 
 - 真实值只存系统 keyring（Windows Credential Manager / macOS Keychain / Secret Service），由 Rust 壳经 `keyring` crate 读写。
 - 流程文件、执行历史、日志中只允许出现 `secret://<name>` 引用。
-- 引擎需要凭据时：节点把 `secretRef` 交给壳的 `secret_get`（经 RPC 回调约定，M4 细化），值在内存中传递，使用节点标记 `sensitive: true` 的端口——该端口值**不进**历史与日志。
+- 引擎需要凭据时：配置里写 `secret://<name>` 或 `{ "secretRef": "secret://…" }`，经可注入 `SecretProvider` 解析后仅在内存中使用。当前实现读环境变量 `LANIUS_SECRETS`（JSON 对象）或测试用 Memory provider；壳 `secret_get` 的 stdio **反向 RPC** 因 PROTOCOL「引擎永不主动发起请求」尚未接线，属后续切片。
+- 节点可标记端口 `sensitive: true`；已解析明文登记后，日志 / 执行通知 / 历史摘要一律渲染为 `***`。
 - UI 提供凭据管理页（设置 → 凭据），只显示名称列表，永不回显值。
 
 ## 4. 信任分级

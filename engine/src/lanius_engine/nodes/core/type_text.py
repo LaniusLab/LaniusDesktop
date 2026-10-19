@@ -1,17 +1,20 @@
-"""keyboard.type：向已绑定窗口输入一段文本（含换行）。"""
+"""keyboard.type：向已绑定窗口输入一段文本（含换行）。
+
+支持明文、模板插值，以及 secret:// / { secretRef }（SECURITY.md §3）。
+"""
 
 import builtins
-from typing import ClassVar
+from typing import Any, ClassVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from lanius_engine.models import LaniusError
 from lanius_engine.nodes.base import NodeContext, NodeResult, Port
-from lanius_engine.runtime.scope import interpolate
 
 
 class TypeConfig(BaseModel):
-    text: str = ""
+    # str | { secretRef }；校验宽松，运行期由 resolve_value 解析
+    text: Any = Field(default="")
 
 
 class TypeTextNode:
@@ -19,12 +22,15 @@ class TypeTextNode:
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = True
     inputs: ClassVar[dict[str, Port]] = {}
-    outputs: ClassVar[dict[str, Port]] = {}
+    outputs: ClassVar[dict[str, Port]] = {
+        "length": Port(type="number"),
+    }
     config_schema: ClassVar[builtins.type[BaseModel]] = TypeConfig
 
     async def execute(self, ctx: NodeContext) -> NodeResult:
         ctx.check_cancelled()
-        text = interpolate(str(ctx.config.get("text", "")), ctx.scope)
+        resolved = ctx.resolve_value(ctx.config.get("text", ""))
+        text = "" if resolved is None else str(resolved)
         if text == "":
             raise LaniusError.of(
                 "engine.flow.validationFailed",

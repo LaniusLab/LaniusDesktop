@@ -138,7 +138,7 @@
 | `execution_list` | `{ limit, offset }` | `ExecutionPage` | `execution.list` | 经 `engine_call` 透传；专用 invoke 待补 |
 | `secret_list` | — | `SecretListResult`（`schemas/shell-secret.schema.json`） | 名称索引；无值 | 已实现 |
 | `secret_set` | `{ key, value }` | `SecretSetResult` | 系统 keyring + 名称索引；日志只记 key | 已实现 |
-| `secret_get` | `{ key }` | `SecretGetResult` | 取值仅供引擎回调；UI 凭据页禁止展示 | 已实现 |
+| `secret_get` | `{ key }` | `SecretGetResult` | 取值供引擎消费；UI 凭据页禁止展示。引擎侧暂经 `LANIUS_SECRETS` / 注入 provider（无反向 RPC） | 已实现（壳）；引擎回调待接线 |
 | `secret_delete` | `{ key }` | `SecretDeleteResult` | 删 keyring 与索引 | 已实现 |
 | `prefs_get` | — | `ShellPrefs` | 读 `prefs.json` | 已实现 |
 | `prefs_set` | `{ prefs }` | `ShellPrefs` | 写盘 + 同步开机自启 | 已实现 |
