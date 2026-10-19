@@ -90,6 +90,8 @@ export interface Bridge {
   engineInfo(): Promise<EngineInfo>;
   flowRun(flow: FlowFile, mode: "run" | "dryRun"): Promise<FlowRunResult>;
   flowCancel(executionId: string): Promise<void>;
+  flowPause(executionId: string): Promise<void>;
+  flowResume(executionId: string): Promise<void>;
   /** 打开本机流程文件（path 必填；OS 对话框待 dialog 插件） */
   flowOpen(path: string): Promise<FlowOpenResult>;
   /** 校验后写盘 */

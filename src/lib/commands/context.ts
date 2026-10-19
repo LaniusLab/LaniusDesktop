@@ -20,6 +20,7 @@ export function currentContext(): CommandContext {
     engine: { status: useExecutionStore.getState().engineStatus },
     execution: {
       phase: useExecutionStore.getState().phase,
+      activeExecutionId: useExecutionStore.getState().activeExecutionId,
       beginRun: (input) => useExecutionStore.getState().beginRun(input),
       ingestRunResult: (result) => useExecutionStore.getState().ingestRunResult(result),
     },

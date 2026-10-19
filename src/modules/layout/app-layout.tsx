@@ -20,8 +20,9 @@ import { formatShortcut, matchShortcut } from "@/lib/shortcut";
 import { cn } from "@/lib/utils";
 import { useExecutionStore } from "@/stores/execution";
 import { useT, useUiStore } from "@/stores/ui";
-import { Kbd, SplitPane, StatusBadge, Tooltip, TooltipContent, TooltipTrigger } from "@/ui";
+import { Kbd, SplitPane, Tooltip, TooltipContent, TooltipTrigger } from "@/ui";
 
+import { ExecutionControlBar } from "../runner/execution-control-bar";
 import { GlobalSearch } from "../search/global-search";
 import { SettingsDialog } from "../settings/settings-page";
 import { Titlebar } from "./titlebar";
@@ -57,7 +58,7 @@ function navClass(active: boolean, index: number, collapsed: boolean): string {
 export function AppLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const { engineStatus, engineUptimeMs, phase, setEngineStatus, setPhase, appendLog, noteStep } =
+  const { engineStatus, engineUptimeMs, setEngineStatus, setPhase, appendLog, noteStep } =
     useExecutionStore();
   const searchOpen = useUiStore((s) => s.searchOpen);
   const setSearchOpen = useUiStore((s) => s.setSearchOpen);
@@ -129,6 +130,7 @@ export function AppLayout() {
         return;
       }
       for (const command of registry.list(ctx)) {
+        if (!command.enabled) continue;
         if (SKIP_DEFAULT_SHORTCUT.has(command.id)) continue;
         if (command.shortcut && matchShortcut(event, command.shortcut)) {
           event.preventDefault();
@@ -254,7 +256,7 @@ export function AppLayout() {
         </main>
       </SplitPane>
 
-      <footer className="mx-3 mb-3 flex h-8 shrink-0 items-center gap-4 rounded-xl border border-line bg-glass px-4 text-xs text-fg-muted backdrop-blur-md">
+      <footer className="mx-3 mb-3 flex h-9 shrink-0 items-center gap-3 rounded-xl border border-line bg-glass px-3 text-xs text-fg-muted backdrop-blur-md">
         <Tooltip>
           <TooltipTrigger className="flex items-center gap-1.5">
             <span
@@ -272,7 +274,7 @@ export function AppLayout() {
             {isTauri ? "" : ` · ${t("engine.preview")}`}
           </TooltipContent>
         </Tooltip>
-        <StatusBadge state={phase} />
+        <ExecutionControlBar />
       </footer>
 
       <GlobalSearch />

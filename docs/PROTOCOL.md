@@ -132,6 +132,7 @@
 | `engine_call` | `{ method, params }` | RPC result | 透传任意方法 | 已实现 |
 | `flow_run` | `{ mode }`（M0 用内置 demo flow） | 执行结果摘要 | `flow.start` | 已实现 |
 | `flow_cancel` | `{ executionId }` | — | `flow.cancel` | 已实现 |
+| （经 `engine_call`） | `flow.pause` / `flow.resume` | — | 同左 | 已实现（UI 控制条） |
 | `flow_open` | `{ path }` | `{ path, flow, migratedFrom?, migratedTo? }` | 读盘 + `flow.migrate`（OS 对话框待 dialog 插件） | 已实现 |
 | `flow_save` | `{ path, flow }` | `{ path }` | 先过 `flow.validate` 再写盘 | 已实现 |
 | `execution_list` | `{ limit, offset }` | `ExecutionPage` | `execution.list` | 经 `engine_call` 透传；专用 invoke 待补 |

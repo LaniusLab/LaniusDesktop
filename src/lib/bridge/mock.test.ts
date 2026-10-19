@@ -34,6 +34,8 @@ describe("mockBridge", () => {
       ],
     });
     await expect(bridge.flowCancel("x")).resolves.toBeUndefined();
+    await expect(bridge.flowPause("x")).resolves.toBeUndefined();
+    await expect(bridge.flowResume("x")).resolves.toBeUndefined();
     const sample = {
       schemaVersion: 2 as const,
       id: "file-1",
