@@ -46,7 +46,7 @@ impl EngineClient {
     /// 开发模式（debug_assertions）启动 `python -m lanius_engine`；
     /// 生产模式启动 externalBin 打包的 PyInstaller 产物。
     pub async fn spawn(app: AppHandle) -> Result<Arc<Self>, ShellError> {
-        let mut command = resolve_engine_command();
+        let mut command = resolve_engine_command()?;
         command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -182,14 +182,31 @@ impl EngineClient {
     }
 }
 
-fn resolve_engine_command() -> Command {
+/// 生产态引擎路径（Tauri `externalBin` 安装布局）。
+///
+/// 源树：`src-tauri/binaries/lanius-engine-<target-triple>[.exe]`
+/// 安装后：与主可执行文件**同目录**的 `lanius-engine[.exe]`（无 triple、无 `binaries/` 子目录）。
+pub(crate) fn production_engine_path() -> std::path::PathBuf {
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_default();
+    let name = if cfg!(windows) {
+        "lanius-engine.exe"
+    } else {
+        "lanius-engine"
+    };
+    exe_dir.join(name)
+}
+
+fn resolve_engine_command() -> Result<Command, ShellError> {
     if let Ok(custom) = std::env::var("LANIUS_ENGINE_CMD") {
         // 开发逃生门：LANIUS_ENGINE_CMD="python -m lanius_engine"
         let mut parts = custom.split_whitespace();
         let program = parts.next().unwrap_or("python");
         let mut cmd = Command::new(program);
         cmd.args(parts);
-        return cmd;
+        return Ok(cmd);
     }
 
     if cfg!(debug_assertions) {
@@ -201,17 +218,48 @@ fn resolve_engine_command() -> Command {
             cmd.current_dir(&engine_dir);
             cmd.env("PYTHONPATH", engine_dir.join("src"));
         }
-        cmd
-    } else {
-        let exe_dir = std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        return Ok(cmd);
+    }
+
+    let binary = production_engine_path();
+    if !binary.is_file() {
+        return Err(ShellError::SidecarSpawn(format!(
+            "找不到引擎二进制: {}（externalBin 未随安装包分发或路径解析错误）",
+            binary.display()
+        )));
+    }
+    tracing::info!(
+        target: "sidecar",
+        path = %binary.display(),
+        "启动生产引擎 sidecar"
+    );
+    Ok(Command::new(binary))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::production_engine_path;
+
+    #[test]
+    fn production_path_is_sibling_of_exe_not_binaries_subdir() {
+        let path = production_engine_path();
+        let name = path
+            .file_name()
+            .and_then(|s| s.to_str())
             .unwrap_or_default();
-        let binary = exe_dir.join("binaries").join(if cfg!(windows) {
-            "lanius-engine.exe"
-        } else {
-            "lanius-engine"
-        });
-        Command::new(binary)
+        assert!(
+            name == "lanius-engine" || name == "lanius-engine.exe",
+            "unexpected sidecar file name: {name}"
+        );
+        // 回归：旧实现错误地拼了 exe_dir/binaries/…，Windows 上目录不存在会报 os error 3
+        let parent_name = path
+            .parent()
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or_default();
+        assert_ne!(
+            parent_name, "binaries",
+            "sidecar must sit next to the app exe, not under binaries/"
+        );
     }
 }

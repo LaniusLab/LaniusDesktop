@@ -117,7 +117,7 @@ echo {"jsonrpc":"2.0","id":1,"method":"engine.ping","params":{}} | python -m lan
 
 CI（`.github/workflows/ci.yml`）在 **`main` 的 push** 与 **面向 `main` 的 PR** 上按 job 跑 frontend / engine / shell；本地外环应对齐这三块。跨层改动用 `pnpm verify`，不要只跑 `pnpm check`。
 
-打包不在 CI 里做：`.github/workflows/release.yml` 在 **merge/push 到 `release`** 时跑 detect——仅当 `CHANGELOG.md` 含当前 `package.json` 版本章节且带 `<!-- release:publish -->`（且尚无对应 tag）才打 **Windows** 包并上传 Release assets。对齐 Minecraft-Utilities `desktop-release`；见 [CONTRIBUTING.md](../CONTRIBUTING.md#分支策略)。
+打包不在 CI 里做：`.github/workflows/release.yml` 在 **merge/push 到 `release`** 时跑 detect——仅当 `CHANGELOG.md` 含当前 `package.json` 版本章节且带 `<!-- release:publish -->`（且尚无对应 tag）才打 **Windows** 包并上传 Release assets。打包前必须先 `pnpm engine:pack`（PyInstaller → `src-tauri/binaries/lanius-engine-<triple>.exe`，经 `bundle.externalBin` 打进安装包）。仅 `cargo check` 时可用 `node scripts/ensure-sidecar-stub.mjs`（空占位；`pnpm verify:shell` 已包含）。对齐 Minecraft-Utilities `desktop-release`；见 [CONTRIBUTING.md](../CONTRIBUTING.md#分支策略)。
 
 ## 6. IDE 任务与调试
 

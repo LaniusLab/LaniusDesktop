@@ -15,6 +15,9 @@
 # Tauri
 /src-tauri/target
 /src-tauri/gen
+# PyInstaller sidecar（由 pnpm engine:pack 生成；保留目录占位）
+/src-tauri/binaries/*
+!/src-tauri/binaries/.gitkeep
 
 # Python
 __pycache__/
