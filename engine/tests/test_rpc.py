@@ -86,7 +86,15 @@ async def test_flow_migrate_bumps_schema_version(server: RpcServer) -> None:
         "schemaVersion": 2,
         "id": "old",
         "name": "旧版",
-        "steps": [{"id": "a", "kind": "preset", "type": "core.log", "label": "记", "config": {"message": "x"}}],
+        "steps": [
+            {
+                "id": "a",
+                "kind": "preset",
+                "type": "core.log",
+                "label": "记",
+                "config": {"message": "x"},
+            }
+        ],
     }
     response = await server.handle_frame(frame("flow.migrate", {"flow": flow}))
     assert response is not None
