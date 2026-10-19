@@ -89,6 +89,11 @@ describe("设置弹窗", () => {
       expect(screen.getByRole("button", { name: "下载" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "下载并安装" })).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByRole("button", { name: /^下载$/ }));
+    await waitFor(() => {
+      expect(screen.getByText(/已下载 Lanius|Downloaded Lanius/i)).toBeInTheDocument();
+      expect(screen.getByText(/无 SHA256SUMS|No SHA256SUMS/i)).toBeInTheDocument();
+    });
   });
 
   it("凭据页可保存名称且不回显值", async () => {

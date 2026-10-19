@@ -288,6 +288,8 @@ export const en: Record<string, string> = {
   "settings.updateInstall": "Install",
   "settings.updateDownloading": "Downloading…",
   "settings.updateDownloaded": "Downloaded {file}",
+  "settings.updateChecksumVerified": "Matched release SHA256SUMS (not code signing).",
+  "settings.updateChecksumUnavailable": "No SHA256SUMS on this release; hash check skipped (not code signing).",
   "settings.updateInstallHint": "Opens the system installer wizard; restart the app when it finishes.",
   "settings.updateInstallWindowsOnly": "Launching the installer is Windows-only; the package is cached.",
   "settings.updateInstallSkipped": "Downloaded, but install was skipped ({reason})",

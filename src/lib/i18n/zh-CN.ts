@@ -288,6 +288,8 @@ export const zhCN: Record<string, string> = {
   "settings.updateInstall": "安装",
   "settings.updateDownloading": "正在下载…",
   "settings.updateDownloaded": "已下载 {file}",
+  "settings.updateChecksumVerified": "已与发布 SHA256SUMS 核对（非代码签名）。",
+  "settings.updateChecksumUnavailable": "此版本无 SHA256SUMS，跳过哈希核对（非代码签名）。",
   "settings.updateInstallHint": "将打开系统安装向导；完成后请按向导提示重启应用。",
   "settings.updateInstallWindowsOnly": "安装器启动仅支持 Windows；包已下载到缓存。",
   "settings.updateInstallSkipped": "已下载，但未启动安装（{reason}）",
