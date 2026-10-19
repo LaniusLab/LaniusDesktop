@@ -3,6 +3,7 @@
 
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
+import type { FlowFile } from "@/lib/gen/flow";
 
 export type EngineStatus = "starting" | "ready" | "degraded" | "stopped";
 
@@ -22,11 +23,29 @@ export type ExecutionPhase =
   | "failed"
   | "cancelled";
 
+export interface FlowNodeRun {
+  nodeId: string;
+  status: "done" | "failed" | "cancelled" | "skipped";
+  durationMs: number;
+  errorCode?: string | null;
+  label?: string;
+}
+
+export interface FlowRunResult {
+  executionId: string;
+  finalState?: ExecutionPhase;
+  mode?: "run" | "dryRun";
+  nodeRuns?: FlowNodeRun[];
+  error?: { code?: string; message?: string } | null;
+}
+
 export interface EngineEvent {
   kind: "status" | "execution" | "log";
   status?: EngineStatus;
   executionId?: string;
   phase?: ExecutionPhase;
+  nodeId?: string;
+  nodeStatus?: "running" | "done" | "failed" | "skipped";
   traceId?: string;
   message?: string;
   uptimeMs?: number;
@@ -42,7 +61,7 @@ export interface UpdaterResult {
 
 export interface Bridge {
   engineInfo(): Promise<EngineInfo>;
-  flowRun(mode: "run" | "dryRun"): Promise<{ executionId: string }>;
+  flowRun(flow: FlowFile, mode: "run" | "dryRun"): Promise<FlowRunResult>;
   flowCancel(executionId: string): Promise<void>;
   onEngineEvent(handler: (event: EngineEvent) => void): () => void;
   prefsGet(): Promise<ShellPrefs>;

@@ -1,15 +1,23 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
+import { toFlowFile } from "@/lib/flow-file";
 import { registerBuiltinCommands } from "./builtins";
 import { registry } from "./registry";
 import type { CommandContext } from "./types";
+
+const sampleFlow = toFlowFile({
+  keymapProfileId: "default",
+  match: { exe: "notepad.exe", title: "", className: "" },
+  locate: { channel: "a11y", source: "probe", capture: "client", visionPack: "template" },
+  steps: [],
+});
 
 function ctx(partial: Partial<CommandContext> = {}): CommandContext {
   return {
     bridge: { flowRun: vi.fn().mockResolvedValue({ executionId: "e1" }) } as unknown as CommandContext["bridge"],
     engine: { status: "ready" },
-    execution: { phase: "idle" },
-    editor: { dirty: false },
+    execution: { phase: "idle", beginRun: vi.fn(), ingestRunResult: vi.fn() },
+    editor: { dirty: false, hasTarget: true, toFlowFile: () => sampleFlow, saveTemplate: vi.fn() },
     navigate: vi.fn(),
     ui: { toggleTheme: vi.fn(), setSearchOpen: vi.fn(), setSettingsOpen: vi.fn() },
     ...partial,
@@ -47,11 +55,23 @@ describe("内置命令", () => {
     const ready = ctx();
     await registry.run("flow.run", ready);
     await registry.run("flow.dryRun", ready);
-    expect(ready.bridge.flowRun).toHaveBeenCalledWith("run");
-    expect(ready.bridge.flowRun).toHaveBeenCalledWith("dryRun");
+    expect(ready.bridge.flowRun).toHaveBeenCalledWith(sampleFlow, "run");
+    expect(ready.bridge.flowRun).toHaveBeenCalledWith(sampleFlow, "dryRun");
+    expect(ready.execution.beginRun).toHaveBeenCalledTimes(2);
+    expect(ready.execution.ingestRunResult).toHaveBeenCalledTimes(2);
 
-    const busy = ctx({ execution: { phase: "running" } });
-    const listed = registry.list(busy).filter((cmd) => cmd.id.startsWith("flow."));
+    const busy = ctx({
+      execution: { phase: "running", beginRun: vi.fn(), ingestRunResult: vi.fn() },
+    });
+    const listed = registry.list(busy).filter((cmd) => cmd.id === "flow.run" || cmd.id === "flow.dryRun");
     expect(listed.every((cmd) => !cmd.enabled)).toBe(true);
+  });
+
+  it("未选目标窗口时不能试一次，仍可保存草稿", async () => {
+    const save = vi.fn();
+    const blocked = ctx({ editor: { dirty: true, hasTarget: false, toFlowFile: () => sampleFlow, saveTemplate: save } });
+    expect(registry.list(blocked).find((cmd) => cmd.id === "flow.run")?.enabled).toBe(false);
+    await registry.run("flow.save", blocked);
+    expect(save).toHaveBeenCalledOnce();
   });
 });

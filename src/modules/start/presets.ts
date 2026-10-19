@@ -1,6 +1,11 @@
+import { processById } from "@/lib/targets";
+import { createNotepadMultilineSteps, type TemplateStep } from "@/lib/template";
+import type { StoredTemplate } from "@/lib/template-store";
+
 export interface JobStep {
   id: string;
   label: string;
+  disabled?: boolean;
 }
 
 export interface JobPreset {
@@ -10,22 +15,46 @@ export interface JobPreset {
   available: boolean;
   laterHint?: string;
   steps: JobStep[];
+  /** 选中时写入编辑器的完整模板片段 */
+  load?: () => Pick<StoredTemplate, "steps" | "processId" | "match" | "locate"> & {
+    keymapProfileId?: string;
+  };
 }
 
-/** M0 写死的作业预设，与演示流程同一语义；M2 改为 *.flow.json 投影 */
-/** M0 演示预设；available=false 的卡片仅展示 laterHint，不可选。
- */
+function asJobSteps(steps: TemplateStep[]): JobStep[] {
+  return steps.map((step) => ({ id: step.id, label: step.label, disabled: step.disabled }));
+}
+
+/** M0 作业列表。记事本多行输入为默认冒烟预设。 */
 export const JOB_PRESETS: JobPreset[] = [
   {
-    id: "notepad-sentence",
-    title: "给记事本写一句话",
-    summary: "找到记事本，写下一句话，并记下已经做完。",
+    id: "notepad-multiline",
+    title: "记事本多行输入",
+    summary: "选定记事本窗口后，输入多行预设文本。用于冒烟与演示。",
     available: true,
-    steps: [
-      { id: "open_app", label: "定位记事本" },
-      { id: "type_text", label: "输入内容" },
-      { id: "log_done", label: "记下完成" },
-    ],
+    steps: asJobSteps(createNotepadMultilineSteps()),
+    load: () => {
+      const notepad = processById("notepad");
+      return {
+        steps: createNotepadMultilineSteps(),
+        processId: notepad?.id ?? "notepad",
+        match: notepad?.match ?? { exe: "notepad.exe", title: "无标题 - 记事本", className: "Notepad" },
+        locate: notepad?.recommended ?? {
+          channel: "a11y",
+          source: "probe",
+          capture: "client",
+          visionPack: "template",
+        },
+        keymapProfileId: "default",
+      };
+    },
+  },
+  {
+    id: "window-template",
+    title: "对选定窗口跑模板",
+    summary: "选进程，确认识别方式，然后按模板里的按键、鼠标和预设操作执行。",
+    available: true,
+    steps: [],
   },
   {
     id: "sort-downloads",

@@ -6,7 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from lanius_engine.rpc.methods import register_all
+from lanius_engine.models import FlowFile
+from lanius_engine.rpc.methods import _apply_run_inputs, register_all
 from lanius_engine.rpc.server import RpcServer
 
 ENGINE_SRC = Path(__file__).resolve().parent.parent / "src"
@@ -46,6 +47,40 @@ async def test_hello_reports_registered_node_types() -> None:
     assert result["protocolVersion"] == "0.1.0"
     assert "core.log" in result["nodeTypes"]
     assert "core.wait" in result["nodeTypes"]
+    assert "keyboard.press" in result["nodeTypes"]
+    assert "mouse.click" in result["nodeTypes"]
+    assert "template.steps" in result["capabilities"]
+
+
+async def test_flow_validate_requires_binding_keys() -> None:
+    server = make_server()
+    flow = {
+        "schemaVersion": 2,
+        "id": "no-keys",
+        "name": "缺键",
+        "steps": [{"id": "key", "kind": "binding", "label": "空键"}],
+    }
+    response = await server.handle_frame(frame("flow.validate", {"flow": flow}))
+    result = response["result"]
+    assert result["ok"] is False
+    assert result["issues"][0]["code"] == "engine.flow.validationFailed"
+    assert result["issues"][0]["nodeId"] == "key"
+
+
+def test_flow_start_inputs_override_target() -> None:
+    flow = FlowFile.model_validate(EXAMPLE_FLOW)
+    next_flow = _apply_run_inputs(
+        flow,
+        {
+            "target": {
+                "match": {"exe": "client.exe", "title": "", "className": "UnityWndClass"},
+                "locate": {"channel": "vision", "source": "user"},
+            }
+        },
+    )
+    assert next_flow.target.match.exe == "client.exe"
+    assert next_flow.target.locate.channel == "vision"
+    assert next_flow.target.locate.source == "user"
 
 
 async def test_unknown_method_returns_minus_32601() -> None:
@@ -68,7 +103,7 @@ async def test_flow_start_runs_example_flow() -> None:
     )
     result = response["result"]
     assert result["finalState"] == "done"
-    assert [run["status"] for run in result["nodeRuns"]] == ["done", "done", "done"]
+    assert [run["status"] for run in result["nodeRuns"]] == ["done", "done", "done", "done", "done"]
 
 
 async def test_flow_start_rejects_unknown_node_type() -> None:

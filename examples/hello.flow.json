@@ -1,8 +1,18 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 3,
   "id": "flow_01J8ZHELLO000000000000001",
   "name": "你好，Lanius",
-  "description": "最小示例流程：记录日志、等待、再记录日志。",
+  "description": "最小示例模板：日志、按键、单击、等待。运行时绑到选定窗口。",
+  "keymapProfileId": "default",
+  "target": {
+    "match": { "exe": "", "title": "", "className": "" },
+    "locate": {
+      "channel": "a11y",
+      "source": "probe",
+      "capture": "client",
+      "visionPack": "template"
+    }
+  },
   "variables": {
     "who": { "type": "string", "default": "世界" }
   },
@@ -10,32 +20,44 @@
     "timeoutMs": 60000,
     "onError": "stop"
   },
-  "nodes": [
+  "steps": [
     {
       "id": "say_hello",
+      "kind": "preset",
       "type": "core.log",
       "label": "记录问候",
-      "position": { "x": 80, "y": 120 },
       "config": { "message": "你好，{{ who }}！", "level": "info" }
     },
     {
+      "id": "press_enter",
+      "kind": "binding",
+      "type": "keyboard.press",
+      "profileId": "default",
+      "mappingId": "d-enter",
+      "keys": "Enter",
+      "label": "回车"
+    },
+    {
+      "id": "click_once",
+      "kind": "mouse",
+      "type": "mouse.click",
+      "label": "单击",
+      "config": { "button": "left", "x": 0, "y": 0 }
+    },
+    {
       "id": "wait_a_bit",
+      "kind": "preset",
       "type": "core.wait",
       "label": "稍等片刻",
-      "position": { "x": 360, "y": 120 },
       "config": { "ms": 200 }
     },
     {
       "id": "say_bye",
+      "kind": "preset",
       "type": "core.log",
       "label": "记录告别",
-      "position": { "x": 640, "y": 120 },
       "config": { "message": "执行完毕", "level": "info" }
     }
   ],
-  "edges": [
-    { "id": "e1", "from": "say_hello", "to": "wait_a_bit", "kind": "control" },
-    { "id": "e2", "from": "wait_a_bit", "to": "say_bye", "kind": "control" }
-  ],
-  "metadata": { "createdWith": "0.1.0", "tags": ["example"] }
+  "metadata": { "createdWith": "0.2.0", "tags": ["example"] }
 }

@@ -12,7 +12,7 @@ import typer
 
 from lanius_engine.drivers.mock import MockDriver
 from lanius_engine.logging import configure_logging
-from lanius_engine.models import FlowFile, LaniusError
+from lanius_engine.models import FlowFile, LaniusError, migrate_to_current
 from lanius_engine.nodes.registry import default_registry
 from lanius_engine.runtime.executor import Executor
 
@@ -20,7 +20,7 @@ app = typer.Typer(help="Lanius 引擎调试 CLI", no_args_is_help=True)
 
 
 def _load_flow(path: Path) -> FlowFile:
-    return FlowFile.model_validate(json.loads(path.read_text(encoding="utf-8")))
+    return migrate_to_current(FlowFile.model_validate(json.loads(path.read_text(encoding="utf-8"))))
 
 
 @app.command()
@@ -30,12 +30,12 @@ def validate(path: Annotated[Path, typer.Argument(help="流程文件路径")]) -
     registry = default_registry()
     flow = _load_flow(path)
     known = set(registry.types())
-    problems = [node for node in flow.nodes if node.type not in known]
+    problems = [step for step in flow.steps if step.node_type() not in known]
     if problems:
-        for node in problems:
-            typer.secho(f"✗ {node.id}: 未知节点类型 {node.type}", fg=typer.colors.RED)
+        for step in problems:
+            typer.secho(f"✗ {step.id}: 未知节点类型 {step.node_type()}", fg=typer.colors.RED)
         raise typer.Exit(code=1)
-    typer.secho(f"✓ {flow.name}：{len(flow.nodes)} 个节点校验通过", fg=typer.colors.GREEN)
+    typer.secho(f"✓ {flow.name}：{len(flow.steps)} 个步骤校验通过", fg=typer.colors.GREEN)
 
 
 @app.command()

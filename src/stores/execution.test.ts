@@ -16,5 +16,31 @@ describe("execution store", () => {
     useExecutionStore.getState().appendLog({ ts: 1, message: "a" });
     useExecutionStore.getState().appendLog({ ts: 2, message: "b", traceId: "t" });
     expect(useExecutionStore.getState().logLines.at(-1)?.message).toBe("b");
+
+    useExecutionStore.getState().ingestRunResult({
+      executionId: "exec-2",
+      finalState: "done",
+      mode: "run",
+      nodeRuns: [{ nodeId: "s1", status: "done", durationMs: 3, label: "回车" }],
+    });
+    expect(useExecutionStore.getState().phase).toBe("done");
+    expect(useExecutionStore.getState().logLines.at(-1)?.message).toBe("回车：完成");
+    expect(useExecutionStore.getState().runs[0]?.executionId).toBe("exec-2");
+    expect(useExecutionStore.getState().stepStatuses.s1).toBe("done");
+  });
+
+  it("beginRun 把禁用步骤标为跳过", () => {
+    useExecutionStore.getState().beginRun({
+      mode: "run",
+      exe: "notepad.exe",
+      channel: "a11y",
+      steps: [
+        { id: "a", disabled: true },
+        { id: "b" },
+      ],
+    });
+    expect(useExecutionStore.getState().stepStatuses).toEqual({ a: "skipped", b: "pending" });
+    useExecutionStore.getState().noteStep("b", "running");
+    expect(useExecutionStore.getState().activeStepId).toBe("b");
   });
 });

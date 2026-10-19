@@ -27,7 +27,7 @@
 | [SECURITY.md](SECURITY.md) | 威胁模型与控制 | 多为目标态（M4/M5） |
 | [ROADMAP.md](ROADMAP.md) | M0–M5 范围与验收 | 实现进度锚点 |
 | [WORKFLOW.md](WORKFLOW.md) | 变更分类、开发回路、IDE 门禁 | 已落地（Workspace / 任务 / 规则） |
-| [adr/](adr/) | 架构决策记录 | 0001–0009 已接受 |
+| [adr/](adr/) | 架构决策记录 | 0001–0010 已接受 |
 
 根目录规范：
 
@@ -42,7 +42,7 @@
 
 下列主题已在域文档出现，落地前宜补 ADR（或明确声明由域文档承载）：
 
-- 流程 `schemaVersion` 与迁移链（见 FLOW-FORMAT）
+- 流程 `schemaVersion` 与迁移链（见 FLOW-FORMAT；v1→v2 已落地，后续版本仍登记）
 - SQLite 执行历史路径与保留策略（见 ENGINE）
 - 信任分级与危险节点确认（见 SECURITY）
 - dry-run ≡ mock driver（见 ENGINE）

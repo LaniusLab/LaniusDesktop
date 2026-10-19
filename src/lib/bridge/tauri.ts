@@ -5,7 +5,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
 
-import type { Bridge, EngineEvent, EngineInfo, UpdaterResult } from "./types";
+import type { Bridge, EngineEvent, EngineInfo, FlowRunResult, UpdaterResult } from "./types";
 
 // 真实桥接：UI → Rust invoke → JSON-RPC → Python 引擎，见 docs/PROTOCOL.md §8
 export function createTauriBridge(): Bridge {
@@ -14,8 +14,8 @@ export function createTauriBridge(): Bridge {
       return invoke<EngineInfo>("engine_info");
     },
 
-    flowRun(mode) {
-      return invoke<{ executionId: string }>("flow_run", { mode });
+    flowRun(flow, mode) {
+      return invoke<FlowRunResult>("flow_run", { flow, mode });
     },
 
     async flowCancel(executionId) {

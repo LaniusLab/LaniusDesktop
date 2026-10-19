@@ -57,7 +57,7 @@ function navClass(active: boolean, index: number, collapsed: boolean): string {
 export function AppLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
-  const { engineStatus, engineUptimeMs, phase, setEngineStatus, setPhase, appendLog } =
+  const { engineStatus, engineUptimeMs, phase, setEngineStatus, setPhase, appendLog, noteStep } =
     useExecutionStore();
   const searchOpen = useUiStore((s) => s.searchOpen);
   const setSearchOpen = useUiStore((s) => s.setSearchOpen);
@@ -96,13 +96,23 @@ export function AppLayout() {
     return bridge.onEngineEvent((event) => {
       if (event.kind === "status" && event.status) {
         setEngineStatus(event.status, event.uptimeMs);
-      } else if (event.kind === "execution" && event.phase) {
-        setPhase(event.phase, event.executionId, event.traceId);
+      } else if (event.kind === "execution") {
+        if (event.phase) {
+          setPhase(event.phase, event.executionId, event.traceId);
+        }
+        if (event.nodeId && event.nodeStatus) {
+          noteStep(event.nodeId, event.nodeStatus);
+        }
       } else if (event.kind === "log" && event.message) {
-        appendLog({ ts: Date.now(), message: event.message, traceId: event.traceId });
+        appendLog({
+          ts: Date.now(),
+          message: event.message,
+          traceId: event.traceId,
+          executionId: event.executionId,
+        });
       }
     });
-  }, [setEngineStatus, setPhase, appendLog]);
+  }, [setEngineStatus, setPhase, appendLog, noteStep]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

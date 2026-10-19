@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 3,
+  "id": "flow_01J8ZNOTEPAD_MULTILINE01",
+  "name": "记事本多行输入",
+  "description": "选定记事本窗口后，输入多行预设文本。可用于冒烟与演示。",
+  "keymapProfileId": "default",
+  "target": {
+    "match": {
+      "exe": "notepad.exe",
+      "title": "无标题 - 记事本",
+      "className": "Notepad"
+    },
+    "locate": {
+      "channel": "a11y",
+      "source": "probe",
+      "capture": "client",
+      "visionPack": "template"
+    }
+  },
+  "variables": {},
+  "settings": {
+    "timeoutMs": 60000,
+    "onError": "stop"
+  },
+  "steps": [
+    {
+      "id": "wait_focus",
+      "kind": "preset",
+      "type": "core.wait",
+      "label": "稍等片刻",
+      "config": { "ms": 300 }
+    },
+    {
+      "id": "type_body",
+      "kind": "preset",
+      "type": "keyboard.type",
+      "label": "输入多行文本",
+      "config": {
+        "text": "Lanius 记事本测试\n第二行：自动化写入\n第三行：结束。"
+      }
+    },
+    {
+      "id": "log_done",
+      "kind": "preset",
+      "type": "core.log",
+      "label": "记下完成",
+      "config": { "message": "多行文本已写入记事本", "level": "info" }
+    }
+  ],
+  "metadata": {
+    "createdWith": "0.2.0",
+    "tags": ["example", "notepad", "preset"]
+  }
+}

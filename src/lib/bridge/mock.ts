@@ -1,8 +1,7 @@
 import { DEFAULT_PREFS, mergePrefs } from "@/lib/prefs";
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
-
-import type { Bridge, EngineEvent, EngineInfo } from "./types";
+import type { Bridge, EngineEvent, EngineInfo, FlowNodeRun } from "./types";
 
 /*
  * 浏览器开发 mock：pnpm dev 脱离 Tauri 运行时，用定时器模拟
@@ -13,8 +12,8 @@ import type { Bridge, EngineEvent, EngineInfo } from "./types";
 const MOCK_INFO: EngineInfo = {
   protocolVersion: "0.1.0",
   engineVersion: "0.1.0-mock",
-  capabilities: ["dryRun"],
-  nodeTypes: ["core.log", "core.wait", "mouse.click", "keyboard.type", "window.find"],
+  capabilities: ["dryRun", "template.steps", "locate.a11y"],
+  nodeTypes: ["core.log", "core.wait", "keyboard.press", "mouse.click", "mouse.dblclick", "mouse.move"],
 };
 
 const MOCK_DEBUG: ShellDebugInfo = {
@@ -52,29 +51,79 @@ export function createMockBridge(): Bridge {
       return MOCK_INFO;
     },
 
-    async flowRun(mode) {
+    async flowRun(flow, mode) {
       const executionId = `mock-exec-${++traceSeq}`;
       const traceId = `mock-trace-${traceSeq.toString().padStart(4, "0")}`;
-      const steps: Array<[number, EngineEvent]> = [
-        [0, { kind: "execution", executionId, phase: "validating", traceId }],
-        [300, { kind: "execution", executionId, phase: "running", traceId }],
-        [
-          500,
-          {
-            kind: "log",
+      const steps = flow.steps ?? [];
+      const exe = flow.target?.match?.exe || "window";
+      const channel = flow.target?.locate?.channel === "vision" ? "画面" : "控件";
+      const prefix = mode === "dryRun" ? "演练：" : "";
+      const tick = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+      emit({ kind: "execution", executionId, phase: "validating", traceId });
+      await tick(12);
+      emit({ kind: "execution", executionId, phase: "running", traceId });
+      emit({
+        kind: "log",
+        executionId,
+        traceId,
+        message: `${prefix}绑定 ${exe}（${channel}）`,
+      });
+
+      const nodeRuns: FlowNodeRun[] = [];
+      for (const step of steps) {
+        if (step.disabled) {
+          nodeRuns.push({
+            nodeId: step.id,
+            status: "skipped" as const,
+            durationMs: 0,
+            label: step.label,
+          });
+          emit({
+            kind: "execution",
             executionId,
+            phase: "running",
+            nodeId: step.id,
+            nodeStatus: "skipped",
             traceId,
-            message: mode === "dryRun" ? "演练：记下完成" : "记下：你好，Lanius",
-          },
-        ],
-        [900, { kind: "log", executionId, traceId, message: "等了一小会" }],
-        [1400, { kind: "execution", executionId, phase: "done", traceId }],
-        [1800, { kind: "execution", executionId, phase: "idle", traceId }],
-      ];
-      for (const [delay, event] of steps) {
-        setTimeout(() => emit(event), delay);
+          });
+          continue;
+        }
+        emit({
+          kind: "execution",
+          executionId,
+          phase: "running",
+          nodeId: step.id,
+          nodeStatus: "running",
+          traceId,
+        });
+        await tick(24);
+        emit({
+          kind: "log",
+          executionId,
+          traceId,
+          nodeId: step.id,
+          message: `${prefix}${step.label ?? step.id}`,
+        });
+        emit({
+          kind: "execution",
+          executionId,
+          phase: "running",
+          nodeId: step.id,
+          nodeStatus: "done",
+          traceId,
+        });
+        nodeRuns.push({
+          nodeId: step.id,
+          status: "done" as const,
+          durationMs: 24,
+          label: step.label,
+        });
       }
-      return { executionId };
+      emit({ kind: "execution", executionId, phase: "done", traceId });
+      await tick(12);
+      emit({ kind: "execution", executionId, phase: "idle", traceId });
+      return { executionId, finalState: "done", mode, nodeRuns };
     },
 
     async flowCancel() {

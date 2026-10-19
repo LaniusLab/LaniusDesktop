@@ -7,7 +7,7 @@ import { HistoryPage } from "./history-page";
 
 describe("运行记录页", () => {
   afterEach(() => {
-    useExecutionStore.setState({ logLines: [] });
+    useExecutionStore.setState({ logLines: [], runs: [], stepStatuses: {} });
   });
 
   it("空列表显示 EmptyState", () => {
@@ -15,11 +15,24 @@ describe("运行记录页", () => {
     expect(screen.getByText(/暂无记录|No records/i)).toBeInTheDocument();
   });
 
-  it("有日志时按时间展示", () => {
+  it("有运行摘要时展示完成计数", () => {
     useExecutionStore.setState({
-      logLines: [{ ts: Date.UTC(2026, 0, 1, 12, 0, 0), message: "hello-log" }],
+      runs: [
+        {
+          executionId: "exec-1",
+          startedAt: Date.UTC(2026, 0, 1, 12, 0, 0),
+          mode: "run",
+          finalState: "done",
+          exe: "notepad.exe",
+          channel: "a11y",
+          doneCount: 3,
+          skippedCount: 1,
+          failedCount: 0,
+        },
+      ],
     });
     render(<HistoryPage />);
-    expect(screen.getByText("hello-log")).toBeInTheDocument();
+    expect(screen.getByText(/3 完成/)).toBeInTheDocument();
+    expect(screen.getByText(/notepad\.exe/)).toBeInTheDocument();
   });
 });

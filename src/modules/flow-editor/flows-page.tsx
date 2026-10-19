@@ -1,30 +1,38 @@
-import { Background, ReactFlow } from "@xyflow/react";
-import { Keyboard, MousePointer2, PencilLine, Play, Redo2, Undo2, Wand2 } from "lucide-react";
-
-import "@xyflow/react/dist/style.css";
+import { Play, Redo2, Save, Undo2, Wand2 } from "lucide-react";
+import { useState } from "react";
 
 import { currentContext } from "@/lib/commands/context";
 import { registry } from "@/lib/commands/registry";
-import { cn } from "@/lib/utils";
+import { PROCESS_CATALOG } from "@/lib/targets";
+import { TemplateInspector } from "@/modules/flow-editor/inspector";
+import { MindMapPreview } from "@/modules/flow-editor/mind-map-preview";
+import { TemplatePalette } from "@/modules/flow-editor/palette";
+import { TemplateSequence } from "@/modules/flow-editor/sequence";
 import { redoEdit, undoEdit, useEditorStore } from "@/stores/editor";
+import { useExecutionStore } from "@/stores/execution";
 import { useT, useUiStore } from "@/stores/ui";
-import { KeymapCatalog } from "@/modules/keymap/keymap-catalog";
-import { Badge, Button, PageHeader, SplitPane, Tooltip, TooltipContent, TooltipTrigger } from "@/ui";
+import { Badge, Button, PageHeader, Select, SplitPane, StatusBadge, Tabs, Tooltip, TooltipContent, TooltipTrigger } from "@/ui";
 
-const PALETTE_GROUPS = [
-  { titleKey: "edit.group.keys", hintKey: "edit.group.keysHint", icon: Keyboard },
-  { titleKey: "edit.group.mouse", hintKey: "edit.group.mouseHint", icon: MousePointer2 },
-  { titleKey: "edit.group.window", hintKey: "edit.group.windowHint", icon: PencilLine },
-] as const;
+type CenterTab = "strip" | "mind";
 
-/** 编排页。脚本入口：M0 为演示画布；积木拖拽 / 属性 / 存盘属 M2 */
+/** 模板页：指令条缩进 + 插入菜单 + 只读导图预览。 */
 export function FlowsPage() {
-  const { nodes, edges, dirty, onNodesChange, onEdgesChange, onConnect } = useEditorStore();
-  const theme = useUiStore((s) => s.resolvedTheme);
+  const dirty = useEditorStore((s) => s.dirty);
+  const processId = useEditorStore((s) => s.processId);
+  const locate = useEditorStore((s) => s.locate);
+  const bindProcess = useEditorStore((s) => s.bindProcess);
   const editorPaletteWidth = useUiStore((s) => s.editorPaletteWidth);
   const setEditorPaletteWidth = useUiStore((s) => s.setEditorPaletteWidth);
+  const editorInspectorWidth = useUiStore((s) => s.editorInspectorWidth);
+  const setEditorInspectorWidth = useUiStore((s) => s.setEditorInspectorWidth);
+  const editorLogHeight = useUiStore((s) => s.editorLogHeight);
+  const setEditorLogHeight = useUiStore((s) => s.setEditorLogHeight);
+  const logLines = useExecutionStore((s) => s.logLines);
+  const phase = useExecutionStore((s) => s.phase);
   const t = useT();
+  const [centerTab, setCenterTab] = useState<CenterTab>("strip");
   const runCommand = (id: string) => void registry.run(id, currentContext());
+  const processName = PROCESS_CATALOG.find((item) => item.id === processId)?.name ?? processId;
 
   return (
     <div className="flex h-full flex-col">
@@ -34,6 +42,23 @@ export function FlowsPage() {
         actions={
           <>
             {dirty ? <Badge tone="warning">{t("edit.dirty")}</Badge> : <Badge>{t("edit.saved")}</Badge>}
+            <StatusBadge state={phase} />
+            <Select
+              aria-label={t("start.process")}
+              value={processId}
+              onChange={(event) => bindProcess(event.target.value)}
+              className="w-44"
+            >
+              {PROCESS_CATALOG.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </Select>
+            <Badge tone="accent">
+              {locate.channel === "vision" ? t("start.locate.vision") : t("start.locate.a11y")}
+            </Badge>
+            <span className="sr-only">{processName}</span>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" onClick={undoEdit} aria-label={t("edit.undo")}>
@@ -50,6 +75,10 @@ export function FlowsPage() {
               </TooltipTrigger>
               <TooltipContent>{t("edit.redo")}</TooltipContent>
             </Tooltip>
+            <Button variant="secondary" size="sm" aria-label={t("cmd.flow.save")} onClick={() => runCommand("flow.save")}>
+              <Save />
+              {t("edit.save")}
+            </Button>
             <Button variant="secondary" size="sm" onClick={() => runCommand("flow.dryRun")}>
               <Wand2 />
               {t("start.dryRun")}
@@ -65,54 +94,67 @@ export function FlowsPage() {
         className="min-h-0 flex-1"
         size={editorPaletteWidth}
         onSizeChange={setEditorPaletteWidth}
-        min={160}
-        max={360}
-        minSecond={240}
+        min={200}
+        max={420}
+        minSecond={320}
         label={t("layout.resize.horizontal")}
       >
-        <aside className="flex h-full min-h-0 flex-col gap-2 bg-glass px-3 py-4 backdrop-blur-md">
-          <p className="px-1 font-display text-sm text-fg animate-rise">{t("edit.blocks")}</p>
-          <p className="px-1 text-xs leading-relaxed text-fg-muted animate-rise delay-1">
-            {t("edit.blocksHint")}
-          </p>
-          {PALETTE_GROUPS.map((group, index) => (
-            <div
-              key={group.titleKey}
-              className={cn(
-                "rounded-xl border border-dashed border-line bg-surface-sunken/50 px-3 py-2.5 opacity-80 animate-rise",
-                index === 0 && "delay-2",
-                index === 1 && "delay-3",
-                index === 2 && "delay-4",
-              )}
-            >
-              <p className="flex items-center gap-1.5 text-sm text-fg">
-                <group.icon className="size-3.5 text-accent" />
-                {t(group.titleKey)}
-              </p>
-              {group.titleKey === "edit.group.keys" ? (
-                <div className="mt-2">
-                  <KeymapCatalog allowSwitchProfile />
-                </div>
-              ) : (
-                <p className="mt-1 text-xs text-fg-faint">{t(group.hintKey)}</p>
-              )}
-            </div>
-          ))}
-        </aside>
-        <div className="h-full min-h-0 min-w-0">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            fitView
-            colorMode={theme === "dark" ? "dark" : "light"}
-            proOptions={{ hideAttribution: true }}
+        <TemplatePalette />
+        <SplitPane
+          className="h-full min-h-0"
+          primary="second"
+          size={editorInspectorWidth}
+          onSizeChange={setEditorInspectorWidth}
+          min={220}
+          max={420}
+          minSecond={240}
+          label={t("layout.resize.horizontal")}
+        >
+          <SplitPane
+            orientation="vertical"
+            className="h-full"
+            primary="second"
+            size={editorLogHeight}
+            onSizeChange={setEditorLogHeight}
+            min={88}
+            minSecond={160}
+            label={t("layout.resize.vertical")}
           >
-            <Background gap={28} />
-          </ReactFlow>
-        </div>
+            <div className="flex h-full min-h-0 min-w-0 flex-col bg-surface/40">
+              <div className="border-b border-line px-3 py-2">
+                <Tabs
+                  value={centerTab}
+                  onValueChange={setCenterTab}
+                  items={[
+                    { value: "strip", label: t("edit.tab.strip") },
+                    { value: "mind", label: t("edit.tab.mind") },
+                  ]}
+                />
+              </div>
+              <div className="min-h-0 flex-1">
+                {centerTab === "strip" ? <TemplateSequence /> : <MindMapPreview />}
+              </div>
+            </div>
+            <section className="glass-card flex h-full min-h-0 flex-col rounded-none px-4 py-3">
+              <p className="font-display text-sm text-fg">{t("start.log")}</p>
+              {logLines.length === 0 ? (
+                <p className="m-auto text-sm text-fg-faint">{t("start.logEmpty")}</p>
+              ) : (
+                <ol className="mt-2 min-h-0 flex-1 overflow-auto">
+                  {logLines.map((line, index) => (
+                    <li
+                      key={`${String(line.ts)}-${String(index)}`}
+                      className="border-b border-line/70 py-1.5 text-xs text-fg-muted last:border-b-0"
+                    >
+                      {line.message}
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </section>
+          </SplitPane>
+          <TemplateInspector />
+        </SplitPane>
       </SplitPane>
     </div>
   );

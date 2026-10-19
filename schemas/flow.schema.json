@@ -2,25 +2,37 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lanius.dev/schemas/flow.schema.json",
   "title": "FlowFile",
-  "description": "Lanius 流程文件（docs/FLOW-FORMAT.md）",
+  "description": "Lanius 作业模板（docs/FLOW-FORMAT.md）。schemaVersion 3 起支持嵌套 control（条件/循环）。",
   "type": "object",
-  "required": ["schemaVersion", "id", "name", "nodes", "edges"],
+  "required": ["schemaVersion", "id", "name"],
   "properties": {
     "schemaVersion": { "type": "integer", "minimum": 1 },
     "id": { "type": "string", "minLength": 1 },
     "name": { "type": "string", "minLength": 1 },
     "description": { "type": "string" },
+    "keymapProfileId": {
+      "type": "string",
+      "description": "编排时默认使用的按键方案 id"
+    },
+    "target": { "$ref": "#/$defs/target" },
     "variables": {
       "type": "object",
       "additionalProperties": { "$ref": "#/$defs/variable" }
     },
     "settings": { "$ref": "#/$defs/settings" },
+    "steps": {
+      "type": "array",
+      "description": "有序步骤（schemaVersion ≥ 2 的执行真源；≥ 3 可嵌套）",
+      "items": { "$ref": "#/$defs/step" }
+    },
     "nodes": {
       "type": "array",
+      "description": "v1 DAG 节点；打开时迁移为 steps",
       "items": { "$ref": "#/$defs/node" }
     },
     "edges": {
       "type": "array",
+      "description": "v1 DAG 连线；打开时迁移为 steps 顺序",
       "items": { "$ref": "#/$defs/edge" }
     },
     "metadata": { "type": "object" }
@@ -39,6 +51,64 @@
       "properties": {
         "timeoutMs": { "type": "integer", "exclusiveMinimum": 0, "default": 600000 },
         "onError": { "type": "string", "default": "stop" }
+      }
+    },
+    "target": {
+      "type": "object",
+      "description": "执行绑定：匹配规则解析为窗口句柄；locate 为定位通道",
+      "properties": {
+        "match": { "$ref": "#/$defs/targetMatch" },
+        "locate": { "$ref": "#/$defs/locate" }
+      }
+    },
+    "targetMatch": {
+      "type": "object",
+      "properties": {
+        "exe": { "type": "string" },
+        "title": { "type": "string" },
+        "className": { "type": "string" }
+      }
+    },
+    "locate": {
+      "type": "object",
+      "properties": {
+        "channel": { "type": "string", "enum": ["a11y", "vision"] },
+        "source": { "type": "string", "enum": ["probe", "user"] },
+        "capture": { "type": "string", "enum": ["client", "screen"] },
+        "visionPack": { "type": "string" }
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": ["id", "kind"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "kind": {
+          "type": "string",
+          "enum": ["binding", "mouse", "preset", "control"]
+        },
+        "type": { "type": "string" },
+        "mappingId": { "type": "string" },
+        "profileId": { "type": "string" },
+        "keys": { "type": "string" },
+        "label": { "type": "string" },
+        "config": { "type": "object" },
+        "disabled": { "type": "boolean", "default": false },
+        "then": {
+          "type": "array",
+          "description": "flow.if 的则分支",
+          "items": { "$ref": "#/$defs/step" }
+        },
+        "else": {
+          "type": "array",
+          "description": "flow.if 的否则分支",
+          "items": { "$ref": "#/$defs/step" }
+        },
+        "body": {
+          "type": "array",
+          "description": "flow.loop 的循环体",
+          "items": { "$ref": "#/$defs/step" }
+        }
       }
     },
     "node": {

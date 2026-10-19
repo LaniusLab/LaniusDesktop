@@ -1,7 +1,9 @@
-"""执行器：拓扑调度 + 状态机 + 协作式取消 + 双层超时（docs/ENGINE.md §5）。
+"""执行器：有序模板 + 嵌套控制 + 状态机 + 协作式取消（docs/ENGINE.md §5）。
 
-M0 范围：顺序执行 control 边定义的图；并行结构串行化与分支语义属 M1。
+schemaVersion 2+ 按 steps 顺序执行；v3 起 control（if/loop）可嵌套子列表。
 """
+
+from __future__ import annotations
 
 import asyncio
 import time
@@ -12,11 +14,11 @@ from typing import Any, Literal
 
 from lanius_engine.drivers.base import Driver
 from lanius_engine.logging import get_logger
-from lanius_engine.models import FlowFile, LaniusError
+from lanius_engine.models import FlowFile, FlowStep, LaniusError, migrate_to_current
 from lanius_engine.nodes.base import NodeContext
 from lanius_engine.nodes.registry import NodeRegistry
 from lanius_engine.runtime.cancel import FlowCancelled
-from lanius_engine.runtime.scope import ScopeChain
+from lanius_engine.runtime.scope import ScopeChain, interpolate
 from lanius_engine.runtime.state import ExecutionState, ExecutionStateMachine
 
 EventHook = Callable[[str, dict[str, Any]], None]
@@ -28,6 +30,7 @@ class NodeRun:
     status: Literal["done", "failed", "cancelled", "skipped"]
     duration_ms: int
     error_code: str | None = None
+    label: str = ""
 
 
 @dataclass
@@ -44,7 +47,7 @@ class Executor:
     def __init__(self, registry: NodeRegistry, driver: Driver) -> None:
         self._registry = registry
         self._driver = driver
-        self._lock = asyncio.Lock()  # 键鼠全局互斥：同时只允许一个执行实例
+        self._lock = asyncio.Lock()
         self._cancel: asyncio.Event | None = None
 
     async def start(
@@ -91,9 +94,8 @@ class Executor:
         )
 
         try:
-            order = _topo_order(flow)
+            flow = migrate_to_current(flow)
         except LaniusError as err:
-            # 校验期失败同样走状态机：validating → failed，错误进记录
             machine.transition(ExecutionState.FAILED)
             record.state = machine.state
             record.error = err.error.model_dump(mode="json")
@@ -107,72 +109,36 @@ class Executor:
         emit("execution.stateChanged", {"from": "validating", "to": "running"})
 
         flow_deadline = time.monotonic() + flow.settings.timeout_ms / 1000
+        target_handle: str | None = None
 
         try:
-            for node in order:
-                if node.disabled:
-                    record.node_runs.append(
-                        NodeRun(node_id=node.id, status="skipped", duration_ms=0)
-                    )
-                    continue
-                if cancel_event.is_set():
-                    raise FlowCancelled()
-
-                node_cls = self._registry.get(node.type)
-                if node_cls is None:
-                    raise LaniusError.of(
-                        "engine.flow.unknownNodeType",
-                        f"未知节点类型: {node.type}",
-                        node_id=node.id,
-                        details={"type": node.type},
-                    )
-
-                emit("execution.nodeStarted", {"nodeId": node.id})
-                started = time.monotonic()
-                remaining_ms = int((flow_deadline - time.monotonic()) * 1000)
-                if remaining_ms <= 0:
-                    raise LaniusError.of(
-                        "engine.runtime.timeout",
-                        "流程级超时预算已耗尽",
-                        node_id=node.id,
-                    )
-                node_timeout_s = min(
-                    float(node.config.get("timeoutMs", 30_000)), float(remaining_ms)
-                ) / 1000
-
-                ctx = NodeContext(
-                    driver=self._driver,
-                    scope=scope,
-                    logger=logger.bind(nodeId=node.id),
-                    cancel_event=cancel_event,
-                    node_id=node.id,
-                    config=node.config,
-                    inputs=node.inputs,
-                    emit=emit,
+            if not flow.target.match.is_empty():
+                target_handle = await self._driver.find_window(
+                    {
+                        "exe": flow.target.match.exe,
+                        "title": flow.target.match.title,
+                        "className": flow.target.match.class_name,
+                    }
                 )
-                instance = node_cls()
-                try:
-                    result = await asyncio.wait_for(
-                        instance.execute(ctx), timeout=node_timeout_s
-                    )
-                except TimeoutError:
-                    raise LaniusError.of(
-                        "engine.runtime.timeout",
-                        f"节点 {node.id} 超过超时预算",
-                        node_id=node.id,
-                        retryable=True,
-                    ) from None
+                await self._driver.activate(target_handle)
+                await self._driver.set_locate(
+                    {
+                        "channel": flow.target.locate.channel,
+                        "source": flow.target.locate.source,
+                        "capture": flow.target.locate.capture,
+                        "visionPack": flow.target.locate.vision_pack,
+                    }
+                )
 
-                duration_ms = int((time.monotonic() - started) * 1000)
-                if result.outputs:
-                    scope.set(node.id, {"outputs": result.outputs})
-                record.node_runs.append(
-                    NodeRun(node_id=node.id, status="done", duration_ms=duration_ms)
-                )
-                emit(
-                    "execution.nodeFinished",
-                    {"nodeId": node.id, "status": "done", "durationMs": duration_ms},
-                )
+            await self._run_steps(
+                flow.steps,
+                record=record,
+                scope=scope,
+                logger=logger,
+                emit=emit,
+                cancel_event=cancel_event,
+                flow_deadline=flow_deadline,
+            )
 
             machine.transition(ExecutionState.DONE)
         except FlowCancelled:
@@ -184,30 +150,278 @@ class Executor:
 
         record.state = machine.state
         emit("execution.stateChanged", {"from": "running", "to": machine.state.value})
+        if target_handle is not None:
+            emit(
+                "execution.targetBound",
+                {
+                    "handle": target_handle,
+                    "locate": {
+                        "channel": flow.target.locate.channel,
+                        "source": flow.target.locate.source,
+                        "capture": flow.target.locate.capture,
+                        "visionPack": flow.target.locate.vision_pack,
+                    },
+                },
+            )
         return record
 
+    async def _run_steps(
+        self,
+        steps: list[FlowStep],
+        *,
+        record: ExecutionRecord,
+        scope: ScopeChain,
+        logger: Any,
+        emit: EventHook,
+        cancel_event: asyncio.Event,
+        flow_deadline: float,
+    ) -> None:
+        for step in steps:
+            if step.disabled:
+                record.node_runs.append(
+                    NodeRun(
+                        node_id=step.id,
+                        status="skipped",
+                        duration_ms=0,
+                        label=step.label,
+                    )
+                )
+                continue
+            if cancel_event.is_set():
+                raise FlowCancelled()
 
-def _topo_order(flow: FlowFile) -> list[Any]:
-    """Kahn 拓扑排序；环在 M1 的 flow.validate 中拦截，这里兜底报错。"""
-    nodes = {node.id: node for node in flow.nodes}
-    indegree = {node.id: 0 for node in flow.nodes}
-    for edge in flow.edges:
-        if edge.kind == "control" and edge.to in indegree:
-            indegree[edge.to] += 1
-    queue = sorted((nid for nid, deg in indegree.items() if deg == 0))
-    order: list[Any] = []
-    while queue:
-        nid = queue.pop(0)
-        order.append(nodes[nid])
-        for edge in flow.edges:
-            if edge.kind == "control" and edge.from_ == nid and edge.to in indegree:
-                indegree[edge.to] -= 1
-                if indegree[edge.to] == 0:
-                    queue.append(edge.to)
-    if len(order) != len(flow.nodes):
-        raise LaniusError.of(
-            "engine.flow.cycleDetected",
-            "流程图存在环或悬空连线，无法拓扑排序",
-            details={"sorted": len(order), "total": len(flow.nodes)},
+            if step.kind == "control":
+                await self._run_control(
+                    step,
+                    record=record,
+                    scope=scope,
+                    logger=logger,
+                    emit=emit,
+                    cancel_event=cancel_event,
+                    flow_deadline=flow_deadline,
+                )
+                continue
+
+            await self._run_leaf(
+                step,
+                record=record,
+                scope=scope,
+                logger=logger,
+                emit=emit,
+                cancel_event=cancel_event,
+                flow_deadline=flow_deadline,
+            )
+
+    async def _run_control(
+        self,
+        step: FlowStep,
+        *,
+        record: ExecutionRecord,
+        scope: ScopeChain,
+        logger: Any,
+        emit: EventHook,
+        cancel_event: asyncio.Event,
+        flow_deadline: float,
+    ) -> None:
+        started = time.monotonic()
+        emit("execution.nodeStarted", {"nodeId": step.id})
+        node_type = step.node_type()
+        try:
+            if node_type == "flow.if":
+                matched = _eval_condition(step, scope)
+                branch = step.then if matched else step.else_
+                emit(
+                    "execution.log",
+                    {
+                        "nodeId": step.id,
+                        "message": f"{step.label or step.id} → {'则' if matched else '否则'}",
+                    },
+                )
+                await self._run_steps(
+                    branch,
+                    record=record,
+                    scope=scope,
+                    logger=logger,
+                    emit=emit,
+                    cancel_event=cancel_event,
+                    flow_deadline=flow_deadline,
+                )
+            elif node_type == "flow.loop":
+                max_iter = int(step.config.get("max", step.config.get("times", 1)))
+                until = str(step.config.get("until", "")).strip()
+                for index in range(max(0, max_iter)):
+                    if cancel_event.is_set():
+                        raise FlowCancelled()
+                    scope.push({"index": index, "item": index})
+                    try:
+                        await self._run_steps(
+                            step.body,
+                            record=record,
+                            scope=scope,
+                            logger=logger,
+                            emit=emit,
+                            cancel_event=cancel_event,
+                            flow_deadline=flow_deadline,
+                        )
+                        if until and _eval_until(until, step, scope):
+                            break
+                    finally:
+                        scope.pop()
+            else:
+                raise LaniusError.of(
+                    "engine.flow.unknownNodeType",
+                    f"未知控制类型: {node_type}",
+                    node_id=step.id,
+                    details={"type": node_type},
+                )
+        except LaniusError:
+            duration_ms = int((time.monotonic() - started) * 1000)
+            record.node_runs.append(
+                NodeRun(
+                    node_id=step.id,
+                    status="failed",
+                    duration_ms=duration_ms,
+                    label=step.label,
+                )
+            )
+            raise
+
+        duration_ms = int((time.monotonic() - started) * 1000)
+        record.node_runs.append(
+            NodeRun(
+                node_id=step.id,
+                status="done",
+                duration_ms=duration_ms,
+                label=step.label,
+            )
         )
-    return order
+        emit(
+            "execution.nodeFinished",
+            {"nodeId": step.id, "status": "done", "durationMs": duration_ms},
+        )
+
+    async def _run_leaf(
+        self,
+        step: FlowStep,
+        *,
+        record: ExecutionRecord,
+        scope: ScopeChain,
+        logger: Any,
+        emit: EventHook,
+        cancel_event: asyncio.Event,
+        flow_deadline: float,
+    ) -> None:
+        node_type = _resolve_step_type(step)
+        node_cls = self._registry.get(node_type)
+        if node_cls is None:
+            raise LaniusError.of(
+                "engine.flow.unknownNodeType",
+                f"未知节点类型: {node_type}",
+                node_id=step.id,
+                details={"type": node_type, "kind": step.kind},
+            )
+
+        emit("execution.nodeStarted", {"nodeId": step.id})
+        started = time.monotonic()
+        remaining_ms = int((flow_deadline - time.monotonic()) * 1000)
+        if remaining_ms <= 0:
+            raise LaniusError.of(
+                "engine.runtime.timeout",
+                "流程级超时预算已耗尽",
+                node_id=step.id,
+            )
+        node_timeout_s = min(
+            float(step.config.get("timeoutMs", 30_000)), float(remaining_ms)
+        ) / 1000
+
+        ctx = NodeContext(
+            driver=self._driver,
+            scope=scope,
+            logger=logger.bind(nodeId=step.id),
+            cancel_event=cancel_event,
+            node_id=step.id,
+            config=_step_config(step),
+            inputs={},
+            emit=emit,
+        )
+        instance = node_cls()
+        try:
+            result = await asyncio.wait_for(instance.execute(ctx), timeout=node_timeout_s)
+        except TimeoutError:
+            raise LaniusError.of(
+                "engine.runtime.timeout",
+                f"节点 {step.id} 超过超时预算",
+                node_id=step.id,
+                retryable=True,
+            ) from None
+
+        duration_ms = int((time.monotonic() - started) * 1000)
+        if result.outputs:
+            scope.set(step.id, {"outputs": result.outputs})
+            if node_type.startswith("vision."):
+                scope.set("ocr", result.outputs)
+        record.node_runs.append(
+            NodeRun(
+                node_id=step.id,
+                status="done",
+                duration_ms=duration_ms,
+                label=step.label,
+            )
+        )
+        emit(
+            "execution.nodeFinished",
+            {"nodeId": step.id, "status": "done", "durationMs": duration_ms},
+        )
+
+
+def _resolve_step_type(step: FlowStep) -> str:
+    node_type = step.node_type()
+    if not node_type:
+        raise LaniusError.of(
+            "engine.flow.unknownNodeType",
+            f"步骤 {step.id} 缺少可执行类型",
+            node_id=step.id,
+            details={"kind": step.kind},
+        )
+    return node_type
+
+
+def _step_config(step: FlowStep) -> dict[str, Any]:
+    config = dict(step.config)
+    if step.kind == "binding" and step.keys and "keys" not in config:
+        config["keys"] = step.keys
+    return config
+
+
+def _eval_condition(step: FlowStep, scope: ScopeChain) -> bool:
+    when = str(step.config.get("when", "contains"))
+    needle = interpolate(str(step.config.get("text", "")), scope)
+    source_expr = str(step.config.get("source", "{{ocr.text}}"))
+    haystack = interpolate(source_expr, scope) if "{{" in source_expr else str(
+        _resolve_loose(scope, source_expr)
+    )
+    if when in ("contains", "ocr.contains"):
+        return needle in haystack
+    if when in ("equals", "eq"):
+        return haystack == needle
+    if when in ("truthy", "true"):
+        return bool(haystack)
+    return needle in haystack
+
+
+def _eval_until(until: str, step: FlowStep, scope: ScopeChain) -> bool:
+    # until=ocr.contains 时复用 step.config.text
+    probe = FlowStep(
+        id=f"{step.id}__until",
+        kind="control",
+        type="flow.if",
+        config={**step.config, "when": until},
+    )
+    return _eval_condition(probe, scope)
+
+
+def _resolve_loose(scope: ScopeChain, path: str) -> Any:
+    try:
+        return scope.resolve(path)
+    except LaniusError:
+        return ""

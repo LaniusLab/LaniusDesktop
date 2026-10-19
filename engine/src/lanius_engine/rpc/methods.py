@@ -4,7 +4,14 @@ from typing import Any
 
 from lanius_engine import PROTOCOL_VERSION, __version__
 from lanius_engine.drivers.mock import MockDriver
-from lanius_engine.models import FlowFile, LaniusError
+from lanius_engine.models import (
+    FlowFile,
+    FlowLocate,
+    FlowStep,
+    FlowTargetMatch,
+    LaniusError,
+    migrate_to_current,
+)
 from lanius_engine.nodes.registry import default_registry
 from lanius_engine.rpc.server import RpcServer
 from lanius_engine.runtime.executor import Executor
@@ -19,7 +26,13 @@ def register_all(server: RpcServer) -> None:
         return {
             "protocolVersion": PROTOCOL_VERSION,
             "engineVersion": __version__,
-            "capabilities": ["dryRun"],
+            "capabilities": [
+                "dryRun",
+                "template.steps",
+                "template.control",
+                "locate.a11y",
+                "vision.mock",
+            ],
             "nodeTypes": registry.types(),
         }
 
@@ -31,23 +44,15 @@ def register_all(server: RpcServer) -> None:
         return {}
 
     async def flow_validate(params: dict[str, Any]) -> dict[str, Any]:
-        flow = _parse_flow(params)
+        flow = migrate_to_current(_parse_flow(params))
         issues: list[dict[str, Any]] = []
-        known = set(registry.types())
-        for node in flow.nodes:
-            if node.type not in known:
-                issues.append(
-                    {
-                        "severity": "error",
-                        "code": "engine.flow.unknownNodeType",
-                        "nodeId": node.id,
-                        "message": f"未知节点类型: {node.type}",
-                    }
-                )
+        known = set(registry.types()) | {"flow.if", "flow.loop"}
+        _validate_steps(flow.steps, known, issues)
         return {"ok": not any(i["severity"] == "error" for i in issues), "issues": issues}
 
     async def flow_start(params: dict[str, Any]) -> dict[str, Any]:
         flow = _parse_flow(params)
+        flow = _apply_run_inputs(flow, params.get("inputs"))
         mode = params.get("mode", "run")
         if mode not in ("run", "dryRun"):
             raise LaniusError.of(
@@ -59,7 +64,16 @@ def register_all(server: RpcServer) -> None:
         return {
             "executionId": record.execution_id,
             "finalState": record.state.value,
-            "nodeRuns": [vars(run) for run in record.node_runs],
+            "nodeRuns": [
+                {
+                    "nodeId": run.node_id,
+                    "status": run.status,
+                    "durationMs": run.duration_ms,
+                    "errorCode": run.error_code,
+                    "label": run.label,
+                }
+                for run in record.node_runs
+            ],
             "error": record.error,
         }
 
@@ -73,6 +87,39 @@ def register_all(server: RpcServer) -> None:
     server.register("flow.validate", flow_validate)
     server.register("flow.start", flow_start)
     server.register("flow.cancel", flow_cancel)
+
+
+def _validate_steps(
+    steps: list[FlowStep], known: set[str], issues: list[dict[str, Any]]
+) -> None:
+    for step in steps:
+        node_type = step.node_type()
+        if not node_type or node_type not in known:
+            issues.append(
+                {
+                    "severity": "error",
+                    "code": "engine.flow.unknownNodeType",
+                    "nodeId": step.id,
+                    "message": f"未知节点类型: {node_type or step.kind}",
+                }
+            )
+        elif step.kind == "binding":
+            keys = step.keys or str(step.config.get("keys", "")).strip()
+            if not keys:
+                issues.append(
+                    {
+                        "severity": "error",
+                        "code": "engine.flow.validationFailed",
+                        "nodeId": step.id,
+                        "message": f"步骤 {step.id} 缺少按键 keys",
+                    }
+                )
+        if step.then:
+            _validate_steps(step.then, known, issues)
+        if step.else_:
+            _validate_steps(step.else_, known, issues)
+        if step.body:
+            _validate_steps(step.body, known, issues)
 
 
 def _parse_flow(params: dict[str, Any]) -> FlowFile:
@@ -90,3 +137,25 @@ def _parse_flow(params: dict[str, Any]) -> FlowFile:
             "流程文件不符合 schema",
             details={"cause": str(exc)},
         ) from exc
+
+
+def _apply_run_inputs(flow: FlowFile, inputs: object) -> FlowFile:
+    """开跑时覆盖目标进程与定位通道，不写回模板文件。"""
+    if not isinstance(inputs, dict):
+        return flow
+    target = flow.target
+    raw_match = inputs.get("target")
+    if isinstance(raw_match, dict):
+        nested = raw_match.get("match", raw_match)
+        if isinstance(nested, dict):
+            target = target.model_copy(
+                update={"match": FlowTargetMatch.model_validate(nested)}
+            )
+        raw_locate = raw_match.get("locate")
+        if isinstance(raw_locate, dict):
+            target = target.model_copy(update={"locate": FlowLocate.model_validate(raw_locate)})
+    raw_locate = inputs.get("locate")
+    if isinstance(raw_locate, dict):
+        target = target.model_copy(update={"locate": FlowLocate.model_validate(raw_locate)})
+    return flow.model_copy(update={"target": target})
+

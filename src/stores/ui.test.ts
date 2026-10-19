@@ -15,6 +15,8 @@ describe("ui store", () => {
       startTopHeight: 280,
       startLogWidth: 320,
       editorPaletteWidth: 192,
+      editorInspectorWidth: 280,
+      editorLogHeight: 140,
     });
   });
 

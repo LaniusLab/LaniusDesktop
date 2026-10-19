@@ -11,6 +11,42 @@ export interface Settings {
   "onError"?: string;
 }
 
+export interface Target {
+  "match"?: TargetMatch;
+  "locate"?: Locate;
+}
+
+export interface TargetMatch {
+  "exe"?: string;
+  "title"?: string;
+  "className"?: string;
+}
+
+export interface Locate {
+  "channel"?: "a11y" | "vision";
+  "source"?: "probe" | "user";
+  "capture"?: "client" | "screen";
+  "visionPack"?: string;
+}
+
+export interface Step {
+  "id": string;
+  "kind": "binding" | "mouse" | "preset" | "control";
+  "type"?: string;
+  "mappingId"?: string;
+  "profileId"?: string;
+  "keys"?: string;
+  "label"?: string;
+  "config"?: Record<string, unknown>;
+  "disabled"?: boolean;
+  /** flow.if 的则分支 */
+  "then"?: Array<Step>;
+  /** flow.if 的否则分支 */
+  "else"?: Array<Step>;
+  /** flow.loop 的循环体 */
+  "body"?: Array<Step>;
+}
+
 export interface Node {
   "id": string;
   "type": string;
@@ -35,9 +71,16 @@ export interface FlowFile {
   "id": string;
   "name": string;
   "description"?: string;
+  /** 编排时默认使用的按键方案 id */
+  "keymapProfileId"?: string;
+  "target"?: Target;
   "variables"?: Record<string, Variable>;
   "settings"?: Settings;
-  "nodes": Array<Node>;
-  "edges": Array<Edge>;
+  /** 有序步骤（schemaVersion ≥ 2 的执行真源；≥ 3 可嵌套） */
+  "steps"?: Array<Step>;
+  /** v1 DAG 节点；打开时迁移为 steps */
+  "nodes"?: Array<Node>;
+  /** v1 DAG 连线；打开时迁移为 steps 顺序 */
+  "edges"?: Array<Edge>;
   "metadata"?: Record<string, unknown>;
 }

@@ -4,53 +4,69 @@ import { useMemo, useState } from "react";
 
 import { currentContext } from "@/lib/commands/context";
 import { registry } from "@/lib/commands/registry";
+import { PROCESS_CATALOG, processById } from "@/lib/targets";
+import { findStepById } from "@/lib/template";
 import { cn } from "@/lib/utils";
 import { JOB_PRESETS } from "@/modules/start/presets";
+import { useEditorStore } from "@/stores/editor";
 import { useExecutionStore } from "@/stores/execution";
 import { useT, useUiStore } from "@/stores/ui";
-import { Badge, Button, PageHeader, SplitPane, StatusBadge } from "@/ui";
+import {
+  Badge,
+  Button,
+  ChoiceGroup,
+  PageHeader,
+  Select,
+  SplitPane,
+  StatusBadge,
+} from "@/ui";
 
-/** 开始页：MaaEnd 式可调分栏——上栏预设与日志，下栏步骤与试一次。勾选为 M0 mock。 */
+/** 开始页：选模板、选进程、确认识别方式，再试一次。 */
 export function StartPage() {
   const navigate = useNavigate();
   const t = useT();
   const [presetId, setPresetId] = useState(JOB_PRESETS[0].id);
   const preset = JOB_PRESETS.find((item) => item.id === presetId) ?? JOB_PRESETS[0];
-  const [checked, setChecked] = useState<ReadonlySet<string>>(
-    () => new Set(preset.steps.map((step) => step.id)),
-  );
+  const templateSteps = useEditorStore((s) => s.steps);
+  const processId = useEditorStore((s) => s.processId);
+  const locate = useEditorStore((s) => s.locate);
+  const bindProcess = useEditorStore((s) => s.bindProcess);
+  const setLocateChannel = useEditorStore((s) => s.setLocateChannel);
+  const setVisionPack = useEditorStore((s) => s.setVisionPack);
+  const setStepDisabled = useEditorStore((s) => s.setStepDisabled);
+  const loadTemplate = useEditorStore((s) => s.loadTemplate);
+  const liveSteps = preset.available ? templateSteps : preset.steps;
   const startTopHeight = useUiStore((s) => s.startTopHeight);
   const setStartTopHeight = useUiStore((s) => s.setStartTopHeight);
   const startLogWidth = useUiStore((s) => s.startLogWidth);
   const setStartLogWidth = useUiStore((s) => s.setStartLogWidth);
   const logLines = useExecutionStore((s) => s.logLines);
   const phase = useExecutionStore((s) => s.phase);
+  const stepStatuses = useExecutionStore((s) => s.stepStatuses);
+  const activeStepId = useExecutionStore((s) => s.activeStepId);
   const engineStatus = useExecutionStore((s) => s.engineStatus);
   const canRun =
-    engineStatus === "ready" && phase !== "running" && phase !== "validating";
+    engineStatus === "ready" && phase !== "running" && phase !== "validating" && Boolean(processId);
 
   const selectedCount = useMemo(
-    () => preset.steps.filter((step) => checked.has(step.id)).length,
-    [checked, preset.steps],
+    () => liveSteps.filter((step) => !("disabled" in step && step.disabled)).length,
+    [liveSteps],
   );
+  const probed = processById(processId);
 
   const selectPreset = (id: string) => {
     const next = JOB_PRESETS.find((item) => item.id === id);
     if (!next?.available) return;
     setPresetId(id);
-    setChecked(new Set(next.steps.map((step) => step.id)));
+    if (next.load) {
+      loadTemplate(next.load());
+    }
   };
 
   const toggleStep = (id: string) => {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
+    const step = findStepById(templateSteps, id);
+    if (!step) return;
+    setStepDisabled(id, !step.disabled);
   };
 
   const runCommand = (id: string) => void registry.run(id, currentContext());
@@ -64,7 +80,7 @@ export function StartPage() {
         size={startTopHeight}
         onSizeChange={setStartTopHeight}
         min={160}
-        minSecond={180}
+        minSecond={220}
         label={t("layout.resize.vertical")}
       >
         <SplitPane
@@ -136,12 +152,66 @@ export function StartPage() {
           <div className="shrink-0">
             <p className="font-display text-lg text-fg">{preset.title}</p>
             <p className="mt-1 text-sm text-fg-muted">
-              {t("start.selected", { n: selectedCount, total: preset.steps.length })}
+              {t("start.selected", { n: selectedCount, total: liveSteps.length })}
             </p>
           </div>
+
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-fg-muted">{t("start.process")}</span>
+              <Select
+                aria-label={t("start.process")}
+                value={processId}
+                onChange={(event) => {
+                  bindProcess(event.target.value);
+                }}
+              >
+                {PROCESS_CATALOG.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </Select>
+            </label>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs text-fg-muted">{t("start.locate")}</span>
+              <ChoiceGroup
+                aria-label={t("start.locate")}
+                columns={2}
+                value={locate.channel}
+                onChange={setLocateChannel}
+                options={[
+                  { value: "a11y", label: t("start.locate.a11y") },
+                  { value: "vision", label: t("start.locate.vision") },
+                ]}
+              />
+            </div>
+          </div>
+          {probed ? (
+            <p className="mt-2 text-xs text-fg-muted">
+              {locate.source === "user" ? t("start.locate.overridden") : t("start.locate.probed")}
+              {probed.reasons.join(" · ")}
+            </p>
+          ) : null}
+          {locate.channel === "vision" ? (
+            <label className="mt-2 flex max-w-xs flex-col gap-1.5">
+              <span className="text-xs text-fg-muted">{t("start.visionPack")}</span>
+              <Select
+                aria-label={t("start.visionPack")}
+                value={locate.visionPack}
+                onChange={(event) => setVisionPack(event.target.value)}
+              >
+                <option value="template">{t("start.pack.template")}</option>
+                <option value="ocr-zh">{t("start.pack.ocr")}</option>
+              </Select>
+            </label>
+          ) : null}
+
           <ol className="mt-4 min-h-0 flex-1 overflow-auto">
-            {preset.steps.map((step, index) => {
-              const isOn = checked.has(step.id);
+            {liveSteps.map((step, index) => {
+              const isOn = !("disabled" in step && step.disabled);
+              const running = activeStepId === step.id;
+              const runStatus = stepStatuses[step.id];
               return (
                 <li key={step.id}>
                   <button
@@ -153,6 +223,7 @@ export function StartPage() {
                     className={cn(
                       "flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors duration-150",
                       "hover:bg-fg/5",
+                      running && "bg-accent-soft",
                     )}
                   >
                     <span
@@ -176,6 +247,9 @@ export function StartPage() {
                     <span className={cn("text-sm", isOn ? "text-fg" : "text-fg-muted line-through")}>
                       {step.label}
                     </span>
+                    {runStatus && runStatus !== "pending" ? (
+                      <span className="ml-auto text-xs text-fg-faint">{t(`edit.run.${runStatus}`)}</span>
+                    ) : null}
                   </button>
                 </li>
               );

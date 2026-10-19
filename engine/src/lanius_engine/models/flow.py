@@ -4,9 +4,13 @@
 打开时不丢失，迁移链负责语义升级而非字段清洗。
 """
 
+from __future__ import annotations
+
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+CURRENT_SCHEMA_VERSION = 3
 
 
 class FlowVariable(BaseModel):
@@ -21,6 +25,59 @@ class FlowSettings(BaseModel):
 
     timeout_ms: int = Field(default=600_000, alias="timeoutMs", gt=0)
     on_error: str = Field(default="stop", alias="onError")
+
+
+class FlowTargetMatch(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    exe: str = ""
+    title: str = ""
+    class_name: str = Field(default="", alias="className")
+
+    def is_empty(self) -> bool:
+        return not (self.exe or self.title or self.class_name)
+
+
+class FlowLocate(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    channel: Literal["a11y", "vision"] = "a11y"
+    source: Literal["probe", "user"] = "probe"
+    capture: Literal["client", "screen"] = "client"
+    vision_pack: str = Field(default="template", alias="visionPack")
+
+
+class FlowTarget(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    match: FlowTargetMatch = Field(default_factory=FlowTargetMatch)
+    locate: FlowLocate = Field(default_factory=FlowLocate)
+
+
+class FlowStep(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    id: str
+    kind: Literal["binding", "mouse", "preset", "control"]
+    type: str = ""
+    mapping_id: str = Field(default="", alias="mappingId")
+    profile_id: str = Field(default="", alias="profileId")
+    keys: str = ""
+    label: str = ""
+    config: dict[str, Any] = Field(default_factory=dict)
+    disabled: bool = False
+    then: list[FlowStep] = Field(default_factory=list)
+    else_: list[FlowStep] = Field(default_factory=list, alias="else")
+    body: list[FlowStep] = Field(default_factory=list)
+
+    def node_type(self) -> str:
+        if self.kind == "binding":
+            return self.type or "keyboard.press"
+        if self.kind == "control":
+            return self.type or ""
+        if self.type:
+            return self.type
+        return ""
 
 
 class FlowNode(BaseModel):
@@ -53,8 +110,14 @@ class FlowFile(BaseModel):
     id: str
     name: str
     description: str = ""
+    keymap_profile_id: str = Field(default="default", alias="keymapProfileId")
+    target: FlowTarget = Field(default_factory=FlowTarget)
     variables: dict[str, FlowVariable] = Field(default_factory=dict)
     settings: FlowSettings = Field(default_factory=FlowSettings)
+    steps: list[FlowStep] = Field(default_factory=list)
     nodes: list[FlowNode] = Field(default_factory=list)
     edges: list[FlowEdge] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+FlowStep.model_rebuild()
