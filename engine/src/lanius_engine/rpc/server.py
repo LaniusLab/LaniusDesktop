@@ -26,6 +26,8 @@ class RpcServer:
         self._methods: dict[str, Handler] = {}
         self._started_at = time.monotonic()
         self._shutdown = asyncio.Event()
+        # 当前请求的 traceId：通知帧注入用；请求间隙为空串
+        self.current_trace_id: str = ""
 
     def register(self, name: str, handler: Handler) -> None:
         if name in self._methods:
@@ -42,6 +44,14 @@ class RpcServer:
 
     def stop(self) -> None:
         self._shutdown.set()
+
+    def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
+        """向壳发出无 id 通知帧（PROTOCOL.md §2 / §3.3）。stdout 只走协议。"""
+        payload = dict(params or {})
+        if self.current_trace_id and "traceId" not in payload:
+            payload["traceId"] = self.current_trace_id
+        self._write_frame({"jsonrpc": "2.0", "method": method, "params": payload})
+
 
     async def serve(self) -> int:
         loop = asyncio.get_running_loop()
@@ -84,6 +94,8 @@ class RpcServer:
                 frame_id, -32601, "Method not found", {"methodName": method}
             )
 
+        previous_trace = self.current_trace_id
+        self.current_trace_id = trace_id
         try:
             result = await handler(params)
         except LaniusError as err:
@@ -98,6 +110,8 @@ class RpcServer:
                 trace_id=trace_id,
             )
             return {"jsonrpc": "2.0", "id": frame_id, "error": error.to_rpc_error()}
+        finally:
+            self.current_trace_id = previous_trace
 
         if frame_id is None:  # 通知无响应
             return None

@@ -1,9 +1,13 @@
 """RPC 方法实现（注册制）。方法清单的权威文档见 docs/PROTOCOL.md §3。"""
 
+from __future__ import annotations
+
+import time
 from typing import Any
 
 from lanius_engine import PROTOCOL_VERSION, __version__
 from lanius_engine.drivers.mock import MockDriver
+from lanius_engine.history import ExecutionHistory, HistoryFilter
 from lanius_engine.models import (
     FlowFile,
     FlowLocate,
@@ -17,10 +21,11 @@ from lanius_engine.rpc.server import RpcServer
 from lanius_engine.runtime.executor import Executor
 
 
-def register_all(server: RpcServer) -> None:
+def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> None:
     registry = default_registry()
     # M0/M1 统一使用 mock driver；平台 driver 的选择逻辑随 M4 落地
     executor = Executor(registry, MockDriver())
+    store = history if history is not None else ExecutionHistory()
 
     async def hello(params: dict[str, Any]) -> dict[str, Any]:
         return {
@@ -32,6 +37,7 @@ def register_all(server: RpcServer) -> None:
                 "template.control",
                 "locate.a11y",
                 "vision.mock",
+                "execution.history",
             ],
             "nodeTypes": registry.types(),
         }
@@ -41,6 +47,7 @@ def register_all(server: RpcServer) -> None:
 
     async def shutdown(params: dict[str, Any]) -> dict[str, Any]:
         server.stop()
+        store.close()
         return {}
 
     async def flow_validate(params: dict[str, Any]) -> dict[str, Any]:
@@ -60,7 +67,22 @@ def register_all(server: RpcServer) -> None:
                 f"非法执行模式: {mode!r}",
                 details={"allowed": ["run", "dryRun"]},
             )
-        record = await executor.start(flow, mode=mode)
+
+        def on_event(event: str, payload: dict[str, Any]) -> None:
+            # 执行器内部事件名即 PROTOCOL §3.3 通知方法名
+            server.notify(event, payload)
+
+        started_at = time.time()
+        record = await executor.start(flow, mode=mode, on_event=on_event)
+        finished_at = time.time()
+        store.save(
+            record,
+            trace_id=server.current_trace_id,
+            flow_path=params.get("path") if isinstance(params.get("path"), str) else None,
+            trigger="rpc.flow.start",
+            started_at=started_at,
+            finished_at=finished_at,
+        )
         return {
             "executionId": record.execution_id,
             "finalState": record.state.value,
@@ -81,12 +103,38 @@ def register_all(server: RpcServer) -> None:
         executor.cancel()
         return {}
 
+    async def execution_get(params: dict[str, Any]) -> dict[str, Any]:
+        execution_id = params.get("executionId")
+        if not isinstance(execution_id, str) or not execution_id:
+            raise LaniusError.of(
+                "engine.flow.validationFailed",
+                "params.executionId 必须是非空字符串",
+                details={"missing": ["executionId"]},
+            )
+        return {"record": store.get(execution_id)}
+
+    async def execution_list(params: dict[str, Any]) -> dict[str, Any]:
+        limit = int(params.get("limit", 50))
+        offset = int(params.get("offset", 0))
+        raw_filter = params.get("filter")
+        hist_filter: HistoryFilter | None = None
+        if isinstance(raw_filter, dict):
+            state = raw_filter.get("state")
+            flow_id = raw_filter.get("flowId")
+            hist_filter = HistoryFilter(
+                state=state if isinstance(state, str) else None,
+                flow_id=flow_id if isinstance(flow_id, str) else None,
+            )
+        return store.list(limit=limit, offset=offset, filter=hist_filter)
+
     server.register("engine.hello", hello)
     server.register("engine.ping", ping)
     server.register("engine.shutdown", shutdown)
     server.register("flow.validate", flow_validate)
     server.register("flow.start", flow_start)
     server.register("flow.cancel", flow_cancel)
+    server.register("execution.get", execution_get)
+    server.register("execution.list", execution_list)
 
 
 def _validate_steps(
@@ -158,4 +206,3 @@ def _apply_run_inputs(flow: FlowFile, inputs: object) -> FlowFile:
     if isinstance(raw_locate, dict):
         target = target.model_copy(update={"locate": FlowLocate.model_validate(raw_locate)})
     return flow.model_copy(update={"target": target})
-
