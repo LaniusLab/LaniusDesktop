@@ -85,6 +85,7 @@ describe("mockBridge", () => {
     await expect(bridge.updaterDownload("v0.2.0")).resolves.toMatchObject({
       tag: "v0.2.0",
       kind: "setupExe",
+      checksumStatus: "unavailable",
     });
     await expect(bridge.updaterInstall("/tmp/x.exe")).resolves.toMatchObject({
       mode: "interactiveInstaller",

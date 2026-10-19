@@ -153,7 +153,7 @@
 | `shell_export_diagnostics` | — | `DiagnosticsExportResult`（`schemas/shell-diagnostics.schema.json`） | 本机诊断包（日志/元数据；无遥测、无凭据明文；可选 tar.gz/zip） | 已实现 |
 | `updater_list` | — | `UpdaterListResult`（见 `schemas/shell-updater.schema.json`） | 公开 GitHub Releases（published；draft 不可见） | 已实现 |
 | `updater_check` | — | `UpdaterCheckResult` | 相对当前版本是否有带 Windows 包的更新 | 已实现 |
-| `updater_download` | `{ tag, assetName? }` | `UpdaterDownloadResult` | 下载该 tag 的 preferred 或指定 Windows 包 | 已实现 |
+| `updater_download` | `{ tag, assetName? }` | `UpdaterDownloadResult` | 下载该 tag 的 preferred 或指定 Windows 包；有 `SHA256SUMS.txt` 则核对 | 已实现 |
 | `updater_install` | `{ path }` | `UpdaterInstallResult` | Windows 交互式启动；路径须在更新缓存目录；签名静默属 M5 | 已实现 |
 | `updater_apply` | `{ tag, assetName? }` | `UpdaterApplyResult` | 下载后 Windows 启动安装器；非 Windows 只下载并标 `installSkippedReason` | 已实现 |
 

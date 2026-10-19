@@ -1,9 +1,9 @@
 //! GitHub Releases → Windows 安装包下载 / 交互式启动。
 //! 对齐姊妹仓 Minecraft-Utilities 的「tag → package」模式；HTTP 经 curl（ADR-0011）。
-//! 签名静默安装属 M5。本模块只做：拉公开 Releases、过滤 Windows 资产、落盘、启动安装器。
+//! 签名静默安装属 M5（密钥阻塞）。若 release 附带 SHA256SUMS.txt 则下载后核对（非签名）。
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use serde::Serialize;
@@ -408,6 +408,137 @@ fn pick_asset_from_release<'a>(
         .ok_or_else(|| ShellError::UpdaterNoAsset(tag.to_string()))
 }
 
+/// 从 GNU `SHA256SUMS` 正文取指定 basename 的期望哈希（小写 hex）。
+fn expected_sha256_from_sums(body: &str, file_name: &str) -> Option<String> {
+    for line in body.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let (hash, name) = if let Some((h, rest)) = line.split_once("  ") {
+            (h, rest.trim())
+        } else if let Some((h, rest)) = line.split_once(" *") {
+            (h, rest.trim())
+        } else {
+            continue;
+        };
+        let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
+        if base == file_name
+            && hash.len() == 64
+            && hash.chars().all(|c| c.is_ascii_hexdigit())
+        {
+            return Some(hash.to_ascii_lowercase());
+        }
+    }
+    None
+}
+
+fn sha256_file_hex(path: &Path) -> Result<String, ShellError> {
+    if cfg!(windows) {
+        let output = Command::new("certutil")
+            .args(["-hashfile", &path.to_string_lossy(), "SHA256"])
+            .output()
+            .map_err(|e| ShellError::Io(format!("certutil: {e}")))?;
+        if !output.status.success() {
+            return Err(ShellError::Io("certutil hash failed".into()));
+        }
+        let text = String::from_utf8_lossy(&output.stdout);
+        for line in text.lines() {
+            let t = line.trim();
+            if t.len() == 64 && t.chars().all(|c| c.is_ascii_hexdigit()) {
+                return Ok(t.to_ascii_lowercase());
+            }
+        }
+        return Err(ShellError::Io("certutil 输出无 SHA256".into()));
+    }
+    let output = Command::new("sha256sum")
+        .arg(path)
+        .output()
+        .map_err(|e| ShellError::Io(format!("sha256sum: {e}")))?;
+    if !output.status.success() {
+        return Err(ShellError::Io("sha256sum failed".into()));
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    let hash = text
+        .split_whitespace()
+        .next()
+        .ok_or_else(|| ShellError::Io("sha256sum 输出为空".into()))?;
+    if hash.len() != 64 || !hash.chars().all(|c| c.is_ascii_hexdigit()) {
+        return Err(ShellError::Io("sha256sum 输出非法".into()));
+    }
+    Ok(hash.to_ascii_lowercase())
+}
+
+fn find_raw_release_by_tag<'a>(raw: &'a [Value], tag: &str) -> Option<&'a Value> {
+    let want = tag.trim();
+    raw.iter().find(|r| {
+        r.get("tag_name")
+            .and_then(|v| v.as_str())
+            .is_some_and(|t| {
+                t.eq_ignore_ascii_case(want) || strip_v(t).eq_ignore_ascii_case(strip_v(want))
+            })
+    })
+}
+
+fn sums_asset_url(raw_release: &Value) -> Option<&str> {
+    let assets = raw_release.get("assets")?.as_array()?;
+    for a in assets {
+        let name = a.get("name").and_then(|n| n.as_str()).unwrap_or("");
+        if name.eq_ignore_ascii_case("SHA256SUMS.txt") || name.eq_ignore_ascii_case("SHA256SUMS") {
+            let url = a.get("browser_download_url").and_then(|u| u.as_str())?;
+            if !url.is_empty() {
+                return Some(url);
+            }
+        }
+    }
+    None
+}
+
+/// 有 SUMS 则强制核对；无 SUMS / 拉取失败 → unavailable（旧 release 兼容）。
+fn verify_download_checksum(
+    app: &AppHandle,
+    raw_releases: &[Value],
+    tag: &str,
+    file_name: &str,
+    dest: &Path,
+) -> Result<&'static str, ShellError> {
+    let Some(raw_rel) = find_raw_release_by_tag(raw_releases, tag) else {
+        return Ok("unavailable");
+    };
+    let Some(sums_url) = sums_asset_url(raw_rel) else {
+        return Ok("unavailable");
+    };
+    let sums_path = updates_dir(app)?.join(format!("SHA256SUMS-{tag}.txt"));
+    if sums_path.exists() {
+        let _ = fs::remove_file(&sums_path);
+    }
+    if http_download_file(sums_url, &sums_path).is_err() {
+        let _ = fs::remove_file(&sums_path);
+        return Ok("unavailable");
+    }
+    let body = match fs::read_to_string(&sums_path) {
+        Ok(b) => b,
+        Err(_) => return Ok("unavailable"),
+    };
+    let Some(expected) = expected_sha256_from_sums(&body, file_name) else {
+        let _ = fs::remove_file(dest);
+        return Err(ShellError::UpdaterChecksum(format!(
+            "SHA256SUMS 中无条目: {file_name}"
+        )));
+    };
+    let actual = sha256_file_hex(dest).map_err(|e| {
+        let _ = fs::remove_file(dest);
+        e
+    })?;
+    if actual != expected {
+        let _ = fs::remove_file(dest);
+        return Err(ShellError::UpdaterChecksum(format!(
+            "{file_name} 期望 {expected}，实际 {actual}"
+        )));
+    }
+    Ok("verified")
+}
+
 fn download_release_blocking(
     app: &AppHandle,
     tag: &str,
@@ -446,14 +577,17 @@ fn download_release_blocking(
     let n = fs::metadata(&dest)
         .map(|m| m.len())
         .unwrap_or(size.unwrap_or(0));
+    let release_tag = rel.get("tag").and_then(|v| v.as_str()).unwrap_or(tag);
+    let checksum_status = verify_download_checksum(app, &raw, release_tag, file_name, &dest)?;
     emit_progress(app, "done", Some(tag), n, Some(n));
 
     Ok(json!({
-        "tag": rel.get("tag").and_then(|v| v.as_str()).unwrap_or(tag),
+        "tag": release_tag,
         "fileName": file_name,
         "path": dest.to_string_lossy(),
         "bytes": n,
         "kind": kind,
+        "checksumStatus": checksum_status,
     }))
 }
 
@@ -555,6 +689,7 @@ pub async fn apply_release(
                 "path": path,
                 "bytes": downloaded.get("bytes"),
                 "kind": downloaded.get("kind"),
+                "checksumStatus": downloaded.get("checksumStatus"),
                 "launched": installed.get("launched").and_then(|v| v.as_bool()).unwrap_or(true),
                 "mode": "interactiveInstaller",
                 "installSkippedReason": Value::Null,
@@ -568,6 +703,7 @@ pub async fn apply_release(
                 "path": path,
                 "bytes": downloaded.get("bytes"),
                 "kind": downloaded.get("kind"),
+                "checksumStatus": downloaded.get("checksumStatus"),
                 "launched": false,
                 "mode": Value::Null,
                 "installSkippedReason": "unsupportedPlatform",
@@ -581,6 +717,21 @@ pub async fn apply_release(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_gnu_sha256sums() {
+        let body = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  setup.exe\n\
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb *app.msi\n";
+        assert_eq!(
+            expected_sha256_from_sums(body, "setup.exe").as_deref(),
+            Some("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+        );
+        assert_eq!(
+            expected_sha256_from_sums(body, "app.msi").as_deref(),
+            Some("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+        );
+        assert!(expected_sha256_from_sums(body, "missing.exe").is_none());
+    }
 
     #[test]
     fn classifies_lanius_windows_assets() {

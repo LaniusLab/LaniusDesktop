@@ -87,15 +87,21 @@
       },
       "additionalProperties": false
     },
+    "updaterChecksumStatus": {
+      "type": "string",
+      "enum": ["verified", "unavailable"],
+      "description": "verified=与发布 SHA256SUMS.txt 一致；unavailable=无清单或无法核对（非签名）"
+    },
     "updaterDownloadResult": {
       "type": "object",
-      "required": ["tag", "fileName", "path", "bytes", "kind"],
+      "required": ["tag", "fileName", "path", "bytes", "kind", "checksumStatus"],
       "properties": {
         "tag": { "type": "string" },
         "fileName": { "type": "string" },
         "path": { "type": "string", "description": "本机已下载路径" },
         "bytes": { "type": "integer", "minimum": 0 },
-        "kind": { "$ref": "#/$defs/updaterAssetKind" }
+        "kind": { "$ref": "#/$defs/updaterAssetKind" },
+        "checksumStatus": { "$ref": "#/$defs/updaterChecksumStatus" }
       },
       "additionalProperties": false
     },
@@ -116,7 +122,7 @@
     "updaterApplyResult": {
       "type": "object",
       "description": "下载指定 tag 的 Windows 包并在支持的平台上交互式启动安装器",
-      "required": ["tag", "fileName", "path", "bytes", "kind", "launched"],
+      "required": ["tag", "fileName", "path", "bytes", "kind", "launched", "checksumStatus"],
       "properties": {
         "tag": { "type": "string" },
         "fileName": { "type": "string" },
@@ -134,7 +140,8 @@
         "installSkippedReason": {
           "type": ["string", "null"],
           "description": "未启动安装时的原因，如 unsupportedPlatform"
-        }
+        },
+        "checksumStatus": { "$ref": "#/$defs/updaterChecksumStatus" }
       },
       "additionalProperties": false
     },
