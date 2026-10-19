@@ -133,6 +133,14 @@ export function registerBuiltinCommands(): void {
       ctx.execution.phase !== "paused",
     run: async (ctx) => {
       const flow = ctx.editor.toFlowFile();
+      const { gateFlowRun } = await import("@/lib/trust-gate");
+      const gate = await gateFlowRun(ctx.bridge, flow, ctx.ui.prefs);
+      if (!gate.ok) {
+        if (gate.reason === "blocked") {
+          throw new Error(gate.message);
+        }
+        return;
+      }
       ctx.execution.beginRun({
         mode: "run",
         exe: flow.target?.match?.exe ?? "",
@@ -156,7 +164,17 @@ export function registerBuiltinCommands(): void {
       ctx.execution.phase !== "validating" &&
       ctx.execution.phase !== "paused",
     run: async (ctx) => {
+      // dry-run 走 mock，仍尊重 blockAllDestructive；未信任确认可跳过
       const flow = ctx.editor.toFlowFile();
+      if (ctx.ui.prefs.blockAllDestructive) {
+        const inspect = await ctx.bridge.flowInspect(flow);
+        const destructive = inspect.dangerousSteps.filter((s) => s.dangerLevel === "destructive");
+        if (destructive.length > 0) {
+          throw new Error(
+            `已禁止 destructive 节点：${destructive.map((s) => s.label).join("、")}`,
+          );
+        }
+      }
       ctx.execution.beginRun({
         mode: "dryRun",
         exe: flow.target?.match?.exe ?? "",

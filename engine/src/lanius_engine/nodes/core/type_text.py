@@ -21,6 +21,7 @@ class TypeTextNode:
     type: ClassVar[str] = "keyboard.type"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = True
+    danger_level: ClassVar[str] = 'caution'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {
         "length": Port(type="number"),

@@ -253,6 +253,8 @@ export const zhCN: Record<string, string> = {
   "settings.localeHint": "界面文案。流程文件内容不会被翻译。",
   "settings.locale.zh-CN": "简体中文",
   "settings.locale.en": "English",
+  "settings.blockDestructive": "禁止危险步骤",
+  "settings.blockDestructiveHint": "打开后，含写文件等 destructive 节点的流程无法运行（含预演）。",
   "settings.close": "关闭窗口时",
   "settings.closeHint": "点右上角关闭，或用系统关闭手势。",
   "settings.close.quit": "退出应用",

@@ -133,6 +133,7 @@ const outputs = [
   generate("schemas/shell-updater.schema.json", "shell-updater.ts", "UpdaterListResult"),
   generate("schemas/shell-secret.schema.json", "shell-secret.ts", "SecretListResult"),
   generate("schemas/element-locator.schema.json", "element-locator.ts", "DriverElementFindResult"),
+  generate("schemas/shell-trust.schema.json", "shell-trust.ts", "TrustCheckResult"),
 ];
 
 mkdirSync(join(root, "src/lib/gen"), { recursive: true });

@@ -53,6 +53,7 @@
 | --- | --- | --- | --- | --- |
 | `flow.validate` | `{ flow }` 或 `{ path }` | `{ ok, issues[] }` | 已实现 | 静态校验，不执行 |
 | `flow.migrate` | `{ flow }` | `{ flow, migratedFrom, migratedTo }` | 已实现 | 迁移到当前 schemaVersion |
+| `flow.inspect` | `{ flow }` | `{ flowId, contentHash, dangerousSteps[] }` | 已实现 | SHA-256 + destructive 清单（信任门闩） |
 | `flow.start` | `{ path \| flow, mode, inputs? }` | `{ executionId }` | 已实现（异步） | 立即返回；进度经 §3.3；终态 `execution.get`；全局互斥 |
 | `flow.pause` / `flow.resume` | `{ executionId }` | `{}` | 已实现 | 协作式暂停；在步骤/等待安全点生效 |
 | `flow.cancel` | `{ executionId, reason? }` | `{}` | 已实现 | 协作式取消 |
@@ -141,6 +142,10 @@
 | `secret_set` | `{ key, value }` | `SecretSetResult` | 系统 keyring + 名称索引；日志只记 key | 已实现 |
 | `secret_get` | `{ key }` | `SecretGetResult` | 取值供引擎消费；UI 凭据页禁止展示。引擎侧暂经 `LANIUS_SECRETS` / 注入 provider（无反向 RPC） | 已实现（壳）；引擎回调待接线 |
 | `secret_delete` | `{ key }` | `SecretDeleteResult` | 删 keyring 与索引 | 已实现 |
+| `trust_list` | — | `TrustListResult`（`schemas/shell-trust.schema.json`） | 本机信任索引 | 已实现 |
+| `trust_check` | `{ flowId, contentHash }` | `TrustCheckResult` | 是否可信 | 已实现 |
+| `trust_mark` | `{ flowId, contentHash }` | `TrustMarkResult` | 标记可信 | 已实现 |
+| `trust_revoke` | `{ flowId, contentHash? }` | `TrustRevokeResult` | 撤销 | 已实现 |
 | `prefs_get` | — | `ShellPrefs` | 读 `prefs.json` | 已实现 |
 | `prefs_set` | `{ prefs }` | `ShellPrefs` | 写盘 + 同步开机自启 | 已实现 |
 | `shell_debug_info` | — | `ShellDebugInfo` | 系统 / 路径 | 已实现 |

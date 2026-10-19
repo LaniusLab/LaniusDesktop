@@ -36,6 +36,7 @@ export function currentContext(): CommandContext {
     },
     navigate: (to) => navigateFn(to),
     ui: {
+      prefs: useUiStore.getState().prefs,
       toggleTheme: () => useUiStore.getState().toggleTheme(),
       setSearchOpen: (open) => useUiStore.getState().setSearchOpen(open),
       setSettingsOpen: (open) => useUiStore.getState().setSettingsOpen(open),

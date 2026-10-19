@@ -54,6 +54,7 @@ class ReadTextNode:
     type: ClassVar[str] = "fs.readText"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = False
+    danger_level: ClassVar[str] = 'safe'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {"text": Port(type="string")}
     config_schema: ClassVar[builtins.type[BaseModel]] = PathConfig
@@ -79,6 +80,7 @@ class WriteTextNode:
     type: ClassVar[str] = "fs.writeText"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = True
+    danger_level: ClassVar[str] = 'destructive'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {"path": Port(type="string")}
     config_schema: ClassVar[builtins.type[BaseModel]] = WriteConfig
@@ -104,6 +106,7 @@ class ExistsNode:
     type: ClassVar[str] = "fs.exists"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = False
+    danger_level: ClassVar[str] = 'safe'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {"exists": Port(type="boolean")}
     config_schema: ClassVar[builtins.type[BaseModel]] = PathConfig

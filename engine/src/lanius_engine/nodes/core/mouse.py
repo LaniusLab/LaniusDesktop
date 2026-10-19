@@ -30,6 +30,7 @@ class ClickNode:
     type: ClassVar[str] = "mouse.click"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = True
+    danger_level: ClassVar[str] = 'caution'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {}
     config_schema: ClassVar[builtins.type[BaseModel]] = ClickConfig
@@ -45,6 +46,7 @@ class DblClickNode:
     type: ClassVar[str] = "mouse.dblclick"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = True
+    danger_level: ClassVar[str] = 'caution'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {}
     config_schema: ClassVar[builtins.type[BaseModel]] = ClickConfig
@@ -62,6 +64,7 @@ class MoveNode:
     type: ClassVar[str] = "mouse.move"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = True
+    danger_level: ClassVar[str] = 'caution'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {}
     config_schema: ClassVar[builtins.type[BaseModel]] = MoveConfig

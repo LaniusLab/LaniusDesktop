@@ -253,6 +253,8 @@ export const en: Record<string, string> = {
   "settings.localeHint": "Interface copy. Flow file contents stay as written.",
   "settings.locale.zh-CN": "简体中文",
   "settings.locale.en": "English",
+  "settings.blockDestructive": "Block dangerous steps",
+  "settings.blockDestructiveHint": "When on, flows with destructive steps (e.g. write file) cannot run, including dry-run.",
   "settings.close": "When closing the window",
   "settings.closeHint": "Top-right close, or the system close gesture.",
   "settings.close.quit": "Quit the app",

@@ -15,6 +15,8 @@ export type {
   EngineInfo,
   EngineStatus,
   ExecutionPhase,
+  FlowDangerousStep,
+  FlowInspectResult,
   FlowNodeRun,
   FlowRunResult,
   FlowValidateResult,
@@ -44,3 +46,9 @@ export type {
   DriverElementFindResult,
   Locator,
 } from "@/lib/gen/element-locator";
+export type {
+  TrustCheckResult,
+  TrustListResult,
+  TrustMarkResult,
+  TrustRevokeResult,
+} from "@/lib/gen/shell-trust";

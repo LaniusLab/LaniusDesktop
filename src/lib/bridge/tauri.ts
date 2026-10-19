@@ -104,6 +104,13 @@ export function createTauriBridge(): Bridge {
       });
     },
 
+    flowInspect(flow) {
+      return invoke("engine_call", {
+        method: "flow.inspect",
+        params: { flow },
+      });
+    },
+
     elementFind(params) {
       return invoke("engine_call", {
         method: "driver.elementFind",
@@ -143,6 +150,22 @@ export function createTauriBridge(): Bridge {
 
     secretDelete(key) {
       return invoke<SecretDeleteResult>("secret_delete", { key });
+    },
+
+    trustList() {
+      return invoke("trust_list");
+    },
+
+    trustCheck(flowId, contentHash) {
+      return invoke("trust_check", { flowId, contentHash });
+    },
+
+    trustMark(flowId, contentHash) {
+      return invoke("trust_mark", { flowId, contentHash });
+    },
+
+    trustRevoke(flowId, contentHash) {
+      return invoke("trust_revoke", { flowId, contentHash });
     },
 
     debugInfo() {

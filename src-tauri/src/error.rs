@@ -50,6 +50,9 @@ pub enum ShellError {
 
     #[error("系统凭据库不可用: {0}")]
     SecretBackend(String),
+
+    #[error("信任记录不合法: {0}")]
+    InvalidTrust(String),
 }
 
 #[derive(Serialize)]
@@ -81,6 +84,7 @@ impl ShellError {
             ShellError::UpdaterInvalidPath(_) => "shell.updater.invalidPath",
             ShellError::InvalidSecret(_) => "shell.secret.invalid",
             ShellError::SecretBackend(_) => "shell.secret.backendFailed",
+            ShellError::InvalidTrust(_) => "shell.trust.invalid",
         }
     }
 
@@ -117,6 +121,7 @@ impl Serialize for TracedError {
             ShellError::UpdaterInvalidPath(_) => ("error", false),
             ShellError::InvalidSecret(_) => ("warning", false),
             ShellError::SecretBackend(_) => ("error", true),
+            ShellError::InvalidTrust(_) => ("warning", false),
         };
         ErrorPayload {
             code: self.error.code().to_string(),

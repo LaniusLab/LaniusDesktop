@@ -13,6 +13,7 @@
     "closeBehavior",
     "autostart",
     "autoUpdate",
+    "blockAllDestructive",
     "shortcuts"
   ],
   "properties": {
@@ -48,6 +49,10 @@
     },
     "autostart": { "type": "boolean", "description": "登录后自动启动" },
     "autoUpdate": { "type": "boolean", "description": "启动时检查更新" },
+    "blockAllDestructive": {
+      "type": "boolean",
+      "description": "禁止所有 destructive 节点（设置 → 常规）"
+    },
     "shortcuts": {
       "type": "object",
       "description": "可改的应用内快捷键",

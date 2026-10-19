@@ -20,6 +20,7 @@ METHOD_SCHEMAS = [
     "execution.list.json",
     "notifications.json",
     "driver.elementFind.json",
+    "flow.inspect.json",
 ]
 
 
@@ -84,6 +85,14 @@ def test_golden_element_find_matches_schema_required() -> None:
     for key in _required_of(schema, "result"):
         assert key in golden
     assert golden["found"] is True
+
+
+def test_golden_flow_inspect_matches_schema_required() -> None:
+    schema = _load(SCHEMAS / "flow.inspect.json")
+    golden = _load(GOLDEN / "flow.inspect.result.json")
+    for key in _required_of(schema, "result"):
+        assert key in golden
+    assert len(golden["contentHash"]) == 64
 
 
 async def test_live_hello_and_ping_satisfy_golden_shape(tmp_path: Path) -> None:

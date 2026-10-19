@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { toFlowFile } from "@/lib/flow-file";
+import { DEFAULT_PREFS } from "@/lib/prefs";
 import { registerBuiltinCommands } from "./builtins";
 import { registry } from "./registry";
 import type { CommandContext } from "./types";
@@ -26,6 +27,17 @@ function ctx(partial: Partial<CommandContext> = {}): CommandContext {
         migratedTo: 3,
       }),
       flowSave: vi.fn().mockResolvedValue({ path: "/tmp/a.flow.json" }),
+      flowInspect: vi.fn().mockResolvedValue({
+        flowId: sampleFlow.id,
+        contentHash: "a".repeat(64),
+        dangerousSteps: [],
+      }),
+      trustCheck: vi.fn().mockResolvedValue({
+        flowId: sampleFlow.id,
+        contentHash: "a".repeat(64),
+        trusted: true,
+        trustedAt: 1,
+      }),
     } as unknown as CommandContext["bridge"],
     engine: { status: "ready" },
     execution: {
@@ -45,7 +57,12 @@ function ctx(partial: Partial<CommandContext> = {}): CommandContext {
       markSaved: vi.fn(),
     },
     navigate: vi.fn(),
-    ui: { toggleTheme: vi.fn(), setSearchOpen: vi.fn(), setSettingsOpen: vi.fn() },
+    ui: {
+      prefs: { ...DEFAULT_PREFS },
+      toggleTheme: vi.fn(),
+      setSearchOpen: vi.fn(),
+      setSettingsOpen: vi.fn(),
+    },
     ...partial,
   };
 }

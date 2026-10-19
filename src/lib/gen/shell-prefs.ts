@@ -18,6 +18,8 @@ export interface ShellPrefs {
   "autostart": boolean;
   /** 启动时检查更新 */
   "autoUpdate": boolean;
+  /** 禁止所有 destructive 节点（设置 → 常规） */
+  "blockAllDestructive": boolean;
   /** 可改的应用内快捷键 */
   "shortcuts": { "palette": string; "run": string };
 }

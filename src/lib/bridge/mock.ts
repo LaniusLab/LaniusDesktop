@@ -12,6 +12,8 @@ import type {
 } from "./types";
 
 const mockSecrets = new Map<string, string>();
+/** key = `${flowId}::${contentHash}` */
+const mockTrust = new Map<string, number>();
 
 const MOCK_SCHEMA_VERSION = 3;
 
@@ -338,6 +340,46 @@ export function createMockBridge(): Bridge {
       return validateMockFlow(flow);
     },
 
+    async flowInspect(flow) {
+      const steps = flow.steps ?? [];
+      const dangerousSteps: Array<{
+        nodeId: string;
+        type: string;
+        dangerLevel: string;
+        label: string;
+      }> = [];
+      const walk = (items: typeof steps) => {
+        for (const step of items) {
+          if (step.disabled) continue;
+          const nodeType = step.type ?? "";
+          if (nodeType === "fs.writeText") {
+            dangerousSteps.push({
+              nodeId: step.id,
+              type: nodeType,
+              dangerLevel: "destructive",
+              label: step.label ?? step.id,
+            });
+          }
+          if (step.then) walk(step.then);
+          if (step.else) walk(step.else);
+          if (step.body) walk(step.body);
+          if (step.catch) walk(step.catch);
+        }
+      };
+      walk(steps);
+      const payload = JSON.stringify(flow);
+      let hash = 0;
+      for (let i = 0; i < payload.length; i += 1) {
+        hash = (hash * 31 + payload.charCodeAt(i)) >>> 0;
+      }
+      const contentHash = hash.toString(16).padStart(64, "0").slice(0, 64);
+      return {
+        flowId: flow.id,
+        contentHash,
+        dangerousSteps,
+      };
+    },
+
     async elementFind(params) {
       const match = params.match ?? {};
       const locator = params.locator ?? {};
@@ -395,6 +437,46 @@ export function createMockBridge(): Bridge {
     async secretDelete(key) {
       const removed = mockSecrets.delete(key);
       return { key, removed };
+    },
+
+    async trustList() {
+      const records = [...mockTrust.entries()].map(([key, trustedAt]) => {
+        const [flowId = "", contentHash = ""] = key.split("::");
+        return { flowId, contentHash, trustedAt };
+      });
+      return { records };
+    },
+
+    async trustCheck(flowId, contentHash) {
+      const key = `${flowId}::${contentHash}`;
+      const trustedAt = mockTrust.get(key);
+      return {
+        flowId,
+        contentHash,
+        trusted: trustedAt !== undefined,
+        trustedAt: trustedAt ?? null,
+      };
+    },
+
+    async trustMark(flowId, contentHash) {
+      const trustedAt = Date.now() / 1000;
+      mockTrust.set(`${flowId}::${contentHash}`, trustedAt);
+      return { flowId, contentHash, trustedAt };
+    },
+
+    async trustRevoke(flowId, contentHash) {
+      let removed = 0;
+      if (contentHash) {
+        if (mockTrust.delete(`${flowId}::${contentHash}`)) removed = 1;
+      } else {
+        for (const key of [...mockTrust.keys()]) {
+          if (key.startsWith(`${flowId}::`)) {
+            mockTrust.delete(key);
+            removed += 1;
+          }
+        }
+      }
+      return { flowId, removed };
     },
 
     async debugInfo() {

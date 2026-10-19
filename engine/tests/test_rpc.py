@@ -66,6 +66,38 @@ async def test_hello_reports_registered_node_types(server: RpcServer) -> None:
     assert "execution.history" in result["capabilities"]
     assert "secrets.env" in result["capabilities"]
     assert "driver.elementFind" in result["capabilities"]
+    assert "flow.inspect" in result["capabilities"]
+
+
+async def test_flow_inspect_hash_and_destructive(server: RpcServer) -> None:
+    flow = {
+        "schemaVersion": 3,
+        "id": "inspect-me",
+        "name": "检查",
+        "steps": [
+            {
+                "id": "write1",
+                "kind": "preset",
+                "type": "fs.writeText",
+                "label": "写文件",
+                "config": {"path": "out.txt", "content": "x"},
+            },
+            {
+                "id": "log1",
+                "kind": "preset",
+                "type": "core.log",
+                "config": {"message": "ok"},
+            },
+        ],
+    }
+    response = await server.handle_frame(frame("flow.inspect", {"flow": flow}))
+    assert response is not None
+    assert "error" not in response
+    result = response["result"]
+    assert result["flowId"] == "inspect-me"
+    assert len(result["contentHash"]) == 64
+    assert any(s["type"] == "fs.writeText" for s in result["dangerousSteps"])
+    assert all(s["dangerLevel"] == "destructive" for s in result["dangerousSteps"])
 
 
 async def test_driver_element_find_ok(server: RpcServer) -> None:

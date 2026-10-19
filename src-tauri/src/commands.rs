@@ -13,6 +13,7 @@ use crate::error::{ShellError, TracedError};
 use crate::prefs::{self, ShellPrefs};
 use crate::secrets;
 use crate::sidecar::EngineClient;
+use crate::trust;
 use crate::updater;
 
 pub struct ShellState {
@@ -242,6 +243,44 @@ pub async fn secret_delete(app: AppHandle, key: String) -> Result<Value, TracedE
     let trace_id = new_trace_id();
     prefs::append_log(&app, &format!("secret.delete key={key}"));
     secrets::delete(&app, key).map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+pub async fn trust_list(app: AppHandle) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    trust::list(&app).map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+pub async fn trust_check(
+    app: AppHandle,
+    flow_id: String,
+    content_hash: String,
+) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    trust::check(&app, flow_id, content_hash).map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+pub async fn trust_mark(
+    app: AppHandle,
+    flow_id: String,
+    content_hash: String,
+) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    prefs::append_log(&app, &format!("trust.mark flowId={flow_id}"));
+    trust::mark(&app, flow_id, content_hash).map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+pub async fn trust_revoke(
+    app: AppHandle,
+    flow_id: String,
+    content_hash: Option<String>,
+) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    prefs::append_log(&app, &format!("trust.revoke flowId={flow_id}"));
+    trust::revoke(&app, flow_id, content_hash).map_err(|e| e.with_trace(trace_id))
 }
 
 #[tauri::command]

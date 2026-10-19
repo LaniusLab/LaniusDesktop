@@ -93,6 +93,8 @@ class Node(Protocol):
     type: ClassVar[str]
     version: ClassVar[int]
     side_effect: ClassVar[bool]
+    # safe | caution | destructive（SECURITY.md §5）
+    danger_level: ClassVar[str]
     inputs: ClassVar[dict[str, Port]]
     outputs: ClassVar[dict[str, Port]]
     # Protocol 有名为 type 的成员；用 builtins.type 避免 mypy 当成属性引用

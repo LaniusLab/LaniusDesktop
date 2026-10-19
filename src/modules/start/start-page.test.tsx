@@ -25,7 +25,12 @@ vi.mock("@/lib/commands/context", () => ({
     execution: { phase: "idle" },
     editor: { dirty: false },
     navigate: vi.fn(),
-    ui: { toggleTheme: vi.fn(), setSearchOpen: vi.fn(), setSettingsOpen: vi.fn() },
+    ui: {
+      prefs: { theme: "light", accent: "terracotta", font: "mixed", motion: "normal", locale: "zh-CN", closeBehavior: "quit", autostart: false, autoUpdate: false, blockAllDestructive: false, shortcuts: { palette: "Mod+K", run: "Mod+Enter" } },
+      toggleTheme: vi.fn(),
+      setSearchOpen: vi.fn(),
+      setSettingsOpen: vi.fn(),
+    },
   }),
 }));
 

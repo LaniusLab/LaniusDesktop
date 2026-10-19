@@ -18,6 +18,7 @@ class LogNode:
     type: ClassVar[str] = "core.log"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = False
+    danger_level: ClassVar[str] = 'safe'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {}
     config_schema: ClassVar[builtins.type[BaseModel]] = LogConfig

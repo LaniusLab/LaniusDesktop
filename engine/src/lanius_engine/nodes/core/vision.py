@@ -26,6 +26,7 @@ class OcrNode:
     type: ClassVar[str] = "vision.ocr"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = False
+    danger_level: ClassVar[str] = 'safe'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {}
     config_schema: ClassVar[builtins.type[BaseModel]] = OcrConfig
@@ -45,6 +46,7 @@ class WaitImageNode:
     type: ClassVar[str] = "vision.wait"
     version: ClassVar[int] = 1
     side_effect: ClassVar[bool] = False
+    danger_level: ClassVar[str] = 'safe'
     inputs: ClassVar[dict[str, Port]] = {}
     outputs: ClassVar[dict[str, Port]] = {}
     config_schema: ClassVar[builtins.type[BaseModel]] = WaitImageConfig
