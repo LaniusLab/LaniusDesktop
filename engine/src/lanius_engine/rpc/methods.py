@@ -8,7 +8,7 @@ import uuid
 from typing import Any
 
 from lanius_engine import PROTOCOL_VERSION, __version__
-from lanius_engine.drivers.mock import MockDriver
+from lanius_engine.drivers import create_driver, resolve_driver_name
 from lanius_engine.history import ExecutionHistory, HistoryFilter
 from lanius_engine.logging import get_logger
 from lanius_engine.models import (
@@ -28,8 +28,9 @@ _log = get_logger(module="rpc.methods")
 
 def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> None:
     registry = default_registry()
-    # M0/M1 统一使用 mock driver；平台 driver 的选择逻辑随 M4 落地
-    executor = Executor(registry, MockDriver())
+    driver = create_driver()
+    driver_name = resolve_driver_name()
+    executor = Executor(registry, driver)
     store = history if history is not None else ExecutionHistory()
 
     async def hello(params: dict[str, Any]) -> dict[str, Any]:
@@ -45,6 +46,7 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
                 "execution.history",
                 "execution.pause",
                 "fs.readWrite",
+                f"driver.{driver_name}",
             ],
             "nodeTypes": registry.types(),
         }

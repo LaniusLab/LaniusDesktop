@@ -25,11 +25,13 @@ engine/src/lanius_engine/
 │   ├── registry.py    # 节点注册表（type → 类）
 │   └── core/          # 已落地：log、wait、assert、press、mouse、data.*、fs.*；控制：if/loop/wait/subflow/tryCatch |
 ├── drivers/
-│   ├── base.py        # Driver 抽象接口
-│   ├── mock.py        # Mock driver（CI/测试/dry-run 用）
-│   ├── windows.py     # （规划 · M4）pywinauto
-│   ├── macos.py       # （规划 · M4）pyobjc
-│   └── linux.py       # （规划 · M4）pyatspi
+│   ├── base.py          # Driver 抽象接口
+│   ├── mock.py          # Mock driver（CI/测试/dry-run 用）
+│   ├── capabilities.py  # 三平台能力矩阵
+│   ├── factory.py       # LANIUS_DRIVER / create_driver
+│   ├── windows.py       # pywinauto（M4：选择与错误码已接线；绑定实现推进中）
+│   ├── macos.py         # pyobjc 子集占位
+│   └── linux.py         # pyatspi 子集占位
 ├── runtime/
 │   ├── executor.py    # 执行器：有序 steps + 状态机
 │   ├── state.py       # 执行状态机定义
@@ -61,10 +63,34 @@ engine/src/lanius_engine/
 
 | 平台 | 库 | 状态 |
 | --- | --- | --- |
-| Windows | pywinauto（UIA 后端） | M4 首批完整支持 |
-| macOS | pyobjc（AX API） | M4 能力子集（需辅助功能授权引导） |
-| Linux | pyatspi（AT-SPI2） | M4 能力子集 |
-| 任意 | mock | M1 完成，CI 与 dry-run 的默认 driver |
+| Windows | pywinauto（UIA 后端） | M4 首批：工厂可选；optional extra `[windows]`；绑定实现推进中 |
+| macOS | pyobjc（AX API） | M4 能力子集占位（需辅助功能授权引导） |
+| Linux | pyatspi（AT-SPI2） | M4 能力子集占位 |
+| 任意 | mock | 默认；CI 与 dry-run |
+
+选择：`create_driver()` / 环境变量 `LANIUS_DRIVER=mock|windows|macos|linux|auto`（默认 `mock`；`auto` 在 win32→windows，darwin→macos，其余→mock）。
+
+能力支持级别（`drivers/capabilities.py` · `PLATFORM_MATRIX`）：
+
+| 能力 | mock | windows | macos | linux |
+| --- | --- | --- | --- | --- |
+| mouse.click / move | mock | full | subset | subset |
+| keyboard.press / type | mock | full | subset | subset |
+| window.find / activate | mock | full | subset | subset |
+| clipboard | mock | full | subset | subset |
+| element.find / click | planned | full | subset | subset |
+| screen.capture | planned | full | planned | planned |
+| process.launch / terminate | planned | full | subset | subset |
+
+缺失或未接线调用的错误码：
+
+| code | 何时 |
+| --- | --- |
+| `engine.driver.unsupportedPlatform` | 强制指定了非本机平台的 driver |
+| `engine.driver.backendMissing` | 本机平台正确但未装 optional extra |
+| `engine.driver.notImplemented` | 后端已装，具体绑定尚未合入 |
+| `engine.driver.unknownBackend` | `LANIUS_DRIVER` 非法值 |
+| `engine.driver.windowNotFound` | mock/真实查找窗口失败（已有） |
 
 ### 3.3 Mock driver 契约
 
