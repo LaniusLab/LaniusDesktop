@@ -81,6 +81,22 @@ async def test_flow_validate_requires_binding_keys(server: RpcServer) -> None:
     assert result["issues"][0]["nodeId"] == "key"
 
 
+async def test_flow_migrate_bumps_schema_version(server: RpcServer) -> None:
+    flow = {
+        "schemaVersion": 2,
+        "id": "old",
+        "name": "旧版",
+        "steps": [{"id": "a", "kind": "preset", "type": "core.log", "label": "记", "config": {"message": "x"}}],
+    }
+    response = await server.handle_frame(frame("flow.migrate", {"flow": flow}))
+    assert response is not None
+    result = response["result"]
+    assert result["migratedFrom"] == 2
+    assert result["migratedTo"] == 3
+    assert result["flow"]["schemaVersion"] == 3
+    assert result["flow"]["steps"][0]["id"] == "a"
+
+
 def test_flow_start_inputs_override_target() -> None:
     flow = FlowFile.model_validate(EXAMPLE_FLOW)
     next_flow = _apply_run_inputs(

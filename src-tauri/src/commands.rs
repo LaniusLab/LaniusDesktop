@@ -1,6 +1,8 @@
 //! invoke handlers。红线：薄——参数校验、分配 traceId、转发、错误规范化；
 //! 业务规则出现在这里即重构信号（docs/ARCHITECTURE.md §6）。
 
+use std::fs;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -124,6 +126,83 @@ pub async fn flow_cancel(
         )
         .await
         .map_err(|e| e.with_trace(trace_id))
+}
+
+/// 打开本机 `*.flow.json`：读盘 → `flow.migrate`。OS 对话框属后续（需 dialog 插件 ADR）。
+#[tauri::command]
+pub async fn flow_open(state: State<'_, ShellState>, path: String) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    if path.trim().is_empty() {
+        return Err(ShellError::Protocol("flow_open 需要 path".into()).with_trace(trace_id));
+    }
+    let file_path = Path::new(&path);
+    let raw = fs::read_to_string(file_path).map_err(|e| {
+        ShellError::Io(format!("无法读取 {}: {e}", file_path.display())).with_trace(trace_id.clone())
+    })?;
+    let flow: Value = serde_json::from_str(&raw).map_err(|e| {
+        ShellError::Protocol(format!("流程文件不是合法 JSON: {e}")).with_trace(trace_id.clone())
+    })?;
+    let client = engine(&state)
+        .await
+        .map_err(|e| e.with_trace(trace_id.clone()))?;
+    let migrated = client
+        .call("flow.migrate", json!({ "flow": flow }), &trace_id)
+        .await
+        .map_err(|e| e.with_trace(trace_id.clone()))?;
+    Ok(json!({
+        "path": path,
+        "flow": migrated.get("flow").cloned().unwrap_or(Value::Null),
+        "migratedFrom": migrated.get("migratedFrom").cloned().unwrap_or(Value::Null),
+        "migratedTo": migrated.get("migratedTo").cloned().unwrap_or(Value::Null),
+    }))
+}
+
+/// 保存流程：先 `flow.validate`，再写盘。
+#[tauri::command]
+pub async fn flow_save(
+    state: State<'_, ShellState>,
+    path: String,
+    flow: Value,
+) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    if path.trim().is_empty() {
+        return Err(ShellError::Protocol("flow_save 需要 path".into()).with_trace(trace_id));
+    }
+    if !flow.get("steps").is_some_and(Value::is_array) {
+        return Err(ShellError::Protocol("flow 缺少 steps 数组".into()).with_trace(trace_id));
+    }
+    let client = engine(&state)
+        .await
+        .map_err(|e| e.with_trace(trace_id.clone()))?;
+    let validated = client
+        .call("flow.validate", json!({ "flow": flow }), &trace_id)
+        .await
+        .map_err(|e| e.with_trace(trace_id.clone()))?;
+    if validated.get("ok") != Some(&Value::Bool(true)) {
+        return Err(ShellError::Protocol(format!(
+            "流程校验未通过: {}",
+            validated
+                .get("issues")
+                .cloned()
+                .unwrap_or(Value::Array(vec![]))
+        ))
+        .with_trace(trace_id));
+    }
+    let file_path = Path::new(&path);
+    if let Some(parent) = file_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).map_err(|e| {
+                ShellError::Io(format!("无法创建目录 {}: {e}", parent.display()))
+                    .with_trace(trace_id.clone())
+            })?;
+        }
+    }
+    let body = serde_json::to_string_pretty(&flow)
+        .map_err(|e| ShellError::Io(e.to_string()).with_trace(trace_id.clone()))?;
+    fs::write(file_path, body).map_err(|e| {
+        ShellError::Io(format!("无法写入 {}: {e}", file_path.display())).with_trace(trace_id.clone())
+    })?;
+    Ok(json!({ "path": path }))
 }
 
 fn lock_prefs(state: &ShellState) -> std::sync::MutexGuard<'_, ShellPrefs> {

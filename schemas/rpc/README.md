@@ -7,6 +7,7 @@
 | `engine.hello.json` | `engine.hello` |
 | `engine.ping.json` | `engine.ping` |
 | `flow.start.json` | `flow.start` |
+| `flow.migrate.json` | `flow.migrate` |
 | `execution.get.json` | `execution.get` |
 | `execution.list.json` | `execution.list` |
 | `notifications.json` | `execution.*` / `engine.heartbeat` |

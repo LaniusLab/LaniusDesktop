@@ -26,6 +26,7 @@ type PendingMap = Arc<Mutex<HashMap<u64, oneshot::Sender<Result<Value, ShellErro
 const ALLOWED_METHODS: &[&str] = &[
     "engine.ping",
     "flow.validate",
+    "flow.migrate",
     "flow.start",
     "flow.pause",
     "flow.resume",

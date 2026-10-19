@@ -1,7 +1,20 @@
 import { DEFAULT_PREFS, mergePrefs } from "@/lib/prefs";
+import type { FlowFile } from "@/lib/gen/flow";
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
 import type { Bridge, EngineEvent, EngineInfo, FlowNodeRun } from "./types";
+
+const MOCK_SCHEMA_VERSION = 3;
+
+function bumpMockFlow(flow: FlowFile): { flow: FlowFile; migratedFrom: number; migratedTo: number } {
+  const migratedFrom = flow.schemaVersion;
+  const migratedTo = Math.max(migratedFrom, MOCK_SCHEMA_VERSION);
+  return {
+    flow: { ...flow, schemaVersion: migratedTo },
+    migratedFrom,
+    migratedTo,
+  };
+}
 
 /*
  * 浏览器开发 mock：pnpm dev 脱离 Tauri 运行时，用定时器模拟
@@ -36,6 +49,7 @@ export function createMockBridge(): Bridge {
   const handlers = new Set<(event: EngineEvent) => void>();
   const emit = (event: EngineEvent) => handlers.forEach((h) => h(event));
   let prefs: ShellPrefs = { ...DEFAULT_PREFS };
+  const files = new Map<string, FlowFile>();
 
   let uptime = 0;
   let traceSeq = 0;
@@ -128,6 +142,38 @@ export function createMockBridge(): Bridge {
 
     async flowCancel() {
       // mock 执行太短，取消通常赶不上；契约保留
+    },
+
+    async flowOpen(path) {
+      const trimmed = path.trim();
+      if (!trimmed) {
+        throw new Error("flow_open 需要 path");
+      }
+      const stored = files.get(trimmed);
+      if (stored) {
+        const migrated = bumpMockFlow(stored);
+        return { path: trimmed, ...migrated };
+      }
+      // 浏览器无本机盘；未写入过的路径给出可编辑空模板，便于开发联调
+      const empty: FlowFile = {
+        schemaVersion: MOCK_SCHEMA_VERSION,
+        id: `mock-${trimmed.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 32)}`,
+        name: trimmed.split(/[/\\]/).pop() ?? "未命名",
+        steps: [],
+      };
+      return { path: trimmed, flow: empty, migratedFrom: MOCK_SCHEMA_VERSION, migratedTo: MOCK_SCHEMA_VERSION };
+    },
+
+    async flowSave(path, flow) {
+      const trimmed = path.trim();
+      if (!trimmed) {
+        throw new Error("flow_save 需要 path");
+      }
+      if (!Array.isArray(flow.steps)) {
+        throw new Error("flow 缺少 steps 数组");
+      }
+      files.set(trimmed, flow);
+      return { path: trimmed };
     },
 
     onEngineEvent(handler) {

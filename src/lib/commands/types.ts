@@ -18,8 +18,12 @@ export interface CommandContext {
   editor: {
     dirty: boolean;
     hasTarget: boolean;
+    filePath?: string;
     toFlowFile: () => FlowFile;
     saveTemplate: () => void;
+    loadFlowFile: (flow: FlowFile, path: string) => void;
+    setFilePath: (path: string | undefined) => void;
+    markSaved: () => void;
   };
   navigate: (to: string) => void;
   ui: {

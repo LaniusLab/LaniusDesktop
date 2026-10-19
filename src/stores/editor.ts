@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
 
-import { toFlowFile } from "@/lib/flow-file";
+import { fromFlowFile, toFlowFile } from "@/lib/flow-file";
+import type { FlowFile } from "@/lib/gen/flow";
 import { PROCESS_CATALOG, type LocateProfile, type TargetMatch } from "@/lib/targets";
 import {
   findStepById,
@@ -23,6 +24,10 @@ interface EditorStore {
   match: TargetMatch;
   locate: LocateProfile;
   dirty: boolean;
+  /** 当前关联的本机 *.flow.json 路径；未打开文件时为空 */
+  filePath?: string;
+  flowId: string;
+  flowName: string;
   selectedStepId?: string;
   insertStep: (
     draft: TemplateDraft,
@@ -38,8 +43,23 @@ interface EditorStore {
   setLocateChannel: (channel: LocateProfile["channel"]) => void;
   setVisionPack: (visionPack: string) => void;
   loadTemplate: (partial: Partial<StoredTemplate> & { steps: TemplateStep[] }) => void;
+  /** 从磁盘/RPC 流程载入编辑器，并记下路径 */
+  loadFlowFile: (flow: FlowFile, path: string) => void;
+  setFilePath: (path: string | undefined) => void;
   saveTemplate: () => void;
   markSaved: () => void;
+}
+
+function processIdForMatch(match: TargetMatch, fallback: string): string {
+  const found = PROCESS_CATALOG.find(
+    (item) =>
+      item.match.exe === match.exe &&
+      (item.match.title === match.title || !match.title) &&
+      (item.match.className === match.className || !match.className),
+  );
+  if (found) return found.id;
+  const byExe = PROCESS_CATALOG.find((item) => item.match.exe === match.exe);
+  return byExe?.id ?? fallback;
 }
 
 const initial = readStoredTemplate();
@@ -70,6 +90,9 @@ export const useEditorStore = create<EditorStore>()(
       match: initial.match,
       locate: initial.locate,
       dirty: initial.dirty,
+      filePath: undefined,
+      flowId: "session-template",
+      flowName: "当前模板",
       selectedStepId: initial.steps[0]?.id,
       insertStep: (draft, options) => {
         const step = materializeDraft(draft);
@@ -169,6 +192,23 @@ export const useEditorStore = create<EditorStore>()(
         }));
         writeStoredTemplate(snapshot(get()));
       },
+      loadFlowFile: (flow, path) => {
+        const draft = fromFlowFile(flow);
+        set((s) => ({
+          steps: draft.steps,
+          keymapProfileId: draft.keymapProfileId,
+          match: draft.match,
+          locate: draft.locate,
+          processId: processIdForMatch(draft.match, s.processId),
+          flowId: draft.id,
+          flowName: draft.name,
+          filePath: path,
+          dirty: false,
+          selectedStepId: draft.steps[0]?.id,
+        }));
+        writeStoredTemplate(snapshot(get()));
+      },
+      setFilePath: (path) => set({ filePath: path }),
       saveTemplate: () => {
         set({ dirty: false });
         writeStoredTemplate(snapshot(get()));
@@ -205,11 +245,17 @@ export function redoEdit() {
 export function editorToFlowFile() {
   const state = useEditorStore.getState();
   return toFlowFile({
+    id: state.flowId,
+    name: state.flowName,
     keymapProfileId: state.keymapProfileId,
     match: state.match,
     locate: state.locate,
     steps: state.steps,
   });
+}
+
+export function editorFilePath(): string | undefined {
+  return useEditorStore.getState().filePath;
 }
 
 export function editorHasTarget(): boolean {

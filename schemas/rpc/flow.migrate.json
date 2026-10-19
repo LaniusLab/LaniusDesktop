@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/rpc/flow.migrate.json",
+  "title": "flow.migrate",
+  "description": "将流程迁移到当前 schemaVersion",
+  "$defs": {
+    "params": {
+      "type": "object",
+      "required": ["flow"],
+      "properties": {
+        "flow": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "result": {
+      "type": "object",
+      "required": ["flow", "migratedFrom", "migratedTo"],
+      "properties": {
+        "flow": { "type": "object" },
+        "migratedFrom": { "type": "integer", "minimum": 1 },
+        "migratedTo": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

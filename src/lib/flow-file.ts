@@ -58,3 +58,57 @@ export function toFlowFile(input: {
     steps: input.steps.map(toFlowStep),
   };
 }
+
+function fromFlowStep(step: Step): TemplateStep {
+  const out: TemplateStep = {
+    id: step.id,
+    kind: step.kind,
+    type: step.type ?? "",
+    label: step.label ?? step.id,
+    mappingId: step.mappingId,
+    profileId: step.profileId,
+    keys: step.keys,
+    config: (step.config ?? {}) as Record<string, unknown>,
+    disabled: step.disabled,
+  };
+  if (step.then && step.then.length > 0) {
+    out.then = step.then.map(fromFlowStep);
+  }
+  if (step.else && step.else.length > 0) {
+    out.else = step.else.map(fromFlowStep);
+  }
+  if (step.body && step.body.length > 0) {
+    out.body = step.body.map(fromFlowStep);
+  }
+  return out;
+}
+
+/** 把磁盘/RPC 流程落回编辑器草稿。 */
+export function fromFlowFile(flow: FlowFile): {
+  steps: TemplateStep[];
+  keymapProfileId: string;
+  match: TargetMatch;
+  locate: LocateProfile;
+  name: string;
+  id: string;
+} {
+  const match = flow.target?.match ?? {};
+  const locate = flow.target?.locate ?? {};
+  return {
+    id: flow.id,
+    name: flow.name,
+    keymapProfileId: flow.keymapProfileId ?? "default",
+    match: {
+      exe: match.exe ?? "",
+      title: match.title ?? "",
+      className: match.className ?? "",
+    },
+    locate: {
+      channel: locate.channel === "vision" ? "vision" : "a11y",
+      source: locate.source === "user" ? "user" : "probe",
+      capture: locate.capture === "screen" ? "screen" : "client",
+      visionPack: locate.visionPack ?? "template",
+    },
+    steps: (flow.steps ?? []).map(fromFlowStep),
+  };
+}

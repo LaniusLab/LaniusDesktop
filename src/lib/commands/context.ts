@@ -1,5 +1,5 @@
 import { bridge } from "@/lib/bridge";
-import { editorHasTarget, editorToFlowFile, useEditorStore } from "@/stores/editor";
+import { editorFilePath, editorHasTarget, editorToFlowFile, useEditorStore } from "@/stores/editor";
 import { useExecutionStore } from "@/stores/execution";
 import { useUiStore } from "@/stores/ui";
 
@@ -26,8 +26,12 @@ export function currentContext(): CommandContext {
     editor: {
       dirty: useEditorStore.getState().dirty,
       hasTarget: editorHasTarget(),
+      filePath: editorFilePath(),
       toFlowFile: editorToFlowFile,
       saveTemplate: () => useEditorStore.getState().saveTemplate(),
+      loadFlowFile: (flow, path) => useEditorStore.getState().loadFlowFile(flow, path),
+      setFilePath: (path) => useEditorStore.getState().setFilePath(path),
+      markSaved: () => useEditorStore.getState().markSaved(),
     },
     navigate: (to) => navigateFn(to),
     ui: {

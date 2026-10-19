@@ -1,3 +1,5 @@
+import { askLocalPath } from "@/lib/path-prompt";
+
 import { registry } from "./registry";
 
 // 内置命令。搜索 / 菜单 / 快捷键都只是这些实现的触发器（ADR-0007）。
@@ -68,11 +70,51 @@ export function registerBuiltinCommands(): void {
   });
 
   registry.register({
+    id: "flow.open",
+    title: "打开流程文件",
+    scope: "editor",
+    shortcut: "Mod+O",
+    run: async (ctx) => {
+      const path = askLocalPath("打开流程文件路径（*.flow.json）", ctx.editor.filePath ?? "");
+      if (!path) return;
+      const opened = await ctx.bridge.flowOpen(path);
+      ctx.editor.loadFlowFile(opened.flow, opened.path);
+      ctx.navigate("/edit");
+    },
+  });
+
+  registry.register({
     id: "flow.save",
     title: "保存模板",
     scope: "editor",
     shortcut: "Mod+S",
-    run: (ctx) => ctx.editor.saveTemplate(),
+    run: async (ctx) => {
+      // 有关联路径则写盘；否则仍落本机草稿（OS 对话框待 dialog 插件）
+      const path = ctx.editor.filePath;
+      if (!path) {
+        ctx.editor.saveTemplate();
+        return;
+      }
+      await ctx.bridge.flowSave(path, ctx.editor.toFlowFile());
+      ctx.editor.markSaved();
+    },
+  });
+
+  registry.register({
+    id: "flow.saveAs",
+    title: "另存为…",
+    scope: "editor",
+    shortcut: "Mod+Shift+S",
+    run: async (ctx) => {
+      const path = askLocalPath(
+        "另存为路径（*.flow.json）",
+        ctx.editor.filePath ?? "untitled.flow.json",
+      );
+      if (!path) return;
+      await ctx.bridge.flowSave(path, ctx.editor.toFlowFile());
+      ctx.editor.setFilePath(path);
+      ctx.editor.markSaved();
+    },
   });
 
   registry.register({

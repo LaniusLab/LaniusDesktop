@@ -16,8 +16,12 @@ function fakeContext(overrides: Partial<CommandContext> = {}): CommandContext {
     editor: {
       dirty: false,
       hasTarget: true,
+      filePath: undefined,
       toFlowFile: () => ({ schemaVersion: 2, id: "t", name: "t", steps: [] }),
       saveTemplate: vi.fn(),
+      loadFlowFile: vi.fn(),
+      setFilePath: vi.fn(),
+      markSaved: vi.fn(),
     },
     navigate: vi.fn(),
     ui: { toggleTheme: vi.fn(), setSearchOpen: vi.fn(), setSettingsOpen: vi.fn() },

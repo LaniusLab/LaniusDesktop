@@ -63,10 +63,25 @@ export interface EngineEvent {
 export type UpdaterResult = UpdaterCheckResult;
 export type UpdaterStatus = UpdaterCheckResult["status"];
 
+export interface FlowOpenResult {
+  path: string;
+  flow: FlowFile;
+  migratedFrom?: number;
+  migratedTo?: number;
+}
+
+export interface FlowSaveResult {
+  path: string;
+}
+
 export interface Bridge {
   engineInfo(): Promise<EngineInfo>;
   flowRun(flow: FlowFile, mode: "run" | "dryRun"): Promise<FlowRunResult>;
   flowCancel(executionId: string): Promise<void>;
+  /** 打开本机流程文件（path 必填；OS 对话框待 dialog 插件） */
+  flowOpen(path: string): Promise<FlowOpenResult>;
+  /** 校验后写盘 */
+  flowSave(path: string, flow: FlowFile): Promise<FlowSaveResult>;
   onEngineEvent(handler: (event: EngineEvent) => void): () => void;
   prefsGet(): Promise<ShellPrefs>;
   prefsSet(prefs: ShellPrefs): Promise<ShellPrefs>;

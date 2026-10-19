@@ -52,7 +52,7 @@
 | 方法 | 参数 | 结果 | 落地 | 说明 |
 | --- | --- | --- | --- | --- |
 | `flow.validate` | `{ flow }` 或 `{ path }` | `{ ok, issues[] }` | 已实现 | 静态校验，不执行 |
-| `flow.migrate` | `{ flow }` | `{ flow, migratedFrom, migratedTo }` | M2 | 迁移到当前 schemaVersion |
+| `flow.migrate` | `{ flow }` | `{ flow, migratedFrom, migratedTo }` | 已实现 | 迁移到当前 schemaVersion |
 | `flow.start` | `{ path \| flow, mode, inputs? }` | `{ executionId }` | 已实现（异步） | 立即返回；进度经 §3.3；终态 `execution.get`；全局互斥 |
 | `flow.pause` / `flow.resume` | `{ executionId }` | `{}` | 已实现 | 协作式暂停；在步骤/等待安全点生效 |
 | `flow.cancel` | `{ executionId, reason? }` | `{}` | 已实现 | 协作式取消 |
@@ -132,8 +132,8 @@
 | `engine_call` | `{ method, params }` | RPC result | 透传任意方法 | 已实现 |
 | `flow_run` | `{ mode }`（M0 用内置 demo flow） | 执行结果摘要 | `flow.start` | 已实现 |
 | `flow_cancel` | `{ executionId }` | — | `flow.cancel` | 已实现 |
-| `flow_open` | — | `{ path, flow }` | 文件对话框 + `flow.migrate` | M2 |
-| `flow_save` | `{ path, flow }` | — | 壳写盘（先过 `flow.validate`） | M2 |
+| `flow_open` | `{ path }` | `{ path, flow, migratedFrom?, migratedTo? }` | 读盘 + `flow.migrate`（OS 对话框待 dialog 插件） | 已实现 |
+| `flow_save` | `{ path, flow }` | `{ path }` | 先过 `flow.validate` 再写盘 | 已实现 |
 | `execution_list` | `{ limit, offset }` | `ExecutionPage` | `execution.list` | 经 `engine_call` 透传；专用 invoke 待补 |
 | `secret_set` / `secret_get` / `secret_delete` | `{ key, value? }` | — | 壳内 keyring，不过引擎 | M4 |
 | `prefs_get` | — | `ShellPrefs` | 读 `prefs.json` | 已实现 |
