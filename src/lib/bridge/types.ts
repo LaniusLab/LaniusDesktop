@@ -4,6 +4,7 @@
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
 import type {
+  UpdaterApplyResult,
   UpdaterCheckResult,
   UpdaterDownloadResult,
   UpdaterInstallResult,
@@ -73,8 +74,9 @@ export interface Bridge {
   logsTail(): Promise<string>;
   updaterList(): Promise<UpdaterListResult>;
   updaterCheck(): Promise<UpdaterCheckResult>;
-  updaterDownload(tag: string): Promise<UpdaterDownloadResult>;
+  updaterDownload(tag: string, assetName?: string): Promise<UpdaterDownloadResult>;
   updaterInstall(path: string): Promise<UpdaterInstallResult>;
+  updaterApply(tag: string, assetName?: string): Promise<UpdaterApplyResult>;
   onUpdaterProgress(handler: (event: UpdaterProgress) => void): () => void;
   windowMinimize(): Promise<void>;
   windowToggleMaximize(): Promise<void>;

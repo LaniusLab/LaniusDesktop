@@ -189,19 +189,46 @@ pub async fn updater_check(app: AppHandle) -> Result<Value, TracedError> {
 }
 
 #[tauri::command]
-/// 下载指定 tag 的 preferred Windows 安装包到缓存目录。
-pub async fn updater_download(app: AppHandle, tag: String) -> Result<Value, TracedError> {
+/// 下载指定 tag 的 Windows 安装包（可选 assetName；默认 preferred）。
+pub async fn updater_download(
+    app: AppHandle,
+    tag: String,
+    asset_name: Option<String>,
+) -> Result<Value, TracedError> {
     let trace_id = new_trace_id();
-    prefs::append_log(&app, &format!("updater.download {tag}"));
-    updater::download_release(&app, &tag)
+    prefs::append_log(
+        &app,
+        &format!(
+            "updater.download {tag}{}",
+            asset_name
+                .as_deref()
+                .map(|n| format!(" ({n})"))
+                .unwrap_or_default()
+        ),
+    );
+    updater::download_release(&app, &tag, asset_name)
         .await
         .map_err(|e| e.with_trace(trace_id))
 }
 
 #[tauri::command]
-/// 交互式启动已下载安装器（非静默；签名属 M5）。
+/// 交互式启动已下载安装器（非静默；签名属 M5）。路径须在更新缓存目录内。
 pub async fn updater_install(app: AppHandle, path: String) -> Result<Value, TracedError> {
     let trace_id = new_trace_id();
     prefs::append_log(&app, &format!("updater.install {path}"));
-    updater::install_package(&path).map_err(|e| e.with_trace(trace_id))
+    updater::install_package(&app, &path).map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+/// 下载并在 Windows 上启动安装器；其他平台只下载。
+pub async fn updater_apply(
+    app: AppHandle,
+    tag: String,
+    asset_name: Option<String>,
+) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    prefs::append_log(&app, &format!("updater.apply {tag}"));
+    updater::apply_release(&app, &tag, asset_name)
+        .await
+        .map_err(|e| e.with_trace(trace_id))
 }

@@ -54,6 +54,20 @@ export interface UpdaterInstallResult {
   "mode": "interactiveInstaller";
 }
 
+export interface UpdaterApplyResult {
+  "tag": string;
+  "fileName": string;
+  "path": string;
+  "bytes": number;
+  "kind": UpdaterAssetKind;
+  /** 是否已启动安装器 */
+  "launched": boolean;
+  /** 已启动时为 interactiveInstaller；跳过安装时为 null */
+  "mode"?: "interactiveInstaller" | null;
+  /** 未启动安装时的原因，如 unsupportedPlatform */
+  "installSkippedReason"?: string | null;
+}
+
 export interface UpdaterProgress {
   /** 进度阶段 */
   "phase": "fetching" | "downloading" | "done";
@@ -72,4 +86,6 @@ export interface UpdaterListResult {
   "releasesPageUrl": string;
   /** true 表示未请求 draft（公开 API 默认不可见） */
   "draftsOmitted": boolean;
+  /** 当前平台是否支持启动 Windows 安装器（仅 Windows 为 true） */
+  "installSupported": boolean;
 }

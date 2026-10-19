@@ -4,7 +4,7 @@
   "title": "UpdaterListResult",
   "description": "壳层应用内更新：以 GitHub Releases / tag 为版本真源（非 CHANGELOG.md）。默认只列 published；draft 需人工发布后才会出现在公开 API。签名静默安装属 M5。",
   "type": "object",
-  "required": ["currentVersion", "releases", "releasesPageUrl", "draftsOmitted"],
+  "required": ["currentVersion", "releases", "releasesPageUrl", "draftsOmitted", "installSupported"],
   "properties": {
     "currentVersion": { "type": "string", "description": "当前应用版本（无 v 前缀）" },
     "releases": {
@@ -16,6 +16,10 @@
     "draftsOmitted": {
       "type": "boolean",
       "description": "true 表示未请求 draft（公开 API 默认不可见）"
+    },
+    "installSupported": {
+      "type": "boolean",
+      "description": "当前平台是否支持启动 Windows 安装器（仅 Windows 为 true）"
     }
   },
   "additionalProperties": false,
@@ -105,6 +109,31 @@
           "type": "string",
           "enum": ["interactiveInstaller"],
           "description": "当前仅交互式启动安装器；签名静默属 M5"
+        }
+      },
+      "additionalProperties": false
+    },
+    "updaterApplyResult": {
+      "type": "object",
+      "description": "下载指定 tag 的 Windows 包并在支持的平台上交互式启动安装器",
+      "required": ["tag", "fileName", "path", "bytes", "kind", "launched"],
+      "properties": {
+        "tag": { "type": "string" },
+        "fileName": { "type": "string" },
+        "path": { "type": "string" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "kind": { "$ref": "#/$defs/updaterAssetKind" },
+        "launched": { "type": "boolean", "description": "是否已启动安装器" },
+        "mode": {
+          "description": "已启动时为 interactiveInstaller；跳过安装时为 null",
+          "oneOf": [
+            { "type": "string", "enum": ["interactiveInstaller"] },
+            { "type": "null" }
+          ]
+        },
+        "installSkippedReason": {
+          "type": ["string", "null"],
+          "description": "未启动安装时的原因，如 unsupportedPlatform"
         }
       },
       "additionalProperties": false

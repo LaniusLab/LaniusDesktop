@@ -20,6 +20,7 @@ export type {
   UpdaterStatus,
 } from "./types";
 export type {
+  UpdaterApplyResult,
   UpdaterCheckResult,
   UpdaterDownloadResult,
   UpdaterInstallResult,

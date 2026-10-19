@@ -87,6 +87,7 @@ fn main() {
             commands::updater_check,
             commands::updater_download,
             commands::updater_install,
+            commands::updater_apply,
         ])
         .build(tauri::generate_context!())
         .expect("启动 Tauri 应用失败")

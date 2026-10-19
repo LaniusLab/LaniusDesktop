@@ -50,6 +50,11 @@ describe("mockBridge", () => {
     await expect(bridge.updaterInstall("/tmp/x.exe")).resolves.toMatchObject({
       mode: "interactiveInstaller",
     });
+    await expect(bridge.updaterApply("v0.2.0")).resolves.toMatchObject({
+      tag: "v0.2.0",
+      launched: false,
+      installSkippedReason: "unsupportedPlatform",
+    });
     const offProgress = bridge.onUpdaterProgress(() => {});
     offProgress();
     await expect(bridge.windowMinimize()).resolves.toBeUndefined();

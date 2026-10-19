@@ -142,8 +142,9 @@
 | `logs_tail` | — | `string` | 壳日志末 200 行 | 已实现 |
 | `updater_list` | — | `UpdaterListResult`（见 `schemas/shell-updater.schema.json`） | 公开 GitHub Releases（published；draft 不可见） | 已实现 |
 | `updater_check` | — | `UpdaterCheckResult` | 相对当前版本是否有带 Windows 包的更新 | 已实现 |
-| `updater_download` | `{ tag }` | `UpdaterDownloadResult` | 下载该 tag 的 preferred setup.exe/msi | 已实现 |
-| `updater_install` | `{ path }` | `UpdaterInstallResult` | Windows 上交互式启动安装器；签名静默属 M5 | 已实现 |
+| `updater_download` | `{ tag, assetName? }` | `UpdaterDownloadResult` | 下载该 tag 的 preferred 或指定 Windows 包 | 已实现 |
+| `updater_install` | `{ path }` | `UpdaterInstallResult` | Windows 交互式启动；路径须在更新缓存目录；签名静默属 M5 | 已实现 |
+| `updater_apply` | `{ tag, assetName? }` | `UpdaterApplyResult` | 下载后 Windows 启动安装器；非 Windows 只下载并标 `installSkippedReason` | 已实现 |
 
 事件通道命名（目标）：`execution://event`、`engine://status`、`shell://notification`、`updater://progress`。UI 只通过 `src/lib/bridge/` 的封装访问，不散落裸 `invoke` 调用。
 

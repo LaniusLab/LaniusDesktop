@@ -71,6 +71,7 @@ describe("设置弹窗", () => {
     await waitFor(() => {
       expect(screen.getByText("v0.2.0")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "下载" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "下载并安装" })).toBeInTheDocument();
     });
   });
 

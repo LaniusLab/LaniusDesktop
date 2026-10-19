@@ -5,8 +5,6 @@
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-#[cfg(windows)]
-use std::path::Path;
 
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -288,6 +286,7 @@ pub async fn list_releases(app: &AppHandle) -> Result<Value, ShellError> {
             "releases": releases,
             "releasesPageUrl": releases_page_url(),
             "draftsOmitted": true,
+            "installSupported": cfg!(windows),
         }))
     })
     .await
@@ -389,82 +388,132 @@ fn find_release_by_tag<'a>(releases: &'a [Value], tag: &str) -> Result<&'a Value
         .ok_or_else(|| ShellError::UpdaterNotFound(want.to_string()))
 }
 
-/// 下载指定 tag 的 preferred Windows 资产到缓存目录。
-pub async fn download_release(app: &AppHandle, tag: &str) -> Result<Value, ShellError> {
+fn pick_asset_from_release<'a>(
+    rel: &'a Value,
+    asset_name: Option<&str>,
+) -> Result<&'a Value, ShellError> {
+    let tag = rel.get("tag").and_then(|v| v.as_str()).unwrap_or("?");
+    if let Some(want) = asset_name.map(str::trim).filter(|s| !s.is_empty()) {
+        return rel
+            .get("windowsAssets")
+            .and_then(|a| a.as_array())
+            .and_then(|arr| {
+                arr.iter()
+                    .find(|a| a.get("name").and_then(|n| n.as_str()) == Some(want))
+            })
+            .ok_or_else(|| ShellError::UpdaterNoAsset(format!("{tag}/{want}")));
+    }
+    rel.get("preferredAsset")
+        .filter(|a| !a.is_null())
+        .ok_or_else(|| ShellError::UpdaterNoAsset(tag.to_string()))
+}
+
+fn download_release_blocking(
+    app: &AppHandle,
+    tag: &str,
+    asset_name: Option<&str>,
+) -> Result<Value, ShellError> {
+    emit_progress(app, "fetching", Some(tag), 0, None);
+    let raw = fetch_release_values()?;
+    let releases: Vec<Value> = raw.iter().filter_map(parse_release).collect();
+    let rel = find_release_by_tag(&releases, tag)?;
+    let asset = pick_asset_from_release(rel, asset_name)?;
+    let url = asset
+        .get("url")
+        .and_then(|u| u.as_str())
+        .ok_or_else(|| ShellError::UpdaterNoAsset(tag.to_string()))?;
+    let file_name = asset
+        .get("name")
+        .and_then(|n| n.as_str())
+        .unwrap_or("lanius-update.bin");
+    // 拒绝路径穿越：只允许纯文件名
+    if file_name.contains('/') || file_name.contains('\\') || file_name.contains("..") {
+        return Err(ShellError::UpdaterInvalidPath(file_name.to_string()));
+    }
+    let kind = asset
+        .get("kind")
+        .and_then(|k| k.as_str())
+        .unwrap_or("other");
+    let size = asset.get("size").and_then(|s| s.as_u64());
+
+    let dest = updates_dir(app)?.join(file_name);
+    if dest.exists() {
+        let _ = fs::remove_file(&dest);
+    }
+
+    emit_progress(app, "downloading", Some(tag), 0, size);
+    http_download_file(url, &dest)?;
+    let n = fs::metadata(&dest)
+        .map(|m| m.len())
+        .unwrap_or(size.unwrap_or(0));
+    emit_progress(app, "done", Some(tag), n, Some(n));
+
+    Ok(json!({
+        "tag": rel.get("tag").and_then(|v| v.as_str()).unwrap_or(tag),
+        "fileName": file_name,
+        "path": dest.to_string_lossy(),
+        "bytes": n,
+        "kind": kind,
+    }))
+}
+
+/// 下载指定 tag 的 Windows 资产（默认 preferred；可指定 assetName）到缓存目录。
+pub async fn download_release(
+    app: &AppHandle,
+    tag: &str,
+    asset_name: Option<String>,
+) -> Result<Value, ShellError> {
     let tag = tag.trim().to_string();
     if tag.is_empty() {
         return Err(ShellError::UpdaterNotFound("(empty tag)".into()));
     }
     let app = app.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        emit_progress(&app, "fetching", Some(&tag), 0, None);
-        let raw = fetch_release_values()?;
-        let releases: Vec<Value> = raw.iter().filter_map(parse_release).collect();
-        let rel = find_release_by_tag(&releases, &tag)?;
-        let asset = rel
-            .get("preferredAsset")
-            .filter(|a| !a.is_null())
-            .ok_or_else(|| ShellError::UpdaterNoAsset(tag.clone()))?;
-        let url = asset
-            .get("url")
-            .and_then(|u| u.as_str())
-            .ok_or_else(|| ShellError::UpdaterNoAsset(tag.clone()))?;
-        let file_name = asset
-            .get("name")
-            .and_then(|n| n.as_str())
-            .unwrap_or("lanius-update.bin");
-        let kind = asset
-            .get("kind")
-            .and_then(|k| k.as_str())
-            .unwrap_or("other");
-        let size = asset.get("size").and_then(|s| s.as_u64());
-
-        let dest = updates_dir(&app)?.join(file_name);
-        if dest.exists() {
-            let _ = fs::remove_file(&dest);
-        }
-
-        emit_progress(&app, "downloading", Some(&tag), 0, size);
-        http_download_file(url, &dest)?;
-        let n = fs::metadata(&dest)
-            .map(|m| m.len())
-            .unwrap_or(size.unwrap_or(0));
-        emit_progress(&app, "done", Some(&tag), n, Some(n));
-
-        Ok(json!({
-            "tag": rel.get("tag").and_then(|v| v.as_str()).unwrap_or(tag.as_str()),
-            "fileName": file_name,
-            "path": dest.to_string_lossy(),
-            "bytes": n,
-            "kind": kind,
-        }))
+        download_release_blocking(&app, &tag, asset_name.as_deref())
     })
     .await
     .map_err(|e| ShellError::UpdaterNetwork(format!("task join: {e}")))?
 }
 
-/// 交互式启动已下载的安装器（非静默；签名通道属 M5）。
-pub fn install_package(path: &str) -> Result<Value, ShellError> {
+#[cfg(windows)]
+fn path_under_updates_dir(app: &AppHandle, path: &str) -> Result<PathBuf, ShellError> {
+    let updates = updates_dir(app)?;
+    let candidate = PathBuf::from(path);
+    let canon_updates = updates.canonicalize().unwrap_or(updates);
+    let canon_file = candidate
+        .canonicalize()
+        .map_err(|e| ShellError::UpdaterInvalidPath(format!("{path}: {e}")))?;
+    if !canon_file.starts_with(&canon_updates) {
+        return Err(ShellError::UpdaterInvalidPath(
+            "path outside updater cache".into(),
+        ));
+    }
+    if !canon_file.is_file() {
+        return Err(ShellError::UpdaterInvalidPath(path.to_string()));
+    }
+    Ok(canon_file)
+}
+
+/// 交互式启动已下载的安装器（非静默；签名通道属 M5）。路径必须在更新缓存目录内。
+pub fn install_package(app: &AppHandle, path: &str) -> Result<Value, ShellError> {
     #[cfg(not(windows))]
     {
-        let _ = path;
+        let _ = (app, path);
         Err(ShellError::UpdaterUnsupported)
     }
     #[cfg(windows)]
     {
-        let p = Path::new(path);
-        if !p.is_file() {
-            return Err(ShellError::UpdaterInvalidPath(path.to_string()));
-        }
-        let ext = p
+        let canon = path_under_updates_dir(app, path)?;
+        let path_str = canon.to_string_lossy().to_string();
+        let ext = canon
             .extension()
             .and_then(|e| e.to_str())
             .unwrap_or("")
             .to_ascii_lowercase();
         let status = if ext == "msi" {
-            Command::new("msiexec").args(["/i", path]).spawn()
+            Command::new("msiexec").args(["/i", &path_str]).spawn()
         } else if ext == "exe" {
-            Command::new(path).spawn()
+            Command::new(&path_str).spawn()
         } else {
             return Err(ShellError::UpdaterInvalidPath(format!(
                 "unsupported installer extension: {ext}"
@@ -472,11 +521,61 @@ pub fn install_package(path: &str) -> Result<Value, ShellError> {
         };
         status.map_err(|e| ShellError::Io(e.to_string()))?;
         Ok(json!({
-            "path": path,
+            "path": path_str,
             "launched": true,
             "mode": "interactiveInstaller",
         }))
     }
+}
+
+/// 下载后在 Windows 上启动安装器；其他平台只下载并标明跳过原因。
+pub async fn apply_release(
+    app: &AppHandle,
+    tag: &str,
+    asset_name: Option<String>,
+) -> Result<Value, ShellError> {
+    let tag = tag.trim().to_string();
+    if tag.is_empty() {
+        return Err(ShellError::UpdaterNotFound("(empty tag)".into()));
+    }
+    let app = app.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let downloaded = download_release_blocking(&app, &tag, asset_name.as_deref())?;
+        let path = downloaded
+            .get("path")
+            .and_then(|p| p.as_str())
+            .unwrap_or("")
+            .to_string();
+        #[cfg(windows)]
+        {
+            let installed = install_package(&app, &path)?;
+            Ok(json!({
+                "tag": downloaded.get("tag"),
+                "fileName": downloaded.get("fileName"),
+                "path": path,
+                "bytes": downloaded.get("bytes"),
+                "kind": downloaded.get("kind"),
+                "launched": installed.get("launched").and_then(|v| v.as_bool()).unwrap_or(true),
+                "mode": "interactiveInstaller",
+                "installSkippedReason": Value::Null,
+            }))
+        }
+        #[cfg(not(windows))]
+        {
+            Ok(json!({
+                "tag": downloaded.get("tag"),
+                "fileName": downloaded.get("fileName"),
+                "path": path,
+                "bytes": downloaded.get("bytes"),
+                "kind": downloaded.get("kind"),
+                "launched": false,
+                "mode": Value::Null,
+                "installSkippedReason": "unsupportedPlatform",
+            }))
+        }
+    })
+    .await
+    .map_err(|e| ShellError::UpdaterNetwork(format!("task join: {e}")))?
 }
 
 #[cfg(test)]

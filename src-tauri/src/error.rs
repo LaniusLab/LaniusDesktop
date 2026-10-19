@@ -43,7 +43,6 @@ pub enum ShellError {
     UpdaterUnsupported,
 
     #[error("更新包路径无效: {0}")]
-    #[allow(dead_code)] // 仅 Windows 安装路径使用
     UpdaterInvalidPath(String),
 }
 

@@ -5,6 +5,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
 import type {
+  UpdaterApplyResult,
   UpdaterCheckResult,
   UpdaterDownloadResult,
   UpdaterInstallResult,
@@ -60,12 +61,22 @@ export function createTauriBridge(): Bridge {
       return invoke<UpdaterCheckResult>("updater_check");
     },
 
-    updaterDownload(tag) {
-      return invoke<UpdaterDownloadResult>("updater_download", { tag });
+    updaterDownload(tag, assetName) {
+      return invoke<UpdaterDownloadResult>("updater_download", {
+        tag,
+        assetName: assetName ?? null,
+      });
     },
 
     updaterInstall(path) {
       return invoke<UpdaterInstallResult>("updater_install", { path });
+    },
+
+    updaterApply(tag, assetName) {
+      return invoke<UpdaterApplyResult>("updater_apply", {
+        tag,
+        assetName: assetName ?? null,
+      });
     },
 
     onUpdaterProgress(handler) {

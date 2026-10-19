@@ -157,6 +157,7 @@ export function createMockBridge(): Bridge {
       return {
         currentVersion: "0.2.0",
         draftsOmitted: true,
+        installSupported: false,
         releasesPageUrl: "https://github.com/LaniusLab/LaniusDesktop/releases",
         releases: [
           {
@@ -208,6 +209,16 @@ export function createMockBridge(): Bridge {
 
     async updaterInstall(path) {
       return { path, launched: false, mode: "interactiveInstaller" as const };
+    },
+
+    async updaterApply(tag) {
+      const downloaded = await this.updaterDownload(tag);
+      return {
+        ...downloaded,
+        launched: false,
+        mode: null,
+        installSkippedReason: "unsupportedPlatform",
+      };
     },
 
     onUpdaterProgress() {

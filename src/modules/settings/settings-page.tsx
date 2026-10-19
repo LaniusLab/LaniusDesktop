@@ -228,20 +228,23 @@ function DesktopSection() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyTag, setBusyTag] = useState<string | null>(null);
 
-  const checkUpdate = useMutation({
-    mutationFn: () => bridge.updaterCheck(),
-    onSuccess: (result) => {
-      setUpdate(result);
-      setActionError(null);
-    },
-    onError: (err) => setActionError(err instanceof Error ? err.message : String(err)),
-  });
-
   const listReleases = useMutation({
     mutationFn: () => bridge.updaterList(),
     onSuccess: (result) => {
       setList(result);
       setActionError(null);
+    },
+    onError: (err) => setActionError(err instanceof Error ? err.message : String(err)),
+  });
+
+  const checkUpdate = useMutation({
+    mutationFn: () => bridge.updaterCheck(),
+    onSuccess: (result) => {
+      setUpdate(result);
+      setActionError(null);
+      if (result.status === "available" || result.status === "unavailable") {
+        listReleases.mutate();
+      }
     },
     onError: (err) => setActionError(err instanceof Error ? err.message : String(err)),
   });
@@ -263,10 +266,44 @@ function DesktopSection() {
     },
   });
 
+  const applyRelease = useMutation({
+    mutationFn: (tag: string) => bridge.updaterApply(tag),
+    onMutate: (tag) => {
+      setBusyTag(tag);
+      setActionError(null);
+      setProgress(null);
+    },
+    onSuccess: (result) => {
+      setDownloaded({
+        tag: result.tag,
+        fileName: result.fileName,
+        path: result.path,
+        bytes: result.bytes,
+        kind: result.kind,
+      });
+      setBusyTag(null);
+      if (result.installSkippedReason) {
+        setActionError(t("settings.updateInstallSkipped", { reason: result.installSkippedReason }));
+      }
+    },
+    onError: (err) => {
+      setBusyTag(null);
+      setActionError(err instanceof Error ? err.message : String(err));
+    },
+  });
+
   const installPackage = useMutation({
     mutationFn: (path: string) => bridge.updaterInstall(path),
     onError: (err) => setActionError(err instanceof Error ? err.message : String(err)),
   });
+
+  const installSupported = list?.installSupported ?? false;
+  const actionPending =
+    checkUpdate.isPending ||
+    listReleases.isPending ||
+    downloadRelease.isPending ||
+    applyRelease.isPending ||
+    installPackage.isPending;
 
   useEffect(() => {
     return bridge.onUpdaterProgress((event) => setProgress(event));
@@ -316,7 +353,7 @@ function DesktopSection() {
         <Button
           variant="outline"
           size="sm"
-          disabled={checkUpdate.isPending || listReleases.isPending}
+          disabled={actionPending}
           onClick={() => checkUpdate.mutate()}
         >
           {t("settings.updateCheck")}
@@ -324,13 +361,13 @@ function DesktopSection() {
         <Button
           variant="outline"
           size="sm"
-          disabled={listReleases.isPending || checkUpdate.isPending}
+          disabled={actionPending}
           onClick={() => listReleases.mutate()}
         >
           {t("settings.updateList")}
         </Button>
         <p className="text-xs text-fg-muted">
-          {checkUpdate.isPending || listReleases.isPending
+          {actionPending && (listReleases.isPending || checkUpdate.isPending)
             ? listReleases.isPending
               ? t("settings.updateListing")
               : t("settings.updateChecking")
@@ -340,6 +377,9 @@ function DesktopSection() {
         </p>
       </div>
       <p className="px-1 text-xs text-fg-faint">{t("settings.updateDraftsNote")}</p>
+      {list ? (
+        <p className="px-1 font-mono text-xs text-fg-faint">{list.releasesPageUrl}</p>
+      ) : null}
       {progress?.phase === "downloading" && progress.percent != null ? (
         <p className="px-1 text-xs text-fg-muted">
           {t("settings.updateProgress", { percent: Math.round(progress.percent) })}
@@ -352,12 +392,16 @@ function DesktopSection() {
           </p>
           <Button
             size="sm"
-            disabled={installPackage.isPending || !isTauri}
+            disabled={installPackage.isPending || !installSupported}
             onClick={() => installPackage.mutate(downloaded.path)}
           >
             {t("settings.updateInstall")}
           </Button>
-          <p className="text-xs text-fg-faint">{t("settings.updateInstallHint")}</p>
+          <p className="text-xs text-fg-faint">
+            {installSupported
+              ? t("settings.updateInstallHint")
+              : t("settings.updateInstallWindowsOnly")}
+          </p>
         </div>
       ) : null}
       {actionError ? (
@@ -390,14 +434,27 @@ function DesktopSection() {
                       {asset ? asset.name : t("settings.updateNoWindowsAsset")}
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!canDownload || downloadRelease.isPending}
-                    onClick={() => downloadRelease.mutate(release.tag)}
-                  >
-                    {isBusy ? t("settings.updateDownloading") : t("settings.updateDownload")}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!canDownload || actionPending}
+                      onClick={() => downloadRelease.mutate(release.tag)}
+                    >
+                      {isBusy && downloadRelease.isPending
+                        ? t("settings.updateDownloading")
+                        : t("settings.updateDownload")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={!canDownload || actionPending}
+                      onClick={() => applyRelease.mutate(release.tag)}
+                    >
+                      {isBusy && applyRelease.isPending
+                        ? t("settings.updateApplying")
+                        : t("settings.updateApply")}
+                    </Button>
+                  </div>
                 </li>
               );
             })
