@@ -51,7 +51,15 @@ describe("normalizeEngineEvent", () => {
       traceId: "t1",
       nodeId: undefined,
       message: "hello",
+      level: "info",
     });
+
+    expect(
+      normalizeEngineEvent({
+        method: "execution.log",
+        params: { message: "warn", level: "warn" },
+      }),
+    ).toMatchObject({ kind: "log", level: "warning" });
   });
 
   it("returns null for unknown shapes", () => {

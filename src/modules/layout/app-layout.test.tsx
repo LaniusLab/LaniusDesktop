@@ -91,6 +91,8 @@ describe("AppLayout", () => {
       executionId?: string;
       traceId?: string;
       message?: string;
+      level?: string;
+      nodeId?: string;
     }) => void;
     act(() => {
       handler({ kind: "status", status: "degraded", uptimeMs: 1200 });
@@ -101,9 +103,14 @@ describe("AppLayout", () => {
     });
     expect(useExecutionStore.getState().phase).toBe("running");
     act(() => {
-      handler({ kind: "log", message: "hello", traceId: "t1" });
+      handler({ kind: "log", message: "hello", traceId: "t1", level: "warning", nodeId: "n1" });
     });
-    expect(useExecutionStore.getState().logLines.at(-1)?.message).toBe("hello");
+    expect(useExecutionStore.getState().logLines.at(-1)).toMatchObject({
+      message: "hello",
+      level: "warning",
+      nodeId: "n1",
+      traceId: "t1",
+    });
 
     // Shortcut assertions before opening search — avoids stale searchOpen in the keydown effect.
     fireEvent.keyDown(window, { key: "Enter", ctrlKey: true });

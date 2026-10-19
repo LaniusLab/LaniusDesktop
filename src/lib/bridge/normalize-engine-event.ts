@@ -1,4 +1,4 @@
-import type { EngineEvent, ExecutionPhase } from "./types";
+import type { EngineEvent, ExecutionPhase, LogLevel } from "./types";
 
 /**
  * 把壳转发的原始帧归一成 UI 的 EngineEvent。
@@ -64,6 +64,7 @@ export function normalizeEngineEvent(raw: unknown): EngineEvent | null {
         traceId,
         nodeId,
         message: asString(params.message) ?? "",
+        level: asLogLevel(params.level),
       };
     case "execution.targetBound":
       return {
@@ -89,6 +90,21 @@ export function normalizeEngineEvent(raw: unknown): EngineEvent | null {
 
 function asString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
+}
+
+function asLogLevel(value: unknown): LogLevel | undefined {
+  if (typeof value !== "string") return undefined;
+  switch (value) {
+    case "debug":
+    case "info":
+    case "warning":
+    case "error":
+      return value;
+    case "warn":
+      return "warning";
+    default:
+      return undefined;
+  }
 }
 
 function asPhase(value: unknown): ExecutionPhase | undefined {

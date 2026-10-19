@@ -8,6 +8,7 @@ import { PROCESS_CATALOG, processById } from "@/lib/targets";
 import { findStepById } from "@/lib/template";
 import { cn } from "@/lib/utils";
 import { MigrationBanner } from "@/modules/flow-editor/migration-banner";
+import { ExecutionLogPanel } from "@/modules/runner/execution-log-panel";
 import { JOB_PRESETS } from "@/modules/start/presets";
 import { useEditorStore } from "@/stores/editor";
 import { useExecutionStore } from "@/stores/execution";
@@ -44,7 +45,6 @@ export function StartPage() {
   const setStartTopHeight = useUiStore((s) => s.setStartTopHeight);
   const startLogWidth = useUiStore((s) => s.startLogWidth);
   const setStartLogWidth = useUiStore((s) => s.setStartLogWidth);
-  const logLines = useExecutionStore((s) => s.logLines);
   const phase = useExecutionStore((s) => s.phase);
   const stepStatuses = useExecutionStore((s) => s.stepStatuses);
   const activeStepId = useExecutionStore((s) => s.activeStepId);
@@ -158,26 +158,7 @@ export function StartPage() {
               );
             })}
           </section>
-          <section className="glass-card flex h-full min-h-0 flex-col rounded-xl px-4 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="font-display text-sm text-fg">{t("start.log")}</p>
-              <StatusBadge state={phase} />
-            </div>
-            {logLines.length === 0 ? (
-              <p className="m-auto text-sm text-fg-faint">{t("start.logEmpty")}</p>
-            ) : (
-              <ol className="mt-3 min-h-0 flex-1 overflow-auto">
-                {logLines.map((line, index) => (
-                  <li
-                    key={`${String(line.ts)}-${String(index)}`}
-                    className="border-b border-line/70 py-1.5 text-xs text-fg-muted last:border-b-0"
-                  >
-                    {line.message}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
+          <ExecutionLogPanel aside={<StatusBadge state={phase} />} />
         </SplitPane>
 
         <section className="glass-card flex h-full min-h-0 flex-col rounded-xl px-5 py-4">
