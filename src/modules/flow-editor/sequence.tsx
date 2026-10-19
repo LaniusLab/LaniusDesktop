@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useEditorStore, type InsertBranch } from "@/stores/editor";
 import { useExecutionStore, type StepRunStatus } from "@/stores/execution";
+import { useValidationStore } from "@/stores/validation";
 import { useT } from "@/stores/ui";
 import { Badge, Button, EmptyState, Kbd, Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/ui";
 
@@ -217,7 +218,10 @@ function StepRow({
   const t = useT();
   const runStatus = useExecutionStore((s) => s.stepStatuses[step.id]);
   const activeStepId = useExecutionStore((s) => s.activeStepId);
-  const issue = stepIssueKey(step);
+  const allIssues = useValidationStore((s) => s.issues);
+  const engineIssue = allIssues.find((issue) => issue.nodeId === step.id);
+  const localIssue = stepIssueKey(step);
+  const issueMessage = engineIssue?.message ?? (localIssue ? t(localIssue) : null);
   const kindLabel =
     step.kind === "binding"
       ? t("edit.kind.binding")
@@ -254,8 +258,10 @@ function StepRow({
       <span className={cn("min-w-0 flex-1 truncate text-sm", step.disabled ? "text-fg-muted line-through" : "text-fg")}>
         {step.label}
       </span>
-      {issue ? (
-        <Badge tone="danger">{t("edit.issue.badge")}</Badge>
+      {issueMessage ? (
+        <Badge tone="danger" title={issueMessage}>
+          {t("edit.issue.badge")}
+        </Badge>
       ) : (
         <RunStatusBadge status={runStatus} />
       )}

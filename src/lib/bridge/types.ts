@@ -74,6 +74,18 @@ export interface FlowSaveResult {
   path: string;
 }
 
+export interface FlowValidationIssue {
+  severity: "info" | "warning" | "error" | "fatal";
+  code: string;
+  message: string;
+  nodeId?: string;
+}
+
+export interface FlowValidateResult {
+  ok: boolean;
+  issues: FlowValidationIssue[];
+}
+
 export interface Bridge {
   engineInfo(): Promise<EngineInfo>;
   flowRun(flow: FlowFile, mode: "run" | "dryRun"): Promise<FlowRunResult>;
@@ -82,6 +94,8 @@ export interface Bridge {
   flowOpen(path: string): Promise<FlowOpenResult>;
   /** 校验后写盘 */
   flowSave(path: string, flow: FlowFile): Promise<FlowSaveResult>;
+  /** 静态校验；结果钉到步骤列表 */
+  flowValidate(flow: FlowFile): Promise<FlowValidateResult>;
   onEngineEvent(handler: (event: EngineEvent) => void): () => void;
   prefsGet(): Promise<ShellPrefs>;
   prefsSet(prefs: ShellPrefs): Promise<ShellPrefs>;

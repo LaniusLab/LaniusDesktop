@@ -77,6 +77,13 @@ export function createTauriBridge(): Bridge {
       return invoke("flow_save", { path, flow });
     },
 
+    flowValidate(flow) {
+      return invoke("engine_call", {
+        method: "flow.validate",
+        params: { flow },
+      });
+    },
+
     onEngineEvent(handler) {
       const unlisten = listen<unknown>("engine://event", (e) => {
         const event = normalizeEngineEvent(e.payload);

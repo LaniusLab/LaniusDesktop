@@ -81,6 +81,38 @@ async def test_flow_validate_requires_binding_keys(server: RpcServer) -> None:
     assert result["issues"][0]["nodeId"] == "key"
 
 
+async def test_flow_validate_rejects_negative_wait_and_empty_type(
+    server: RpcServer,
+) -> None:
+    flow = {
+        "schemaVersion": 3,
+        "id": "bad-fields",
+        "name": "坏字段",
+        "steps": [
+            {
+                "id": "wait1",
+                "kind": "preset",
+                "type": "core.wait",
+                "label": "等",
+                "config": {"ms": -1},
+            },
+            {
+                "id": "type1",
+                "kind": "preset",
+                "type": "keyboard.type",
+                "label": "输入",
+                "config": {"text": "  "},
+            },
+        ],
+    }
+    response = await server.handle_frame(frame("flow.validate", {"flow": flow}))
+    assert response is not None
+    result = response["result"]
+    assert result["ok"] is False
+    node_ids = {issue["nodeId"] for issue in result["issues"]}
+    assert node_ids == {"wait1", "type1"}
+
+
 async def test_flow_migrate_bumps_schema_version(server: RpcServer) -> None:
     flow = {
         "schemaVersion": 2,

@@ -1,3 +1,7 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+
+import { bindingKeysSchema, typeTextSchema, waitMsSchema } from "@/lib/step-field-schema";
 import {
   configNumber,
   configString,
@@ -6,16 +10,21 @@ import {
   type TemplateStep,
 } from "@/lib/template";
 import { useEditorStore } from "@/stores/editor";
+import { useValidationStore } from "@/stores/validation";
 import { useT } from "@/stores/ui";
 import { EmptyState, FormField, Input, NumberField, Select, Switch, Textarea } from "@/ui";
 
-/** 点选步骤后改必填项；表达式与完整 schema 表单仍属后续。 */
+/** 点选步骤后改必填项；必填字段走 Zod+RHF，引擎 issue 同步展示。 */
 export function TemplateInspector() {
   const t = useT();
   const steps = useEditorStore((s) => s.steps);
   const selectedStepId = useEditorStore((s) => s.selectedStepId);
   const patchStep = useEditorStore((s) => s.patchStep);
   const setStepDisabled = useEditorStore((s) => s.setStepDisabled);
+  const allIssues = useValidationStore((s) => s.issues);
+  const engineIssues = selectedStepId
+    ? allIssues.filter((issue) => issue.nodeId === selectedStepId)
+    : [];
   const step = selectedStepId ? findStepById(steps, selectedStepId) : undefined;
 
   if (!step) {
@@ -26,7 +35,9 @@ export function TemplateInspector() {
     );
   }
 
-  const issue = stepIssueKey(step);
+  const localIssue = stepIssueKey(step);
+  const headline =
+    engineIssues[0]?.message ?? (localIssue ? t(localIssue) : null);
   const patchConfig = (key: string, value: unknown) => {
     patchStep(step.id, { config: { ...step.config, [key]: value } });
   };
@@ -34,7 +45,7 @@ export function TemplateInspector() {
   return (
     <aside className="flex h-full min-h-0 flex-col gap-3 overflow-auto bg-glass px-3 py-4 backdrop-blur-md">
       <p className="px-1 font-display text-sm text-fg">{t("edit.inspector")}</p>
-      {issue ? <p className="px-1 text-xs text-danger">{t(issue)}</p> : null}
+      {headline ? <p className="px-1 text-xs text-danger">{headline}</p> : null}
 
       <FormField label={t("edit.field.label")} htmlFor="step-label">
         <Input
@@ -68,13 +79,25 @@ export function TemplateInspector() {
 function BindingFields({ step }: { step: TemplateStep }) {
   const t = useT();
   const patchStep = useEditorStore((s) => s.patchStep);
+  const form = useForm({
+    resolver: zodResolver(bindingKeysSchema),
+    values: { keys: step.keys ?? "" },
+    mode: "onChange",
+  });
+  const errorKey = form.formState.errors.keys?.message;
   return (
-    <FormField label={t("edit.field.keys")} htmlFor="step-keys" hint={t("edit.field.keysHint")}>
+    <FormField
+      label={t("edit.field.keys")}
+      htmlFor="step-keys"
+      hint={t("edit.field.keysHint")}
+      error={errorKey ? t(errorKey) : undefined}
+    >
       <Input
         id="step-keys"
-        value={step.keys ?? ""}
+        value={form.watch("keys")}
         onChange={(event) => {
           const keys = event.target.value;
+          void form.setValue("keys", keys, { shouldValidate: true });
           patchStep(step.id, { keys, config: { ...step.config, keys } });
         }}
       />
@@ -133,13 +156,28 @@ function WaitFields({
   patchConfig: (key: string, value: unknown) => void;
 }) {
   const t = useT();
+  const form = useForm({
+    resolver: zodResolver(waitMsSchema),
+    values: { ms: configNumber(step.config, "ms", 200) },
+    mode: "onChange",
+  });
+  const errorKey = form.formState.errors.ms?.message;
   return (
-    <FormField label={t("edit.field.waitMs")} htmlFor="step-wait" hint={t("edit.field.waitHint")}>
+    <FormField
+      label={t("edit.field.waitMs")}
+      htmlFor="step-wait"
+      hint={t("edit.field.waitHint")}
+      error={errorKey ? t(errorKey) : undefined}
+    >
       <NumberField
         id="step-wait"
         min={0}
-        value={configNumber(step.config, "ms", 200)}
-        onValueChange={(value) => patchConfig("ms", value ?? 0)}
+        value={form.watch("ms")}
+        onValueChange={(value) => {
+          const ms = value ?? 0;
+          void form.setValue("ms", ms, { shouldValidate: true });
+          patchConfig("ms", ms);
+        }}
       />
     </FormField>
   );
@@ -173,13 +211,28 @@ function TypeFields({
   patchConfig: (key: string, value: unknown) => void;
 }) {
   const t = useT();
+  const form = useForm({
+    resolver: zodResolver(typeTextSchema),
+    values: { text: configString(step.config, "text", "") },
+    mode: "onChange",
+  });
+  const errorKey = form.formState.errors.text?.message;
   return (
-    <FormField label={t("edit.field.text")} htmlFor="step-text" hint={t("edit.field.textHint")}>
+    <FormField
+      label={t("edit.field.text")}
+      htmlFor="step-text"
+      hint={t("edit.field.textHint")}
+      error={errorKey ? t(errorKey) : undefined}
+    >
       <Textarea
         id="step-text"
         rows={5}
-        value={configString(step.config, "text", "")}
-        onChange={(event) => patchConfig("text", event.target.value)}
+        value={form.watch("text")}
+        onChange={(event) => {
+          const text = event.target.value;
+          void form.setValue("text", text, { shouldValidate: true });
+          patchConfig("text", text);
+        }}
       />
     </FormField>
   );

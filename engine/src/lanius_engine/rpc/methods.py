@@ -244,7 +244,29 @@ def _validate_steps(
                         "severity": "error",
                         "code": "engine.flow.validationFailed",
                         "nodeId": step.id,
-                        "message": f"步骤 {step.id} 缺少按键 keys",
+                        "message": "缺按键。在右侧「发出的键」里补上。",
+                    }
+                )
+        if node_type == "core.wait":
+            ms = step.config.get("ms", 0)
+            if not isinstance(ms, (int, float)) or ms < 0:
+                issues.append(
+                    {
+                        "severity": "error",
+                        "code": "engine.flow.validationFailed",
+                        "nodeId": step.id,
+                        "message": "等待时间不能是负数。",
+                    }
+                )
+        if node_type == "keyboard.type":
+            text = str(step.config.get("text", "")).strip()
+            if not text:
+                issues.append(
+                    {
+                        "severity": "error",
+                        "code": "engine.flow.validationFailed",
+                        "nodeId": step.id,
+                        "message": "文本内容不能为空。",
                     }
                 )
         if step.then:
