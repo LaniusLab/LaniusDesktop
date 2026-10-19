@@ -74,7 +74,7 @@
 
 范围：信任分级与危险操作确认、自动更新（签名通道接通）、打包流水线（msi/dmg/AppImage）、凭据管理页、性能达标（PRODUCT.md §6）、SBOM、崩溃上报（本地日志打包导出，无遥测）。设置外观/行为/调试已在 M0 落地。
 
-已落地：信任门闩 + 未信任横幅 / 标记可信；本机诊断导出（`shell_export_diagnostics`）；CI 生产依赖 audit + 引擎 `pip-audit`。
+已落地：信任门闩 + 未信任横幅 / 标记可信；本机诊断导出（`shell_export_diagnostics`）；CI 生产依赖 audit + 引擎 `pip-audit`；发布 `SHA256SUMS.txt`（非签名）。
 
 **阻塞**：签名静默 updater — 需代码签名 / Tauri updater 公钥私钥与 CI secrets，以及允许 `tauri-plugin-updater`（或抬 MSRV）的新 ADR。在此之前保持 ADR-0011 交互式安装。
 

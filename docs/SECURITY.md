@@ -60,6 +60,7 @@ Lanius 的本质是"替用户操作电脑"，安全模型围绕两个事实构�
 - **目标（M5）**：引擎引入 lockfile；开发依赖 audit 收紧；发布产物附 SBOM。
 - 新增依赖评估清单见 [CONTRIBUTING.md](../CONTRIBUTING.md#依赖管理)。
 - **签名自动更新（阻塞）**：目标态为 Tauri updater + 内置公钥静默安装。当前无发布签名密钥与 CI secrets，且 ADR-0011 过渡（curl → 交互式 Windows 安装）仍有效。在密钥与 updater 插件/MSRV ADR 到位前，**不实现**签名静默通道。
+- **发布校验和（已落地）**：`release.yml` 在 Windows 包旁生成并上传 `SHA256SUMS.txt`（`scripts/write-sha256sums.mjs`）。这是无密钥过渡：完整性人工核对，**不是**代码签名。
 - 引擎不独立更新，随应用同包下发。
 
 ## 8. 安全响应
