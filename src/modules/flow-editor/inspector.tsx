@@ -1,6 +1,7 @@
 import {
   configNumber,
   configString,
+  findStepById,
   stepIssueKey,
   type TemplateStep,
 } from "@/lib/template";
@@ -15,7 +16,7 @@ export function TemplateInspector() {
   const selectedStepId = useEditorStore((s) => s.selectedStepId);
   const patchStep = useEditorStore((s) => s.patchStep);
   const setStepDisabled = useEditorStore((s) => s.setStepDisabled);
-  const step = steps.find((item) => item.id === selectedStepId);
+  const step = selectedStepId ? findStepById(steps, selectedStepId) : undefined;
 
   if (!step) {
     return (
@@ -55,6 +56,11 @@ export function TemplateInspector() {
       {step.kind === "mouse" ? <MouseFields step={step} patchConfig={patchConfig} /> : null}
       {step.type === "core.wait" ? <WaitFields step={step} patchConfig={patchConfig} /> : null}
       {step.type === "core.log" ? <LogFields step={step} patchConfig={patchConfig} /> : null}
+      {step.type === "keyboard.type" ? <TypeFields step={step} patchConfig={patchConfig} /> : null}
+      {step.type === "vision.ocr" ? <OcrFields step={step} patchConfig={patchConfig} /> : null}
+      {step.type === "vision.wait" ? <WaitImageFields step={step} patchConfig={patchConfig} /> : null}
+      {step.type === "flow.if" ? <IfFields step={step} patchConfig={patchConfig} /> : null}
+      {step.type === "flow.loop" ? <LoopFields step={step} patchConfig={patchConfig} /> : null}
     </aside>
   );
 }
@@ -156,5 +162,141 @@ function LogFields({
         onChange={(event) => patchConfig("message", event.target.value)}
       />
     </FormField>
+  );
+}
+
+function TypeFields({
+  step,
+  patchConfig,
+}: {
+  step: TemplateStep;
+  patchConfig: (key: string, value: unknown) => void;
+}) {
+  const t = useT();
+  return (
+    <FormField label={t("edit.field.text")} htmlFor="step-text" hint={t("edit.field.textHint")}>
+      <Textarea
+        id="step-text"
+        rows={5}
+        value={configString(step.config, "text", "")}
+        onChange={(event) => patchConfig("text", event.target.value)}
+      />
+    </FormField>
+  );
+}
+
+function OcrFields({
+  step,
+  patchConfig,
+}: {
+  step: TemplateStep;
+  patchConfig: (key: string, value: unknown) => void;
+}) {
+  const t = useT();
+  return (
+    <FormField label={t("edit.field.fakeText")} htmlFor="step-ocr" hint={t("edit.field.fakeTextHint")}>
+      <Input
+        id="step-ocr"
+        value={configString(step.config, "fakeText", "确认")}
+        onChange={(event) => patchConfig("fakeText", event.target.value)}
+      />
+    </FormField>
+  );
+}
+
+function WaitImageFields({
+  step,
+  patchConfig,
+}: {
+  step: TemplateStep;
+  patchConfig: (key: string, value: unknown) => void;
+}) {
+  const t = useT();
+  return (
+    <>
+      <FormField label={t("edit.field.waitImageText")} htmlFor="step-wait-image">
+        <Input
+          id="step-wait-image"
+          value={configString(step.config, "text", "")}
+          onChange={(event) => patchConfig("text", event.target.value)}
+        />
+      </FormField>
+      <FormField label={t("edit.field.timeoutMs")} htmlFor="step-timeout">
+        <NumberField
+          id="step-timeout"
+          min={1}
+          value={configNumber(step.config, "timeoutMs", 8000)}
+          onValueChange={(value) => patchConfig("timeoutMs", value ?? 8000)}
+        />
+      </FormField>
+    </>
+  );
+}
+
+function IfFields({
+  step,
+  patchConfig,
+}: {
+  step: TemplateStep;
+  patchConfig: (key: string, value: unknown) => void;
+}) {
+  const t = useT();
+  return (
+    <>
+      <FormField label={t("edit.field.when")} htmlFor="step-when">
+        <Select
+          id="step-when"
+          value={configString(step.config, "when", "ocr.contains")}
+          onChange={(event) => patchConfig("when", event.target.value)}
+        >
+          <option value="ocr.contains">{t("edit.when.contains")}</option>
+          <option value="equals">{t("edit.when.equals")}</option>
+          <option value="truthy">{t("edit.when.truthy")}</option>
+        </Select>
+      </FormField>
+      <FormField label={t("edit.field.matchText")} htmlFor="step-match-text">
+        <Input
+          id="step-match-text"
+          value={configString(step.config, "text", "")}
+          onChange={(event) => patchConfig("text", event.target.value)}
+        />
+      </FormField>
+      <FormField label={t("edit.field.source")} htmlFor="step-source" hint={t("edit.field.sourceHint")}>
+        <Input
+          id="step-source"
+          value={configString(step.config, "source", "{{ocr.text}}")}
+          onChange={(event) => patchConfig("source", event.target.value)}
+        />
+      </FormField>
+    </>
+  );
+}
+
+function LoopFields({
+  step,
+  patchConfig,
+}: {
+  step: TemplateStep;
+  patchConfig: (key: string, value: unknown) => void;
+}) {
+  const t = useT();
+  return (
+    <>
+      <FormField label={t("edit.field.loopMax")} htmlFor="step-loop-max">
+        <NumberField
+          id="step-loop-max"
+          min={0}
+          value={configNumber(step.config, "max", 3)}
+          onValueChange={(value) => patchConfig("max", value ?? 0)}
+        />
+      </FormField>
+      <FormField label={t("edit.field.until")} htmlFor="step-until" hint={t("edit.field.untilHint")}>
+        <Input
+          id="step-until"
+          value={configString(step.config, "until", "")}
+          onChange={(event) => patchConfig("until", event.target.value)}
+        />
+      </FormField>
+    </>
   );
 }

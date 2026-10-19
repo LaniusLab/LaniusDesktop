@@ -50,11 +50,10 @@ describe("editor store", () => {
 
   it("可把步骤移到指定位置", () => {
     const ids = useEditorStore.getState().steps.map((step) => step.id);
-    useEditorStore.getState().moveStep(0, 3);
+    useEditorStore.getState().moveStep(0, 2);
     expect(useEditorStore.getState().steps.map((step) => step.id)).toEqual([
       ids[1],
       ids[2],
-      ids[3],
       ids[0],
     ]);
   });

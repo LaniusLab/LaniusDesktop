@@ -51,6 +51,7 @@ describe("模板页", () => {
       </TooltipProvider>,
     );
     expect(screen.getByText("稍等片刻")).toBeInTheDocument();
+    expect(screen.getByText("输入多行文本")).toBeInTheDocument();
     expect(screen.getAllByText("回车").length).toBeGreaterThan(0);
     const before = useEditorStore.getState().steps.length;
     fireEvent.click(screen.getByRole("button", { name: "记一条日志" }));
@@ -136,11 +137,20 @@ describe("模板页", () => {
     fireEvent.dragStart(first, { dataTransfer: transfer });
     fireEvent.drop(screen.getByText("拖到这里追加到末尾"), { dataTransfer: transfer });
     expect(useEditorStore.getState().steps.map((step) => step.label)).toEqual([
-      "回车",
-      "单击",
+      "输入多行文本",
       "记下完成",
       "稍等片刻",
     ]);
+  });
+
+  it("可切换到导图预览", () => {
+    render(
+      <TooltipProvider>
+        <FlowsPage />
+      </TooltipProvider>,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "导图预览" }));
+    expect(screen.getByRole("img", { name: "模板导图" })).toBeInTheDocument();
   });
 });
 

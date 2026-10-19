@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { currentContext } from "@/lib/commands/context";
 import { registry } from "@/lib/commands/registry";
 import { PROCESS_CATALOG, processById } from "@/lib/targets";
+import { findStepById } from "@/lib/template";
 import { cn } from "@/lib/utils";
 import { JOB_PRESETS } from "@/modules/start/presets";
 import { useEditorStore } from "@/stores/editor";
@@ -33,6 +34,7 @@ export function StartPage() {
   const setLocateChannel = useEditorStore((s) => s.setLocateChannel);
   const setVisionPack = useEditorStore((s) => s.setVisionPack);
   const setStepDisabled = useEditorStore((s) => s.setStepDisabled);
+  const loadTemplate = useEditorStore((s) => s.loadTemplate);
   const liveSteps = preset.available ? templateSteps : preset.steps;
   const startTopHeight = useUiStore((s) => s.startTopHeight);
   const setStartTopHeight = useUiStore((s) => s.setStartTopHeight);
@@ -56,10 +58,13 @@ export function StartPage() {
     const next = JOB_PRESETS.find((item) => item.id === id);
     if (!next?.available) return;
     setPresetId(id);
+    if (next.load) {
+      loadTemplate(next.load());
+    }
   };
 
   const toggleStep = (id: string) => {
-    const step = templateSteps.find((item) => item.id === id);
+    const step = findStepById(templateSteps, id);
     if (!step) return;
     setStepDisabled(id, !step.disabled);
   };

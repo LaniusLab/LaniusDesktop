@@ -3,8 +3,18 @@ import { temporal } from "zundo";
 
 import { toFlowFile } from "@/lib/flow-file";
 import { PROCESS_CATALOG, type LocateProfile, type TargetMatch } from "@/lib/targets";
-import { createStepId, type TemplateDraft, type TemplateStep } from "@/lib/template";
+import {
+  findStepById,
+  insertIntoSteps,
+  mapSteps,
+  materializeDraft,
+  removeStepById,
+  type TemplateDraft,
+  type TemplateStep,
+} from "@/lib/template";
 import { readStoredTemplate, writeStoredTemplate, type StoredTemplate } from "@/lib/template-store";
+
+export type InsertBranch = "root" | "then" | "else" | "body";
 
 interface EditorStore {
   steps: TemplateStep[];
@@ -14,7 +24,10 @@ interface EditorStore {
   locate: LocateProfile;
   dirty: boolean;
   selectedStepId?: string;
-  insertStep: (draft: TemplateDraft, index?: number) => void;
+  insertStep: (
+    draft: TemplateDraft,
+    options?: { index?: number; parentId?: string; branch?: InsertBranch },
+  ) => void;
   removeStep: (id: string) => void;
   moveStep: (fromIndex: number, toIndex: number) => void;
   setStepDisabled: (id: string, disabled: boolean) => void;
@@ -24,6 +37,7 @@ interface EditorStore {
   bindProcess: (processId: string) => void;
   setLocateChannel: (channel: LocateProfile["channel"]) => void;
   setVisionPack: (visionPack: string) => void;
+  loadTemplate: (partial: Partial<StoredTemplate> & { steps: TemplateStep[] }) => void;
   saveTemplate: () => void;
   markSaved: () => void;
 }
@@ -57,19 +71,28 @@ export const useEditorStore = create<EditorStore>()(
       locate: initial.locate,
       dirty: initial.dirty,
       selectedStepId: initial.steps[0]?.id,
-      insertStep: (draft, index) => {
-        const id = createStepId();
+      insertStep: (draft, options) => {
+        const step = materializeDraft(draft);
+        const parentId = options?.parentId;
+        const branch = options?.branch ?? "root";
         set((s) => {
+          if (parentId && branch !== "root") {
+            return {
+              steps: insertIntoSteps(s.steps, step, parentId, branch),
+              dirty: true,
+              selectedStepId: step.id,
+            };
+          }
           const next = [...s.steps];
-          const at = clampIndex(index ?? next.length, next.length);
-          next.splice(at, 0, { ...draft, id, config: { ...draft.config } });
-          return { steps: next, dirty: true, selectedStepId: id };
+          const at = clampIndex(options?.index ?? next.length, next.length);
+          next.splice(at, 0, step);
+          return { steps: next, dirty: true, selectedStepId: step.id };
         });
         writeStoredTemplate(snapshot(get()));
       },
       removeStep: (id) => {
         set((s) => ({
-          steps: s.steps.filter((step) => step.id !== id),
+          steps: removeStepById(s.steps, id),
           dirty: true,
           selectedStepId: s.selectedStepId === id ? undefined : s.selectedStepId,
         }));
@@ -90,14 +113,14 @@ export const useEditorStore = create<EditorStore>()(
       },
       setStepDisabled: (id, disabled) => {
         set((s) => ({
-          steps: s.steps.map((step) => (step.id === id ? { ...step, disabled } : step)),
+          steps: mapSteps(s.steps, id, (step) => ({ ...step, disabled })),
           dirty: true,
         }));
         writeStoredTemplate(snapshot(get()));
       },
       patchStep: (id, patch) => {
         set((s) => ({
-          steps: s.steps.map((step) => (step.id === id ? { ...step, ...patch } : step)),
+          steps: mapSteps(s.steps, id, (step) => ({ ...step, ...patch })),
           dirty: true,
         }));
         writeStoredTemplate(snapshot(get()));
@@ -131,6 +154,18 @@ export const useEditorStore = create<EditorStore>()(
         set((s) => ({
           locate: { ...s.locate, visionPack, source: "user" },
           dirty: true,
+        }));
+        writeStoredTemplate(snapshot(get()));
+      },
+      loadTemplate: (partial) => {
+        set((s) => ({
+          steps: partial.steps,
+          keymapProfileId: partial.keymapProfileId ?? s.keymapProfileId,
+          processId: partial.processId ?? s.processId,
+          match: partial.match ?? s.match,
+          locate: partial.locate ?? s.locate,
+          dirty: false,
+          selectedStepId: partial.steps[0]?.id,
         }));
         writeStoredTemplate(snapshot(get()));
       },
@@ -180,4 +215,10 @@ export function editorToFlowFile() {
 export function editorHasTarget(): boolean {
   const { processId, match } = useEditorStore.getState();
   return Boolean(processId && (match.exe || match.title || match.className));
+}
+
+export function editorSelectedStep(): TemplateStep | undefined {
+  const { steps, selectedStepId } = useEditorStore.getState();
+  if (!selectedStepId) return undefined;
+  return findStepById(steps, selectedStepId);
 }

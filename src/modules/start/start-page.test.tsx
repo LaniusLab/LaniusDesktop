@@ -43,6 +43,7 @@ describe("开始页", () => {
   it("展示模板、进程与探测通道，不出现机器类型 ID", () => {
     render(<StartPage />);
     expect(screen.getByRole("heading", { name: "选择任务" })).toBeInTheDocument();
+    expect(screen.getAllByText("记事本多行输入").length).toBeGreaterThan(0);
     expect(screen.getAllByText("对选定窗口跑模板").length).toBeGreaterThan(0);
     expect(screen.getByRole("checkbox", { name: "稍等片刻" })).toBeInTheDocument();
     expect(screen.getByLabelText("目标进程")).toHaveValue("notepad");

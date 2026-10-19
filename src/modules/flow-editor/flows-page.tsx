@@ -1,17 +1,21 @@
 import { Play, Redo2, Save, Undo2, Wand2 } from "lucide-react";
+import { useState } from "react";
 
 import { currentContext } from "@/lib/commands/context";
 import { registry } from "@/lib/commands/registry";
 import { PROCESS_CATALOG } from "@/lib/targets";
 import { TemplateInspector } from "@/modules/flow-editor/inspector";
+import { MindMapPreview } from "@/modules/flow-editor/mind-map-preview";
 import { TemplatePalette } from "@/modules/flow-editor/palette";
 import { TemplateSequence } from "@/modules/flow-editor/sequence";
 import { redoEdit, undoEdit, useEditorStore } from "@/stores/editor";
 import { useExecutionStore } from "@/stores/execution";
 import { useT, useUiStore } from "@/stores/ui";
-import { Badge, Button, PageHeader, Select, SplitPane, StatusBadge, Tooltip, TooltipContent, TooltipTrigger } from "@/ui";
+import { Badge, Button, PageHeader, Select, SplitPane, StatusBadge, Tabs, Tooltip, TooltipContent, TooltipTrigger } from "@/ui";
 
-/** 模板页：从按键方案与预设操作拖入有序列表，运行时绑到选定窗口。 */
+type CenterTab = "strip" | "mind";
+
+/** 模板页：指令条缩进 + 插入菜单 + 只读导图预览。 */
 export function FlowsPage() {
   const dirty = useEditorStore((s) => s.dirty);
   const processId = useEditorStore((s) => s.processId);
@@ -26,6 +30,7 @@ export function FlowsPage() {
   const logLines = useExecutionStore((s) => s.logLines);
   const phase = useExecutionStore((s) => s.phase);
   const t = useT();
+  const [centerTab, setCenterTab] = useState<CenterTab>("strip");
   const runCommand = (id: string) => void registry.run(id, currentContext());
   const processName = PROCESS_CATALOG.find((item) => item.id === processId)?.name ?? processId;
 
@@ -115,8 +120,20 @@ export function FlowsPage() {
             minSecond={160}
             label={t("layout.resize.vertical")}
           >
-            <div className="h-full min-h-0 min-w-0 bg-surface/40">
-              <TemplateSequence />
+            <div className="flex h-full min-h-0 min-w-0 flex-col bg-surface/40">
+              <div className="border-b border-line px-3 py-2">
+                <Tabs
+                  value={centerTab}
+                  onValueChange={setCenterTab}
+                  items={[
+                    { value: "strip", label: t("edit.tab.strip") },
+                    { value: "mind", label: t("edit.tab.mind") },
+                  ]}
+                />
+              </div>
+              <div className="min-h-0 flex-1">
+                {centerTab === "strip" ? <TemplateSequence /> : <MindMapPreview />}
+              </div>
             </div>
             <section className="glass-card flex h-full min-h-0 flex-col rounded-none px-4 py-3">
               <p className="font-display text-sm text-fg">{t("start.log")}</p>
