@@ -1,12 +1,13 @@
 import { useNavigate } from "@tanstack/react-router";
 import { History, Crosshair } from "lucide-react";
 
+import { RunComparePanel } from "@/modules/history/run-compare-panel";
 import { useEditorStore } from "@/stores/editor";
 import { useExecutionStore, type RunRecord } from "@/stores/execution";
 import { useT, useUiStore } from "@/stores/ui";
 import { Button, EmptyState, PageHeader, Separator, StatusBadge } from "@/ui";
 
-/** 运行记录：本会话摘要；失败项可跳回模板对应步骤。 */
+/** 运行记录：本会话摘要；失败项可跳回模板对应步骤；预演↔试一次对照。 */
 export function HistoryPage() {
   const runs = useExecutionStore((s) => s.runs);
   const locale = useUiStore((s) => s.prefs.locale);
@@ -31,6 +32,7 @@ export function HistoryPage() {
         />
       ) : (
         <div className="flex-1 overflow-auto px-6 py-4 animate-rise">
+          <RunComparePanel runs={runs} />
           <ul className="flex flex-col">
             {runs.map((run, index) => (
               <li key={run.executionId}>

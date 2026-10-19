@@ -1,6 +1,12 @@
 import { create } from "zustand";
 
-import type { EngineStatus, ExecutionPhase, FlowRunResult, LogLevel } from "@/lib/bridge";
+import type {
+  EngineStatus,
+  ExecutionPhase,
+  FlowNodeRun,
+  FlowRunResult,
+  LogLevel,
+} from "@/lib/bridge";
 
 export type StepRunStatus = "pending" | "running" | "done" | "failed" | "skipped" | "cancelled";
 
@@ -27,6 +33,8 @@ export interface RunRecord {
   failedStepId?: string;
   traceId?: string;
   errorMessage?: string;
+  /** 逐步轨迹，供预演↔真实对照 */
+  nodeRuns?: FlowNodeRun[];
 }
 
 interface BeginRunInput {
@@ -48,7 +56,13 @@ interface ExecutionState {
   runs: RunRecord[];
   pendingRun?: Omit<
     RunRecord,
-    "finalState" | "doneCount" | "skippedCount" | "failedCount" | "failedStepId" | "errorMessage"
+    | "finalState"
+    | "doneCount"
+    | "skippedCount"
+    | "failedCount"
+    | "failedStepId"
+    | "errorMessage"
+    | "nodeRuns"
   >;
   setEngineStatus: (status: EngineStatus, uptimeMs?: number) => void;
   setPhase: (phase: ExecutionPhase, executionId?: string, traceId?: string) => void;
@@ -168,6 +182,7 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
         failedStepId,
         traceId: s.lastTraceId,
         errorMessage: result.error?.message ?? result.error?.code ?? undefined,
+        nodeRuns: nodeRuns.length > 0 ? nodeRuns : undefined,
       };
       return {
         phase: finalState,

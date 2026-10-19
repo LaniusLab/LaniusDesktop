@@ -63,5 +63,6 @@ describe("execution store", () => {
     expect(run?.errorMessage).toBe("步骤失败");
     expect(run?.traceId).toBe("trace-fail");
     expect(useExecutionStore.getState().logLines.some((line) => line.level === "error")).toBe(true);
+    expect(run?.nodeRuns?.map((row) => row.nodeId)).toEqual(["ok", "bad", "later"]);
   });
 });
