@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   Bug,
   Info,
+  KeyRound,
   Keyboard,
   Languages,
   Monitor,
@@ -33,13 +34,21 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Input,
   KeyRecorder,
   ScrollArea,
   SettingRow,
   Switch,
 } from "@/ui";
 
-type SettingsTab = "appearance" | "general" | "desktop" | "shortcuts" | "debug" | "about";
+type SettingsTab =
+  | "appearance"
+  | "general"
+  | "desktop"
+  | "credentials"
+  | "shortcuts"
+  | "debug"
+  | "about";
 
 const ACCENTS: ReadonlyArray<ShellPrefs["accent"]> = ["terracotta", "ink", "moss", "dusk"];
 
@@ -47,6 +56,7 @@ const SECTIONS: ReadonlyArray<{ id: SettingsTab; icon: LucideIcon; labelKey: str
   { id: "appearance", icon: Sparkles, labelKey: "settings.appearance" },
   { id: "general", icon: Languages, labelKey: "settings.behavior" },
   { id: "desktop", icon: Monitor, labelKey: "settings.desktop" },
+  { id: "credentials", icon: KeyRound, labelKey: "settings.credentials" },
   { id: "shortcuts", icon: Keyboard, labelKey: "settings.shortcuts" },
   { id: "debug", icon: Bug, labelKey: "settings.debug" },
   { id: "about", icon: Info, labelKey: "settings.about" },
@@ -101,6 +111,7 @@ export function SettingsDialog() {
               {tab === "appearance" ? <AppearanceSection /> : null}
               {tab === "general" ? <GeneralSection /> : null}
               {tab === "desktop" ? <DesktopSection /> : null}
+              {tab === "credentials" ? <CredentialsSection /> : null}
               {tab === "shortcuts" ? <ShortcutsSection /> : null}
               {tab === "debug" ? <DebugSection /> : null}
               {tab === "about" ? <AboutSection /> : null}
@@ -461,6 +472,94 @@ function DesktopSection() {
           )}
         </ul>
       ) : null}
+    </div>
+  );
+}
+
+function CredentialsSection() {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const list = useQuery({
+    queryKey: ["secrets"],
+    queryFn: () => bridge.secretList(),
+  });
+  const save = useMutation({
+    mutationFn: () => bridge.secretSet(name.trim(), value),
+    onSuccess: async () => {
+      setName("");
+      setValue("");
+      setError(null);
+      await queryClient.invalidateQueries({ queryKey: ["secrets"] });
+    },
+    onError: () => setError(t("settings.credentials.error")),
+  });
+  const remove = useMutation({
+    mutationFn: (key: string) => bridge.secretDelete(key),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["secrets"] });
+    },
+  });
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-xs text-fg-muted">{t("settings.credentials.hint")}</p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <label className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="text-xs text-fg-muted">{t("settings.credentials.name")}</span>
+          <Input
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={t("settings.credentials.namePlaceholder")}
+            autoComplete="off"
+            spellCheck={false}
+          />
+        </label>
+        <label className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="text-xs text-fg-muted">{t("settings.credentials.value")}</span>
+          <Input
+            type="password"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            placeholder={t("settings.credentials.valuePlaceholder")}
+            autoComplete="new-password"
+          />
+        </label>
+        <Button
+          disabled={!name.trim() || !value || save.isPending}
+          onClick={() => save.mutate()}
+        >
+          {t("settings.credentials.add")}
+        </Button>
+      </div>
+      {error ? <p className="text-xs text-danger">{error}</p> : null}
+      <p className="text-xs text-fg-faint">{t("settings.credentials.refHint")}</p>
+      {list.data?.keys.length ? (
+        <ul className="flex flex-col gap-1">
+          {list.data.keys.map((key) => (
+            <li
+              key={key}
+              className="flex items-center gap-2 rounded-lg border border-line px-3 py-2"
+            >
+              <span className="min-w-0 flex-1 truncate font-mono text-sm text-fg">{key}</span>
+              <span className="text-xs text-fg-faint">secret://{key}</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={remove.isPending}
+                onClick={() => remove.mutate(key)}
+                aria-label={t("settings.credentials.delete")}
+              >
+                {t("settings.credentials.delete")}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-fg-muted">{t("settings.credentials.empty")}</p>
+      )}
     </div>
   );
 }

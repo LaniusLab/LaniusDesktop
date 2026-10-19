@@ -44,6 +44,12 @@ pub enum ShellError {
 
     #[error("更新包路径无效: {0}")]
     UpdaterInvalidPath(String),
+
+    #[error("凭据名或值不合法: {0}")]
+    InvalidSecret(String),
+
+    #[error("系统凭据库不可用: {0}")]
+    SecretBackend(String),
 }
 
 #[derive(Serialize)]
@@ -73,6 +79,8 @@ impl ShellError {
             ShellError::UpdaterNoAsset(_) => "shell.updater.noWindowsAsset",
             ShellError::UpdaterUnsupported => "shell.updater.unsupportedPlatform",
             ShellError::UpdaterInvalidPath(_) => "shell.updater.invalidPath",
+            ShellError::InvalidSecret(_) => "shell.secret.invalid",
+            ShellError::SecretBackend(_) => "shell.secret.backendFailed",
         }
     }
 
@@ -107,6 +115,8 @@ impl Serialize for TracedError {
             ShellError::UpdaterNoAsset(_) => ("warning", false),
             ShellError::UpdaterUnsupported => ("warning", false),
             ShellError::UpdaterInvalidPath(_) => ("error", false),
+            ShellError::InvalidSecret(_) => ("warning", false),
+            ShellError::SecretBackend(_) => ("error", true),
         };
         ErrorPayload {
             code: self.error.code().to_string(),

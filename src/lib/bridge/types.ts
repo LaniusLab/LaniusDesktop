@@ -4,6 +4,12 @@
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
 import type {
+  SecretDeleteResult,
+  SecretGetResult,
+  SecretListResult,
+  SecretSetResult,
+} from "@/lib/gen/shell-secret";
+import type {
   UpdaterApplyResult,
   UpdaterCheckResult,
   UpdaterDownloadResult,
@@ -104,6 +110,12 @@ export interface Bridge {
   onEngineEvent(handler: (event: EngineEvent) => void): () => void;
   prefsGet(): Promise<ShellPrefs>;
   prefsSet(prefs: ShellPrefs): Promise<ShellPrefs>;
+  /** 凭据名列表（无值） */
+  secretList(): Promise<SecretListResult>;
+  secretSet(key: string, value: string): Promise<SecretSetResult>;
+  /** 取值仅供引擎回调；凭据页勿展示 */
+  secretGet(key: string): Promise<SecretGetResult>;
+  secretDelete(key: string): Promise<SecretDeleteResult>;
   debugInfo(): Promise<ShellDebugInfo>;
   logsTail(): Promise<string>;
   updaterList(): Promise<UpdaterListResult>;

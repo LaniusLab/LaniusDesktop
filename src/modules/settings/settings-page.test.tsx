@@ -75,6 +75,24 @@ describe("设置弹窗", () => {
     });
   });
 
+  it("凭据页可保存名称且不回显值", async () => {
+    renderSettings();
+    fireEvent.click(screen.getByRole("tab", { name: "凭据" }));
+    expect(screen.getByText(/只显示名称|lists names only/i)).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText("erp-password"), {
+      target: { value: "demo-pass" },
+    });
+    fireEvent.change(screen.getByPlaceholderText(/写入凭据库|keyring/i), {
+      target: { value: "s3cret-value" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /保存|Save/ }));
+    await waitFor(() => {
+      expect(screen.getByText("demo-pass")).toBeInTheDocument();
+      expect(screen.getByText("secret://demo-pass")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("s3cret-value")).not.toBeInTheDocument();
+  });
+
   it("快捷键页可以跳到按键映射", () => {
     renderSettings();
     fireEvent.click(screen.getByRole("tab", { name: "快捷键" }));

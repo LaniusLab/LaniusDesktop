@@ -136,7 +136,10 @@
 | `flow_open` | `{ path }` | `{ path, flow, migratedFrom?, migratedTo? }` | 读盘 + `flow.migrate`（OS 对话框待 dialog 插件） | 已实现 |
 | `flow_save` | `{ path, flow }` | `{ path }` | 先过 `flow.validate` 再写盘 | 已实现 |
 | `execution_list` | `{ limit, offset }` | `ExecutionPage` | `execution.list` | 经 `engine_call` 透传；专用 invoke 待补 |
-| `secret_set` / `secret_get` / `secret_delete` | `{ key, value? }` | — | 壳内 keyring，不过引擎 | M4 |
+| `secret_list` | — | `SecretListResult`（`schemas/shell-secret.schema.json`） | 名称索引；无值 | 已实现 |
+| `secret_set` | `{ key, value }` | `SecretSetResult` | 系统 keyring + 名称索引；日志只记 key | 已实现 |
+| `secret_get` | `{ key }` | `SecretGetResult` | 取值仅供引擎回调；UI 凭据页禁止展示 | 已实现 |
+| `secret_delete` | `{ key }` | `SecretDeleteResult` | 删 keyring 与索引 | 已实现 |
 | `prefs_get` | — | `ShellPrefs` | 读 `prefs.json` | 已实现 |
 | `prefs_set` | `{ prefs }` | `ShellPrefs` | 写盘 + 同步开机自启 | 已实现 |
 | `shell_debug_info` | — | `ShellDebugInfo` | 系统 / 路径 | 已实现 |

@@ -3,6 +3,7 @@
 mod commands;
 mod error;
 mod prefs;
+mod secrets;
 mod sidecar;
 mod updater;
 
@@ -83,6 +84,10 @@ fn main() {
             commands::flow_save,
             commands::prefs_get,
             commands::prefs_set,
+            commands::secret_list,
+            commands::secret_set,
+            commands::secret_get,
+            commands::secret_delete,
             commands::shell_debug_info,
             commands::logs_tail,
             commands::updater_list,

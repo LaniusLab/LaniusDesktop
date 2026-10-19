@@ -33,3 +33,9 @@ export type {
   UpdaterRelease,
   UpdaterReleaseAsset,
 } from "@/lib/gen/shell-updater";
+export type {
+  SecretDeleteResult,
+  SecretGetResult,
+  SecretListResult,
+  SecretSetResult,
+} from "@/lib/gen/shell-secret";
