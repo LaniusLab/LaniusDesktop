@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { stepIssueKey } from "@/lib/template";
+import { createDemoSteps, stepIssueKey } from "@/lib/template";
 import { TEMPLATE_STORAGE_KEY, defaultStoredTemplate } from "@/lib/template-store";
 
 import { redoEdit, undoEdit, useEditorStore } from "./editor";
@@ -82,7 +82,7 @@ describe("editor store", () => {
     expect(raw).toContain("多等一会");
   });
 
-  it("loadFlowFile 写入步骤与 filePath", () => {
+  it("loadFlowFile 写入步骤与 filePath，并记录迁移", () => {
     useEditorStore.getState().loadFlowFile(
       {
         schemaVersion: 3,
@@ -104,6 +104,7 @@ describe("editor store", () => {
         ],
       },
       "/tmp/from-disk.flow.json",
+      { migratedFrom: 2, migratedTo: 3 },
     );
     const state = useEditorStore.getState();
     expect(state.filePath).toBe("/tmp/from-disk.flow.json");
@@ -112,6 +113,21 @@ describe("editor store", () => {
     expect(state.processId).toBe("notepad");
     expect(state.steps[0]?.label).toBe("来自文件");
     expect(state.dirty).toBe(false);
+    expect(state.lastMigration).toEqual({ from: 2, to: 3 });
+    useEditorStore.getState().clearMigration();
+    expect(useEditorStore.getState().lastMigration).toBeUndefined();
+  });
+
+  it("loadTemplate 断开 filePath", () => {
+    useEditorStore.setState({ filePath: "/tmp/x.flow.json", lastMigration: { from: 1, to: 3 } });
+    useEditorStore.getState().loadTemplate({
+      steps: createDemoSteps(),
+      processId: "notepad",
+      match: { exe: "notepad.exe", title: "", className: "" },
+      locate: { channel: "a11y", source: "probe", capture: "client", visionPack: "template" },
+    });
+    expect(useEditorStore.getState().filePath).toBeUndefined();
+    expect(useEditorStore.getState().lastMigration).toBeUndefined();
   });
 });
 

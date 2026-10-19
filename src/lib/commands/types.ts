@@ -21,7 +21,11 @@ export interface CommandContext {
     filePath?: string;
     toFlowFile: () => FlowFile;
     saveTemplate: () => void;
-    loadFlowFile: (flow: FlowFile, path: string) => void;
+    loadFlowFile: (
+      flow: FlowFile,
+      path: string,
+      migration?: { migratedFrom?: number; migratedTo?: number },
+    ) => void;
     setFilePath: (path: string | undefined) => void;
     markSaved: () => void;
   };

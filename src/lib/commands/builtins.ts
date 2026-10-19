@@ -78,7 +78,10 @@ export function registerBuiltinCommands(): void {
       const path = askLocalPath("打开流程文件路径（*.flow.json）", ctx.editor.filePath ?? "");
       if (!path) return;
       const opened = await ctx.bridge.flowOpen(path);
-      ctx.editor.loadFlowFile(opened.flow, opened.path);
+      ctx.editor.loadFlowFile(opened.flow, opened.path, {
+        migratedFrom: opened.migratedFrom,
+        migratedTo: opened.migratedTo,
+      });
       ctx.navigate("/edit");
     },
   });

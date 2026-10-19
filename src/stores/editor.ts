@@ -28,6 +28,8 @@ interface EditorStore {
   filePath?: string;
   flowId: string;
   flowName: string;
+  /** 最近一次打开时的 schema 迁移；用户关掉横幅后清空 */
+  lastMigration?: { from: number; to: number };
   selectedStepId?: string;
   insertStep: (
     draft: TemplateDraft,
@@ -44,8 +46,13 @@ interface EditorStore {
   setVisionPack: (visionPack: string) => void;
   loadTemplate: (partial: Partial<StoredTemplate> & { steps: TemplateStep[] }) => void;
   /** 从磁盘/RPC 流程载入编辑器，并记下路径 */
-  loadFlowFile: (flow: FlowFile, path: string) => void;
+  loadFlowFile: (
+    flow: FlowFile,
+    path: string,
+    migration?: { migratedFrom?: number; migratedTo?: number },
+  ) => void;
   setFilePath: (path: string | undefined) => void;
+  clearMigration: () => void;
   saveTemplate: () => void;
   markSaved: () => void;
 }
@@ -93,6 +100,7 @@ export const useEditorStore = create<EditorStore>()(
       filePath: undefined,
       flowId: "session-template",
       flowName: "当前模板",
+      lastMigration: undefined,
       selectedStepId: initial.steps[0]?.id,
       insertStep: (draft, options) => {
         const step = materializeDraft(draft);
@@ -187,13 +195,22 @@ export const useEditorStore = create<EditorStore>()(
           processId: partial.processId ?? s.processId,
           match: partial.match ?? s.match,
           locate: partial.locate ?? s.locate,
+          // 预设不是磁盘文件投影，断开路径关联
+          filePath: undefined,
+          lastMigration: undefined,
           dirty: false,
           selectedStepId: partial.steps[0]?.id,
         }));
         writeStoredTemplate(snapshot(get()));
       },
-      loadFlowFile: (flow, path) => {
+      loadFlowFile: (flow, path, migration) => {
         const draft = fromFlowFile(flow);
+        const from = migration?.migratedFrom;
+        const to = migration?.migratedTo;
+        const lastMigration =
+          typeof from === "number" && typeof to === "number" && from !== to
+            ? { from, to }
+            : undefined;
         set((s) => ({
           steps: draft.steps,
           keymapProfileId: draft.keymapProfileId,
@@ -203,12 +220,14 @@ export const useEditorStore = create<EditorStore>()(
           flowId: draft.id,
           flowName: draft.name,
           filePath: path,
+          lastMigration,
           dirty: false,
           selectedStepId: draft.steps[0]?.id,
         }));
         writeStoredTemplate(snapshot(get()));
       },
       setFilePath: (path) => set({ filePath: path }),
+      clearMigration: () => set({ lastMigration: undefined }),
       saveTemplate: () => {
         set({ dirty: false });
         writeStoredTemplate(snapshot(get()));

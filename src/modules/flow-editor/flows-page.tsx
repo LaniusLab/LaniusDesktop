@@ -9,6 +9,7 @@ import { TemplateInspector } from "@/modules/flow-editor/inspector";
 import { MindMapPreview } from "@/modules/flow-editor/mind-map-preview";
 import { TemplatePalette } from "@/modules/flow-editor/palette";
 import { TemplateSequence } from "@/modules/flow-editor/sequence";
+import { MigrationBanner } from "@/modules/flow-editor/migration-banner";
 import { ValidationIssueList } from "@/modules/flow-editor/validation-issues";
 import { redoEdit, undoEdit, useEditorStore } from "@/stores/editor";
 import { useExecutionStore } from "@/stores/execution";
@@ -40,6 +41,7 @@ export function FlowsPage() {
 
   return (
     <div className="flex h-full flex-col">
+      <MigrationBanner />
       <PageHeader
         title={t("edit.title")}
         description={t("edit.description")}

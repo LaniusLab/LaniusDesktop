@@ -61,6 +61,7 @@ afterEach(async () => {
     filePath: undefined,
     flowId: "session-template",
     flowName: "当前模板",
+    lastMigration: undefined,
   });
   useEditorStore.temporal.getState().clear();
   useExecutionStore.setState({

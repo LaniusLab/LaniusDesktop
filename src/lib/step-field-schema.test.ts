@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { bindingKeysSchema, typeTextSchema, waitMsSchema } from "./step-field-schema";
+import {
+  bindingKeysSchema,
+  ifFieldsSchema,
+  logMessageSchema,
+  loopFieldsSchema,
+  mouseFieldsSchema,
+  stepLabelSchema,
+  typeTextSchema,
+  waitImageSchema,
+  waitMsSchema,
+} from "./step-field-schema";
 
 describe("step-field-schema", () => {
   it("binding keys 必填", () => {
@@ -16,5 +26,16 @@ describe("step-field-schema", () => {
   it("type text 必填", () => {
     expect(typeTextSchema.safeParse({ text: "  " }).success).toBe(false);
     expect(typeTextSchema.safeParse({ text: "hi" }).success).toBe(true);
+  });
+
+  it("label / log / mouse / waitImage / if / loop", () => {
+    expect(stepLabelSchema.safeParse({ label: "" }).success).toBe(false);
+    expect(logMessageSchema.safeParse({ message: "" }).success).toBe(false);
+    expect(mouseFieldsSchema.safeParse({ x: 1, y: 2, button: "left" }).success).toBe(true);
+    expect(waitImageSchema.safeParse({ text: "", timeoutMs: 0 }).success).toBe(false);
+    expect(
+      ifFieldsSchema.safeParse({ when: "equals", text: "a", source: "{{x}}" }).success,
+    ).toBe(true);
+    expect(loopFieldsSchema.safeParse({ max: -1, until: "" }).success).toBe(false);
   });
 });

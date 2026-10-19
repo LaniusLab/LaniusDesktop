@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { Check, PencilLine, Play, Wand2 } from "lucide-react";
+import { Check, PencilLine, Play, Save, Wand2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { currentContext } from "@/lib/commands/context";
@@ -7,6 +7,7 @@ import { registry } from "@/lib/commands/registry";
 import { PROCESS_CATALOG, processById } from "@/lib/targets";
 import { findStepById } from "@/lib/template";
 import { cn } from "@/lib/utils";
+import { MigrationBanner } from "@/modules/flow-editor/migration-banner";
 import { JOB_PRESETS } from "@/modules/start/presets";
 import { useEditorStore } from "@/stores/editor";
 import { useExecutionStore } from "@/stores/execution";
@@ -21,7 +22,7 @@ import {
   StatusBadge,
 } from "@/ui";
 
-/** 开始页：选模板、选进程、确认识别方式，再试一次。 */
+/** 开始页：选模板、选进程、确认识别方式，再试一次。勾选即写模板 disabled。 */
 export function StartPage() {
   const navigate = useNavigate();
   const t = useT();
@@ -30,11 +31,14 @@ export function StartPage() {
   const templateSteps = useEditorStore((s) => s.steps);
   const processId = useEditorStore((s) => s.processId);
   const locate = useEditorStore((s) => s.locate);
+  const dirty = useEditorStore((s) => s.dirty);
+  const filePath = useEditorStore((s) => s.filePath);
   const bindProcess = useEditorStore((s) => s.bindProcess);
   const setLocateChannel = useEditorStore((s) => s.setLocateChannel);
   const setVisionPack = useEditorStore((s) => s.setVisionPack);
   const setStepDisabled = useEditorStore((s) => s.setStepDisabled);
   const loadTemplate = useEditorStore((s) => s.loadTemplate);
+  // 可用预设一律投影当前编辑器模板，勾选与文件共用同一份 disabled
   const liveSteps = preset.available ? templateSteps : preset.steps;
   const startTopHeight = useUiStore((s) => s.startTopHeight);
   const setStartTopHeight = useUiStore((s) => s.setStartTopHeight);
@@ -64,8 +68,10 @@ export function StartPage() {
   };
 
   const toggleStep = (id: string) => {
+    if (!preset.available) return;
     const step = findStepById(templateSteps, id);
     if (!step) return;
+    // 写入编辑器 disabled；有关联路径时 dirty，保存即进 *.flow.json
     setStepDisabled(id, !step.disabled);
   };
 
@@ -73,7 +79,33 @@ export function StartPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <PageHeader title={t("start.title")} description={t("start.description")} />
+      <MigrationBanner />
+      <PageHeader
+        title={t("start.title")}
+        description={t("start.description")}
+        actions={
+          <>
+            {filePath ? (
+              <Badge tone={dirty ? "warning" : "accent"} title={filePath}>
+                {dirty ? t("start.fileDirty") : t("start.fileBound")}
+              </Badge>
+            ) : (
+              <Badge>{t("start.draftOnly")}</Badge>
+            )}
+            {filePath && dirty ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => runCommand("flow.save")}
+                aria-label={t("start.saveFile")}
+              >
+                <Save />
+                {t("start.saveFile")}
+              </Button>
+            ) : null}
+          </>
+        }
+      />
       <SplitPane
         orientation="vertical"
         className="min-h-0 flex-1 px-4 pb-4"

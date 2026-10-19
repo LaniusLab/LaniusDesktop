@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createDemoSteps } from "@/lib/template";
 import { PROCESS_CATALOG } from "@/lib/targets";
-import { useEditorStore } from "@/stores/editor";
+import { editorToFlowFile, useEditorStore } from "@/stores/editor";
 
 import { StartPage } from "./start-page";
 
@@ -60,10 +60,24 @@ describe("开始页", () => {
     fireEvent.click(step);
     expect(step).toHaveAttribute("aria-checked", "false");
     expect(useEditorStore.getState().steps[0]?.disabled).toBe(true);
+    expect(editorToFlowFile().steps?.[0]?.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText("目标进程"), { target: { value: "client" } });
     expect(useEditorStore.getState().locate.channel).toBe("vision");
     fireEvent.click(screen.getByRole("radio", { name: "控件" }));
     expect(useEditorStore.getState().locate.channel).toBe("a11y");
     expect(useEditorStore.getState().locate.source).toBe("user");
+  });
+
+  it("关联文件时勾选变 dirty，并显示保存入口", () => {
+    useEditorStore.setState({
+      filePath: "/tmp/demo.flow.json",
+      dirty: false,
+    });
+    render(<StartPage />);
+    expect(screen.getByText("已关联文件")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: "稍等片刻" }));
+    expect(useEditorStore.getState().dirty).toBe(true);
+    expect(screen.getByText("勾选未写入文件")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "保存到文件" })).toBeInTheDocument();
   });
 });
