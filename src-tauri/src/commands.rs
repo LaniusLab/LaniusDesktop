@@ -95,12 +95,13 @@ pub async fn flow_run(
     let client = engine(&state)
         .await
         .map_err(|e| e.with_trace(trace_id.clone()))?;
+    // M1：flow.start 立即返回 executionId；进度走通知，壳无需长超时
     client
         .call_with_timeout(
             "flow.start",
             json!({ "flow": flow, "mode": mode }),
             &trace_id,
-            Duration::from_secs(120),
+            Duration::from_secs(15),
         )
         .await
         .map_err(|e| e.with_trace(trace_id))

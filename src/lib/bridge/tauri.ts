@@ -14,7 +14,8 @@ import type {
 } from "@/lib/gen/shell-updater";
 
 import { normalizeEngineEvent } from "./normalize-engine-event";
-import type { Bridge, EngineInfo, FlowRunResult } from "./types";
+import type { Bridge, EngineInfo, ExecutionPhase } from "./types";
+import { isTerminalPhase, waitForExecutionResult } from "./wait-for-execution";
 
 // 真实桥接：UI → Rust invoke → JSON-RPC → Python 引擎，见 docs/PROTOCOL.md §8
 export function createTauriBridge(): Bridge {
@@ -23,8 +24,45 @@ export function createTauriBridge(): Bridge {
       return invoke<EngineInfo>("engine_info");
     },
 
-    flowRun(flow, mode) {
-      return invoke<FlowRunResult>("flow_run", { flow, mode });
+    async flowRun(flow, mode) {
+      // 先挂监听再 start，避免极短流程丢终态通知
+      const seen = new Map<string, ExecutionPhase>();
+      let wake: ((phase: ExecutionPhase, id: string) => void) | null = null;
+      const unlisten = listen<unknown>("engine://event", (e) => {
+        const event = normalizeEngineEvent(e.payload);
+        if (
+          event?.kind === "execution" &&
+          event.executionId &&
+          event.phase &&
+          isTerminalPhase(event.phase)
+        ) {
+          seen.set(event.executionId, event.phase);
+          wake?.(event.phase, event.executionId);
+        }
+      });
+      try {
+        const started = await invoke<{ executionId: string }>("flow_run", { flow, mode });
+        return await waitForExecutionResult({
+          executionId: started.executionId,
+          alreadyTerminal: seen.get(started.executionId),
+          watchTerminal: (handler) => {
+            wake = handler;
+            return () => {
+              wake = null;
+            };
+          },
+          fetchRecord: async (executionId) => {
+            const page = await invoke<{ record: Record<string, unknown> }>("engine_call", {
+              method: "execution.get",
+              params: { executionId },
+            });
+            return page.record;
+          },
+        });
+      } finally {
+        const fn = await unlisten;
+        fn();
+      }
     },
 
     async flowCancel(executionId) {

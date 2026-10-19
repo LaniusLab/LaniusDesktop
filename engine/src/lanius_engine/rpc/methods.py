@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
+import uuid
 from typing import Any
 
 from lanius_engine import PROTOCOL_VERSION, __version__
 from lanius_engine.drivers.mock import MockDriver
 from lanius_engine.history import ExecutionHistory, HistoryFilter
+from lanius_engine.logging import get_logger
 from lanius_engine.models import (
     FlowFile,
     FlowLocate,
@@ -19,6 +22,8 @@ from lanius_engine.models import (
 from lanius_engine.nodes.registry import default_registry
 from lanius_engine.rpc.server import RpcServer
 from lanius_engine.runtime.executor import Executor
+
+_log = get_logger(module="rpc.methods")
 
 
 def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> None:
@@ -68,6 +73,7 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
         return {"ok": not any(i["severity"] == "error" for i in issues), "issues": issues}
 
     async def flow_start(params: dict[str, Any]) -> dict[str, Any]:
+        """立即返回 executionId；执行在后台跑，进度走通知，终态落历史。"""
         flow = _parse_flow(params)
         flow = _apply_run_inputs(flow, params.get("inputs"))
         mode = params.get("mode", "run")
@@ -77,37 +83,62 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
                 f"非法执行模式: {mode!r}",
                 details={"allowed": ["run", "dryRun"]},
             )
+        if executor.active_count:
+            raise LaniusError.of(
+                "engine.runtime.busy",
+                "已有执行实例在运行（键鼠为全局独占资源）",
+                retryable=True,
+            )
+
+        execution_id = f"exec-{uuid.uuid4().hex[:12]}"
+        trace_id = server.current_trace_id
+        flow_path = params.get("path") if isinstance(params.get("path"), str) else None
+        started_at = time.time()
+        started = asyncio.Event()
+        early_errors: list[LaniusError] = []
 
         def on_event(event: str, payload: dict[str, Any]) -> None:
-            # 执行器内部事件名即 PROTOCOL §3.3 通知方法名
-            server.notify(event, payload)
+            # 后台任务已离开请求 ContextVar；显式带上调度时的 traceId
+            enriched = dict(payload)
+            if trace_id:
+                enriched.setdefault("traceId", trace_id)
+            server.notify(event, enriched)
 
-        started_at = time.time()
-        record = await executor.start(flow, mode=mode, on_event=on_event)
-        finished_at = time.time()
-        store.save(
-            record,
-            trace_id=server.current_trace_id,
-            flow_path=params.get("path") if isinstance(params.get("path"), str) else None,
-            trigger="rpc.flow.start",
-            started_at=started_at,
-            finished_at=finished_at,
-        )
-        return {
-            "executionId": record.execution_id,
-            "finalState": record.state.value,
-            "nodeRuns": [
-                {
-                    "nodeId": run.node_id,
-                    "status": run.status,
-                    "durationMs": run.duration_ms,
-                    "errorCode": run.error_code,
-                    "label": run.label,
-                }
-                for run in record.node_runs
-            ],
-            "error": record.error,
-        }
+        async def job() -> None:
+            try:
+                record = await executor.start(
+                    flow,
+                    mode=mode,
+                    on_event=on_event,
+                    execution_id=execution_id,
+                    on_started=lambda _eid: started.set(),
+                )
+                store.save(
+                    record,
+                    trace_id=trace_id,
+                    flow_path=flow_path,
+                    trigger="rpc.flow.start",
+                    started_at=started_at,
+                    finished_at=time.time(),
+                )
+            except LaniusError as err:
+                early_errors.append(err)
+                started.set()
+                _log.warning(
+                    "flow.start.rejected",
+                    code=err.error.code,
+                    executionId=execution_id,
+                )
+            except Exception:
+                started.set()
+                _log.exception("flow.start.backgroundFailed", executionId=execution_id)
+                raise
+
+        asyncio.create_task(job())
+        await started.wait()
+        if early_errors:
+            raise early_errors[0]
+        return {"executionId": execution_id}
 
     async def flow_cancel(params: dict[str, Any]) -> dict[str, Any]:
         execution_id = params.get("executionId")

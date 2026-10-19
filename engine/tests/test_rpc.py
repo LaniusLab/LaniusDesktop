@@ -1,10 +1,12 @@
 """协议层测试：帧处理单测 + 真实子进程端到端（NDJSON over stdio）。"""
 
+import asyncio
 import io
 import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -108,17 +110,35 @@ async def test_parse_error_returns_minus_32700(server: RpcServer) -> None:
     assert response["error"]["code"] == -32700
 
 
-async def test_flow_start_runs_example_flow(server: RpcServer) -> None:
+async def _wait_history(server: RpcServer, execution_id: str, *, timeout_s: float = 5.0) -> dict:
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        got = await server.handle_frame(
+            frame("execution.get", {"executionId": execution_id}, frame_id=99)
+        )
+        assert got is not None
+        if "result" in got:
+            record = got["result"]["record"]
+            if record["state"] in ("done", "failed", "cancelled"):
+                return record
+        # 尚未落盘时 execution.get 返回业务错误，继续轮询
+        await asyncio.sleep(0.02)
+    raise AssertionError(f"execution {execution_id} did not finish")
+
+
+async def test_flow_start_returns_id_immediately_then_finishes(server: RpcServer) -> None:
     response = await server.handle_frame(
         frame("flow.start", {"flow": EXAMPLE_FLOW, "mode": "dryRun"})
     )
     assert response is not None
-    result = response["result"]
-    assert result["finalState"] == "done"
-    assert [run["status"] for run in result["nodeRuns"]] == ["done", "done", "done", "done", "done"]
+    assert set(response["result"].keys()) == {"executionId"}
+    execution_id = response["result"]["executionId"]
+    record = await _wait_history(server, execution_id)
+    assert record["state"] == "done"
+    assert [run["status"] for run in record["nodeRuns"]] == ["done", "done", "done", "done", "done"]
 
 
-async def test_flow_start_rejects_unknown_node_type(server: RpcServer) -> None:
+async def test_flow_start_unknown_node_fails_in_history(server: RpcServer) -> None:
     flow = {
         "schemaVersion": 1,
         "id": "f1",
@@ -128,11 +148,11 @@ async def test_flow_start_rejects_unknown_node_type(server: RpcServer) -> None:
     }
     response = await server.handle_frame(frame("flow.start", {"flow": flow}))
     assert response is not None
-    # 执行失败是数据而非传输错误：finalState=failed，错误模型在 result.error 中
-    result = response["result"]
-    assert result["finalState"] == "failed"
-    assert result["error"]["code"] == "engine.flow.unknownNodeType"
-    assert result["error"]["node_id"] == "n1"
+    execution_id = response["result"]["executionId"]
+    record = await _wait_history(server, execution_id)
+    assert record["state"] == "failed"
+    assert record["error"]["code"] == "engine.flow.unknownNodeType"
+    assert record["error"]["node_id"] == "n1"
 
 
 async def test_flow_start_emits_notify_frames(
@@ -166,7 +186,8 @@ async def test_flow_start_emits_notify_frames(
     ).encode()
     response = await server.handle_frame(request)
     assert response is not None
-    assert response["result"]["finalState"] == "done"
+    execution_id = response["result"]["executionId"]
+    await _wait_history(server, execution_id)
     methods = [name for name, _ in notified]
     assert "execution.stateChanged" in methods
     assert "execution.nodeStarted" in methods
@@ -180,14 +201,16 @@ async def test_execution_get_and_list_after_start(server: RpcServer) -> None:
     )
     assert start is not None
     execution_id = start["result"]["executionId"]
+    record = await _wait_history(server, execution_id)
+    assert record["executionId"] == execution_id
+    assert record["state"] == "done"
+    assert len(record["nodeRuns"]) == 5
 
     got = await server.handle_frame(
         frame("execution.get", {"executionId": execution_id}, frame_id=2)
     )
     assert got is not None
     assert got["result"]["record"]["executionId"] == execution_id
-    assert got["result"]["record"]["state"] == "done"
-    assert len(got["result"]["record"]["nodeRuns"]) == 5
 
     listed = await server.handle_frame(
         frame("execution.list", {"limit": 10, "offset": 0}, frame_id=3)
