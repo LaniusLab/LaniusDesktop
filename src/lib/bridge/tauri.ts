@@ -104,6 +104,13 @@ export function createTauriBridge(): Bridge {
       });
     },
 
+    elementFind(params) {
+      return invoke("engine_call", {
+        method: "driver.elementFind",
+        params,
+      });
+    },
+
     onEngineEvent(handler) {
       const unlisten = listen<unknown>("engine://event", (e) => {
         const event = normalizeEngineEvent(e.payload);

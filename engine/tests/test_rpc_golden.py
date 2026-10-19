@@ -19,6 +19,7 @@ METHOD_SCHEMAS = [
     "execution.get.json",
     "execution.list.json",
     "notifications.json",
+    "driver.elementFind.json",
 ]
 
 
@@ -75,6 +76,14 @@ def test_golden_state_changed_notification() -> None:
     golden = _load(GOLDEN / "execution.stateChanged.params.json")
     for key in _required_of(schema, "execution.stateChanged"):
         assert key in golden
+
+
+def test_golden_element_find_matches_schema_required() -> None:
+    schema = _load(SCHEMAS / "driver.elementFind.json")
+    golden = _load(GOLDEN / "driver.elementFind.result.json")
+    for key in _required_of(schema, "result"):
+        assert key in golden
+    assert golden["found"] is True
 
 
 async def test_live_hello_and_ping_satisfy_golden_shape(tmp_path: Path) -> None:

@@ -58,6 +58,7 @@
 | `flow.cancel` | `{ executionId, reason? }` | `{}` | 已实现 | 协作式取消 |
 | `execution.get` | `{ executionId }` | `{ record }` | 已实现 | 查询单条执行记录 |
 | `execution.list` | `{ limit, offset, filter? }` | `{ records[], total }` | 已实现 | 历史分页 |
+| `driver.elementFind` | `{ match, locate?, locator }`（见 `schemas/element-locator.schema.json`） | `DriverElementFindResult` | 已实现 | 绑窗后 `find_element`；只读探测，不点击 |
 
 **`flow.start` 现实（M1）**：立即返回 `{ executionId }`；执行在后台继续，进度经 §3.3 通知；终态落 SQLite，客户端用 `execution.get` 取摘要。UI bridge 在 `flowRun` 内等待终态后拼出 `FlowRunResult`，对命令层保持原契约。
 

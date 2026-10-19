@@ -4,6 +4,10 @@
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
 import type {
+  DriverElementFindParams,
+  DriverElementFindResult,
+} from "@/lib/gen/element-locator";
+import type {
   SecretDeleteResult,
   SecretGetResult,
   SecretListResult,
@@ -107,6 +111,8 @@ export interface Bridge {
   flowSave(path: string, flow: FlowFile): Promise<FlowSaveResult>;
   /** 静态校验；结果钉到步骤列表 */
   flowValidate(flow: FlowFile): Promise<FlowValidateResult>;
+  /** 元素定位器探测（绑窗 + find_element，不点击） */
+  elementFind(params: DriverElementFindParams): Promise<DriverElementFindResult>;
   onEngineEvent(handler: (event: EngineEvent) => void): () => void;
   prefsGet(): Promise<ShellPrefs>;
   prefsSet(prefs: ShellPrefs): Promise<ShellPrefs>;

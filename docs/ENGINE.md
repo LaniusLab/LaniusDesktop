@@ -56,7 +56,7 @@ engine/src/lanius_engine/
 | 鼠标 | `click(x, y, button)`、`move(x, y)` | 坐标为窗口客户区或屏幕物理像素 |
 | 键盘 | `press(keys)`、`type_text(text)`、`hotkey(*keys)` | `press` 走按键方案的 `keys` 字符串 |
 | 窗口 | `find_window(query)`、`activate(handle)`、`bounds(handle)` | query 支持标题/类名/进程名 |
-| 元素 | `find_element(locator)`、`element_click(locator)` | `locate.channel=a11y` 时使用 |
+| 元素 | `find_element(locator)`、`element_click(locator)` | `locate.channel=a11y` 时使用；UI 探测 RPC：`driver.elementFind` |
 | 屏幕 | `screenshot(region?)` | 返回临时文件路径（不进 stdio） |
 | 剪贴板 | `clipboard_get()`、`clipboard_set(text)` | |
 | 进程 | `launch(cmd)`、`terminate(pid)` | |

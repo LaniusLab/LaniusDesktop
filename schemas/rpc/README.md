@@ -11,5 +11,6 @@
 | `execution.get.json` | `execution.get` |
 | `execution.list.json` | `execution.list` |
 | `notifications.json` | `execution.*` / `engine.heartbeat` |
+| `driver.elementFind.json` | `driver.elementFind` |
 
 Golden 样例见 `engine/tests/golden/rpc/`；由 `engine/tests/test_rpc_golden.py` 校验必填键。

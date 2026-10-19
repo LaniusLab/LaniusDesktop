@@ -1,0 +1,10 @@
+{
+  "found": true,
+  "handle": "hwnd-mock",
+  "elementId": "el-mock",
+  "summary": {
+    "name": "确定",
+    "automationId": "btnOk",
+    "controlType": "Button"
+  }
+}
