@@ -366,6 +366,72 @@ class Executor:
                             break
                     finally:
                         scope.pop()
+            elif node_type == "flow.wait":
+                await _run_flow_wait(
+                    step,
+                    cancel_event=cancel_event,
+                    await_pause=await_pause,
+                    emit=emit,
+                )
+            elif node_type == "flow.subflow":
+                name = str(step.config.get("name", step.label or step.id))
+                emit(
+                    "execution.log",
+                    {"nodeId": step.id, "message": f"subflow {name}"},
+                )
+                await self._run_steps(
+                    step.body,
+                    record=record,
+                    scope=scope,
+                    logger=logger,
+                    emit=emit,
+                    cancel_event=cancel_event,
+                    flow_deadline=flow_deadline,
+                    await_pause=await_pause,
+                )
+            elif node_type == "flow.tryCatch":
+                try:
+                    await self._run_steps(
+                        step.body,
+                        record=record,
+                        scope=scope,
+                        logger=logger,
+                        emit=emit,
+                        cancel_event=cancel_event,
+                        flow_deadline=flow_deadline,
+                        await_pause=await_pause,
+                    )
+                except LaniusError as err:
+                    emit(
+                        "execution.log",
+                        {
+                            "nodeId": step.id,
+                            "level": "warning",
+                            "message": f"tryCatch 捕获 {err.error.code}",
+                        },
+                    )
+                    scope.push(
+                        {
+                            "error": {
+                                "code": err.error.code,
+                                "message": err.error.message,
+                                "nodeId": err.error.node_id,
+                            }
+                        }
+                    )
+                    try:
+                        await self._run_steps(
+                            step.catch,
+                            record=record,
+                            scope=scope,
+                            logger=logger,
+                            emit=emit,
+                            cancel_event=cancel_event,
+                            flow_deadline=flow_deadline,
+                            await_pause=await_pause,
+                        )
+                    finally:
+                        scope.pop()
             else:
                 raise LaniusError.of(
                     "engine.flow.unknownNodeType",
@@ -526,3 +592,42 @@ def _resolve_loose(scope: ScopeChain, path: str) -> Any:
         return scope.resolve(path)
     except LaniusError:
         return ""
+
+
+_WAIT_TICK_MS = 50
+
+
+async def _run_flow_wait(
+    step: FlowStep,
+    *,
+    cancel_event: asyncio.Event,
+    await_pause: Callable[[], Any],
+    emit: EventHook,
+) -> None:
+    raw = step.config.get("ms", 0)
+    try:
+        remaining = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise LaniusError.of(
+            "engine.flow.validationFailed",
+            f"flow.wait 的 ms 必须是整数，收到 {raw!r}",
+            node_id=step.id,
+            details={"config": "ms", "received": repr(raw)},
+        ) from exc
+    if remaining < 0:
+        raise LaniusError.of(
+            "engine.flow.validationFailed",
+            "flow.wait 的 ms 不能为负数",
+            node_id=step.id,
+        )
+    emit(
+        "execution.log",
+        {"nodeId": step.id, "message": f"wait {remaining}ms"},
+    )
+    while remaining > 0:
+        if cancel_event.is_set():
+            raise FlowCancelled()
+        await await_pause()
+        tick = min(_WAIT_TICK_MS, remaining)
+        await asyncio.sleep(tick / 1000)
+        remaining -= tick

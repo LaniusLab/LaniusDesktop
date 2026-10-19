@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/rpc/engine.hello.json",
+  "title": "engine.hello",
+  "description": "握手：交换协议版本与能力清单",
+  "type": "object",
+  "$defs": {
+    "params": {
+      "type": "object",
+      "required": ["protocolVersion"],
+      "properties": {
+        "protocolVersion": { "type": "string" },
+        "clientVersion": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "result": {
+      "type": "object",
+      "required": ["protocolVersion", "engineVersion", "capabilities", "nodeTypes"],
+      "properties": {
+        "protocolVersion": { "type": "string" },
+        "engineVersion": { "type": "string" },
+        "capabilities": { "type": "array", "items": { "type": "string" } },
+        "nodeTypes": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": true
+    }
+  }
+}

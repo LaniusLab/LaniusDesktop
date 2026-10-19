@@ -69,6 +69,7 @@ class FlowStep(BaseModel):
     then: list[FlowStep] = Field(default_factory=list)
     else_: list[FlowStep] = Field(default_factory=list, alias="else")
     body: list[FlowStep] = Field(default_factory=list)
+    catch: list[FlowStep] = Field(default_factory=list)
 
     def node_type(self) -> str:
         if self.kind == "binding":

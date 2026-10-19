@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/rpc/notifications.json",
+  "title": "EngineNotifications",
+  "description": "引擎 → 壳 无 id 通知（PROTOCOL.md §3.3）",
+  "$defs": {
+    "execution.stateChanged": {
+      "type": "object",
+      "required": ["executionId", "from", "to"],
+      "properties": {
+        "executionId": { "type": "string" },
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "traceId": { "type": "string" }
+      }
+    },
+    "execution.nodeStarted": {
+      "type": "object",
+      "required": ["executionId", "nodeId"],
+      "properties": {
+        "executionId": { "type": "string" },
+        "nodeId": { "type": "string" },
+        "traceId": { "type": "string" }
+      }
+    },
+    "execution.nodeFinished": {
+      "type": "object",
+      "required": ["executionId", "nodeId", "status", "durationMs"],
+      "properties": {
+        "executionId": { "type": "string" },
+        "nodeId": { "type": "string" },
+        "status": { "type": "string" },
+        "durationMs": { "type": "integer" },
+        "traceId": { "type": "string" }
+      }
+    },
+    "execution.log": {
+      "type": "object",
+      "required": ["executionId", "message"],
+      "properties": {
+        "executionId": { "type": "string" },
+        "message": { "type": "string" },
+        "level": { "type": "string" },
+        "traceId": { "type": "string" }
+      }
+    },
+    "engine.heartbeat": {
+      "type": "object",
+      "required": ["uptimeMs", "activeExecutions"],
+      "properties": {
+        "uptimeMs": { "type": "integer", "minimum": 0 },
+        "activeExecutions": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

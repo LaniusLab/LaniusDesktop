@@ -57,7 +57,13 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
     async def flow_validate(params: dict[str, Any]) -> dict[str, Any]:
         flow = migrate_to_current(_parse_flow(params))
         issues: list[dict[str, Any]] = []
-        known = set(registry.types()) | {"flow.if", "flow.loop"}
+        known = set(registry.types()) | {
+            "flow.if",
+            "flow.loop",
+            "flow.wait",
+            "flow.subflow",
+            "flow.tryCatch",
+        }
         _validate_steps(flow.steps, known, issues)
         return {"ok": not any(i["severity"] == "error" for i in issues), "issues": issues}
 
