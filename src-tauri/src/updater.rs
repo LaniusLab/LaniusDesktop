@@ -526,9 +526,8 @@ fn verify_download_checksum(
             "SHA256SUMS 中无条目: {file_name}"
         )));
     };
-    let actual = sha256_file_hex(dest).map_err(|e| {
+    let actual = sha256_file_hex(dest).inspect_err(|_| {
         let _ = fs::remove_file(dest);
-        e
     })?;
     if actual != expected {
         let _ = fs::remove_file(dest);
