@@ -37,11 +37,12 @@ engine/src/lanius_engine/
 │   ├── executor.py    # 执行器：有序 steps + 状态机
 │   ├── state.py       # 执行状态机定义
 │   ├── scope.py       # 变量作用域链
+│   ├── secrets.py     # secret:// 解析（可注入 SecretProvider）+ 脱敏登记
 │   └── cancel.py      # 协作式取消原语
 ├── models/            # Pydantic v2 模型（对齐 schemas/）
 ├── history.py         # SQLite 执行历史（M1 已落地）
 ├── cli.py             # 调试 CLI：validate / run 按 steps（含 v1 迁移）
-└── logging.py         # structlog 配置（JSON、traceId 注入）
+└── logging.py         # structlog 配置（JSON、traceId、凭据脱敏）
 ```
 
 ## 3. Driver 抽象

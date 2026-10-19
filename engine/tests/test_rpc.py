@@ -64,6 +64,7 @@ async def test_hello_reports_registered_node_types(server: RpcServer) -> None:
     assert "data.template" in result["nodeTypes"]
     assert "template.steps" in result["capabilities"]
     assert "execution.history" in result["capabilities"]
+    assert "secrets.env" in result["capabilities"]
 
 
 async def test_flow_validate_requires_binding_keys(server: RpcServer) -> None:

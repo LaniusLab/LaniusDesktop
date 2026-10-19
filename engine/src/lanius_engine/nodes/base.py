@@ -17,6 +17,11 @@ from pydantic import BaseModel
 
 from lanius_engine.drivers.base import Driver
 from lanius_engine.runtime.scope import ScopeChain
+from lanius_engine.runtime.secrets import (
+    SecretProvider,
+    create_secret_provider,
+    resolve_config_value,
+)
 
 PauseCheckpoint = Callable[[], Awaitable[None]]
 
@@ -26,6 +31,8 @@ class Port:
     type: str  # string | number | boolean | handle | any
     required: bool = False
     default: Any = None
+    # True：端口值不进历史摘要 / 日志明文（SECURITY.md §3）
+    sensitive: bool = False
 
 
 async def _noop_pause() -> None:
@@ -46,6 +53,7 @@ class NodeContext:
     emit: Callable[[str, dict[str, Any]], None] = field(default=lambda _e, _p: None)
     # 长等待循环内调用：若已 pause 则挂起至 resume / cancel
     await_pause: PauseCheckpoint = field(default=_noop_pause)
+    secrets: SecretProvider = field(default_factory=create_secret_provider)
 
     def check_cancelled(self) -> None:
         """安全点：driver 调用前后与循环迭代边界必须调用。"""
@@ -58,6 +66,19 @@ class NodeContext:
         """安全点：检查取消 + 协作式暂停。"""
         self.check_cancelled()
         await self.await_pause()
+
+    def resolve_value(self, raw: Any, *, interpolate: bool = True) -> Any:
+        """解析配置值中的 secretRef / secret://；可选模板插值。"""
+        from lanius_engine.runtime.scope import interpolate as interpolate_text
+
+        return resolve_config_value(
+            raw,
+            self.secrets,
+            interpolate_fn=(
+                (lambda text: interpolate_text(text, self.scope)) if interpolate else None
+            ),
+            node_id=self.node_id,
+        )
 
 
 @dataclass
