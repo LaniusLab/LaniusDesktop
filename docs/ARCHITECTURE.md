@@ -168,7 +168,7 @@ LaniusDesktop/
 ├── CHANGELOG.md                # Keep a Changelog；release 流水线写入 GitHub Release
 └── .github/workflows/
     ├── ci.yml                  # main：代码检查
-    └── release.yml             # release 分支 + Changelog 门禁：Windows 打包 + assets
+    └── release.yml             # release 分支 + Changelog 门禁：Windows 打包 + assets + SHA256SUMS
 ```
 
 ## 5. 关键机制
