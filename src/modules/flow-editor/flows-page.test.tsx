@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -9,6 +10,17 @@ import { useKeymapStore } from "@/stores/keymap";
 import { TooltipProvider } from "@/ui";
 
 import { FlowsPage } from "./flows-page";
+
+function renderFlows() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <TooltipProvider>
+        <FlowsPage />
+      </TooltipProvider>
+    </QueryClientProvider>,
+  );
+}
 
 vi.mock("@/lib/commands/registry", () => ({
   registry: {
@@ -53,11 +65,7 @@ describe("模板页", () => {
 
   it("渲染有序步骤，点选积木写入模板，并可试一次", async () => {
     const { registry } = await import("@/lib/commands/registry");
-    render(
-      <TooltipProvider>
-        <FlowsPage />
-      </TooltipProvider>,
-    );
+    renderFlows();
     expect(screen.getByText("稍等片刻")).toBeInTheDocument();
     expect(screen.getByText("输入多行文本")).toBeInTheDocument();
     expect(screen.getAllByText("回车").length).toBeGreaterThan(0);
@@ -75,11 +83,7 @@ describe("模板页", () => {
   });
 
   it("点选步骤后可改等待时间", () => {
-    render(
-      <TooltipProvider>
-        <FlowsPage />
-      </TooltipProvider>,
-    );
+    renderFlows();
     fireEvent.click(screen.getAllByText("稍等片刻")[0]);
     const wait = screen.getByLabelText(/等待（毫秒）|Wait \(ms\)/);
     fireEvent.change(wait, { target: { value: "1500" } });
@@ -94,11 +98,7 @@ describe("模板页", () => {
       selectedId: ARROWS_PROFILE_ID,
     });
     useEditorStore.setState({ keymapProfileId: ARROWS_PROFILE_ID });
-    render(
-      <TooltipProvider>
-        <FlowsPage />
-      </TooltipProvider>,
-    );
+    renderFlows();
     expect(screen.getByLabelText("按键方案")).toBeInTheDocument();
     expect(screen.getByText("向上")).toBeInTheDocument();
     expect(screen.getByText("Up")).toBeInTheDocument();
@@ -108,22 +108,14 @@ describe("模板页", () => {
   });
 
   it("可切换目标进程并看到推荐通道", () => {
-    render(
-      <TooltipProvider>
-        <FlowsPage />
-      </TooltipProvider>,
-    );
+    renderFlows();
     fireEvent.change(screen.getByLabelText("目标进程"), { target: { value: "client" } });
     expect(useEditorStore.getState().locate.channel).toBe("vision");
     expect(screen.getByText("画面")).toBeInTheDocument();
   });
 
   it("可把鼠标积木拖进步骤末尾", () => {
-    render(
-      <TooltipProvider>
-        <FlowsPage />
-      </TooltipProvider>,
-    );
+    renderFlows();
     const transfer = createTransfer();
     const before = useEditorStore.getState().steps.map((step) => step.label);
     fireEvent.dragStart(screen.getByRole("button", { name: "单击" }), { dataTransfer: transfer });
@@ -132,11 +124,7 @@ describe("模板页", () => {
   });
 
   it("可在列表内拖动重排步骤", () => {
-    render(
-      <TooltipProvider>
-        <FlowsPage />
-      </TooltipProvider>,
-    );
+    renderFlows();
     const transfer = createTransfer();
     const first = screen.getByText("稍等片刻").closest("[draggable='true']");
     if (!(first instanceof HTMLElement)) {
@@ -152,11 +140,7 @@ describe("模板页", () => {
   });
 
   it("可切换到导图预览", () => {
-    render(
-      <TooltipProvider>
-        <FlowsPage />
-      </TooltipProvider>,
-    );
+    renderFlows();
     fireEvent.click(screen.getByRole("tab", { name: "导图预览" }));
     expect(screen.getByRole("img", { name: "模板导图" })).toBeInTheDocument();
   });

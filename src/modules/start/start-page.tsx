@@ -8,6 +8,7 @@ import { PROCESS_CATALOG, processById } from "@/lib/targets";
 import { findStepById } from "@/lib/template";
 import { cn } from "@/lib/utils";
 import { MigrationBanner } from "@/modules/flow-editor/migration-banner";
+import { TrustBanner } from "@/modules/flow-editor/trust-banner";
 import { LocatorTester } from "@/modules/locator/locator-tester";
 import { ExecutionLogPanel } from "@/modules/runner/execution-log-panel";
 import { JOB_PRESETS } from "@/modules/start/presets";
@@ -82,6 +83,7 @@ export function StartPage() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <MigrationBanner />
+      <TrustBanner />
       <PageHeader
         title={t("start.title")}
         description={t("start.description")}

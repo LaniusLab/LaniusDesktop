@@ -56,11 +56,11 @@ Lanius 的本质是"替用户操作电脑"，安全模型围绕两个事实构�
 
 ## 7. 供应链与更新
 
-- **当前**：前端以 `pnpm-lock.yaml` 锁定依赖；引擎仅有 `pyproject.toml`（尚无 `uv.lock` / 哈希锁定）。
-- **目标（M5）**：引擎引入 lockfile；CI 跑 `pnpm audit` 与 `pip-audit`，高危阻断。
+- **当前**：前端以 `pnpm-lock.yaml` 锁定依赖；引擎仅有 `pyproject.toml`（尚无 `uv.lock` / 哈希锁定）。CI 对 **生产依赖** 跑 `pnpm audit --prod --audit-level=high`，并对引擎已安装依赖跑 `pip-audit`（排除本机 `pip` / 可编辑包）。
+- **目标（M5）**：引擎引入 lockfile；开发依赖 audit 收紧；发布产物附 SBOM。
 - 新增依赖评估清单见 [CONTRIBUTING.md](../CONTRIBUTING.md#依赖管理)。
-- 应用更新走 Tauri updater，包签名公钥内置；引擎不独立更新，随应用同包下发。
-- 发布产物附 SBOM（M5）。
+- **签名自动更新（阻塞）**：目标态为 Tauri updater + 内置公钥静默安装。当前无发布签名密钥与 CI secrets，且 ADR-0011 过渡（curl → 交互式 Windows 安装）仍有效。在密钥与 updater 插件/MSRV ADR 到位前，**不实现**签名静默通道。
+- 引擎不独立更新，随应用同包下发。
 
 ## 8. 安全响应
 

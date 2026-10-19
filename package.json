@@ -24,7 +24,9 @@
     "engine:pack": "node scripts/pack-engine.mjs",
     "check": "pnpm codegen:check && pnpm lint && pnpm typecheck && pnpm test",
     "verify": "pnpm check && pnpm engine:lint && pnpm engine:test",
-    "verify:shell": "node scripts/ensure-sidecar-stub.mjs && cargo check --manifest-path src-tauri/Cargo.toml"
+    "verify:shell": "node scripts/ensure-sidecar-stub.mjs && cargo check --manifest-path src-tauri/Cargo.toml",
+    "audit": "pnpm audit --prod --audit-level=high",
+    "audit:all": "pnpm audit --audit-level=high"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -79,5 +81,11 @@
     "typescript-eslint": "^8.24.0",
     "vite": "^6.1.0",
     "vitest": "^3.0.5"
+  },
+  "pnpm": {
+    "overrides": {
+      "tinypool": ">=2.1.2",
+      "source-map-js": ">=1.2.2"
+    }
   }
 }

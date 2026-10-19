@@ -10,6 +10,7 @@ import { MindMapPreview } from "@/modules/flow-editor/mind-map-preview";
 import { TemplatePalette } from "@/modules/flow-editor/palette";
 import { TemplateSequence } from "@/modules/flow-editor/sequence";
 import { MigrationBanner } from "@/modules/flow-editor/migration-banner";
+import { TrustBanner } from "@/modules/flow-editor/trust-banner";
 import { ValidationIssueList } from "@/modules/flow-editor/validation-issues";
 import { ExecutionLogPanel } from "@/modules/runner/execution-log-panel";
 import { redoEdit, undoEdit, useEditorStore } from "@/stores/editor";
@@ -42,6 +43,7 @@ export function FlowsPage() {
   return (
     <div className="flex h-full flex-col">
       <MigrationBanner />
+      <TrustBanner />
       <PageHeader
         title={t("edit.title")}
         description={t("edit.description")}
