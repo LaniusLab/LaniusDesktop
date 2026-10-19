@@ -3,6 +3,14 @@
 
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
+import type {
+  UpdaterApplyResult,
+  UpdaterCheckResult,
+  UpdaterDownloadResult,
+  UpdaterInstallResult,
+  UpdaterListResult,
+  UpdaterProgress,
+} from "@/lib/gen/shell-updater";
 import type { FlowFile } from "@/lib/gen/flow";
 
 export type EngineStatus = "starting" | "ready" | "degraded" | "stopped";
@@ -51,13 +59,9 @@ export interface EngineEvent {
   uptimeMs?: number;
 }
 
-export type UpdaterStatus = "idle" | "checking" | "upToDate" | "unavailable";
-
-export interface UpdaterResult {
-  status: UpdaterStatus;
-  currentVersion: string;
-  message: string;
-}
+/** @deprecated 使用 UpdaterCheckResult；保留别名以免旧引用断裂 */
+export type UpdaterResult = UpdaterCheckResult;
+export type UpdaterStatus = UpdaterCheckResult["status"];
 
 export interface Bridge {
   engineInfo(): Promise<EngineInfo>;
@@ -68,7 +72,12 @@ export interface Bridge {
   prefsSet(prefs: ShellPrefs): Promise<ShellPrefs>;
   debugInfo(): Promise<ShellDebugInfo>;
   logsTail(): Promise<string>;
-  updaterCheck(): Promise<UpdaterResult>;
+  updaterList(): Promise<UpdaterListResult>;
+  updaterCheck(): Promise<UpdaterCheckResult>;
+  updaterDownload(tag: string, assetName?: string): Promise<UpdaterDownloadResult>;
+  updaterInstall(path: string): Promise<UpdaterInstallResult>;
+  updaterApply(tag: string, assetName?: string): Promise<UpdaterApplyResult>;
+  onUpdaterProgress(handler: (event: UpdaterProgress) => void): () => void;
   windowMinimize(): Promise<void>;
   windowToggleMaximize(): Promise<void>;
   windowIsMaximized(): Promise<boolean>;

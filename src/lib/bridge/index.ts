@@ -19,3 +19,13 @@ export type {
   UpdaterResult,
   UpdaterStatus,
 } from "./types";
+export type {
+  UpdaterApplyResult,
+  UpdaterCheckResult,
+  UpdaterDownloadResult,
+  UpdaterInstallResult,
+  UpdaterListResult,
+  UpdaterProgress,
+  UpdaterRelease,
+  UpdaterReleaseAsset,
+} from "@/lib/gen/shell-updater";

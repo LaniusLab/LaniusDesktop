@@ -29,6 +29,21 @@ pub enum ShellError {
 
     #[error("偏好不合法: {0}")]
     InvalidPrefs(String),
+
+    #[error("更新通道网络失败: {0}")]
+    UpdaterNetwork(String),
+
+    #[error("未找到对应 release: {0}")]
+    UpdaterNotFound(String),
+
+    #[error("该版本无 Windows 安装包: {0}")]
+    UpdaterNoAsset(String),
+
+    #[error("当前平台不支持安装更新")]
+    UpdaterUnsupported,
+
+    #[error("更新包路径无效: {0}")]
+    UpdaterInvalidPath(String),
 }
 
 #[derive(Serialize)]
@@ -53,6 +68,11 @@ impl ShellError {
             ShellError::MethodNotAllowed(_) => "shell.rpc.methodNotAllowed",
             ShellError::Io(_) => "shell.io.failed",
             ShellError::InvalidPrefs(_) => "shell.prefs.invalid",
+            ShellError::UpdaterNetwork(_) => "shell.updater.networkFailed",
+            ShellError::UpdaterNotFound(_) => "shell.updater.releaseNotFound",
+            ShellError::UpdaterNoAsset(_) => "shell.updater.noWindowsAsset",
+            ShellError::UpdaterUnsupported => "shell.updater.unsupportedPlatform",
+            ShellError::UpdaterInvalidPath(_) => "shell.updater.invalidPath",
         }
     }
 
@@ -82,6 +102,11 @@ impl Serialize for TracedError {
             ShellError::MethodNotAllowed(_) => ("warning", false),
             ShellError::Io(_) => ("error", true),
             ShellError::InvalidPrefs(_) => ("warning", false),
+            ShellError::UpdaterNetwork(_) => ("error", true),
+            ShellError::UpdaterNotFound(_) => ("warning", false),
+            ShellError::UpdaterNoAsset(_) => ("warning", false),
+            ShellError::UpdaterUnsupported => ("warning", false),
+            ShellError::UpdaterInvalidPath(_) => ("error", false),
         };
         ErrorPayload {
             code: self.error.code().to_string(),

@@ -4,8 +4,16 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
+import type {
+  UpdaterApplyResult,
+  UpdaterCheckResult,
+  UpdaterDownloadResult,
+  UpdaterInstallResult,
+  UpdaterListResult,
+  UpdaterProgress,
+} from "@/lib/gen/shell-updater";
 
-import type { Bridge, EngineEvent, EngineInfo, FlowRunResult, UpdaterResult } from "./types";
+import type { Bridge, EngineEvent, EngineInfo, FlowRunResult } from "./types";
 
 // 真实桥接：UI → Rust invoke → JSON-RPC → Python 引擎，见 docs/PROTOCOL.md §8
 export function createTauriBridge(): Bridge {
@@ -45,8 +53,37 @@ export function createTauriBridge(): Bridge {
       return invoke<string>("logs_tail");
     },
 
+    updaterList() {
+      return invoke<UpdaterListResult>("updater_list");
+    },
+
     updaterCheck() {
-      return invoke<UpdaterResult>("updater_check");
+      return invoke<UpdaterCheckResult>("updater_check");
+    },
+
+    updaterDownload(tag, assetName) {
+      return invoke<UpdaterDownloadResult>("updater_download", {
+        tag,
+        assetName: assetName ?? null,
+      });
+    },
+
+    updaterInstall(path) {
+      return invoke<UpdaterInstallResult>("updater_install", { path });
+    },
+
+    updaterApply(tag, assetName) {
+      return invoke<UpdaterApplyResult>("updater_apply", {
+        tag,
+        assetName: assetName ?? null,
+      });
+    },
+
+    onUpdaterProgress(handler) {
+      const unlisten = listen<UpdaterProgress>("updater://progress", (e) => handler(e.payload));
+      return () => {
+        void unlisten.then((f) => f());
+      };
     },
 
     windowMinimize() {
