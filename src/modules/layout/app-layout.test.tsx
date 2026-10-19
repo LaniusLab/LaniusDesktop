@@ -91,6 +91,8 @@ describe("AppLayout", () => {
       executionId?: string;
       traceId?: string;
       message?: string;
+      level?: string;
+      nodeId?: string;
     }) => void;
     act(() => {
       handler({ kind: "status", status: "degraded", uptimeMs: 1200 });
