@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -34,6 +35,15 @@ vi.mock("@/lib/commands/context", () => ({
   }),
 }));
 
+function renderStart() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <StartPage />
+    </QueryClientProvider>,
+  );
+}
+
 describe("开始页", () => {
   afterEach(() => {
     const first = PROCESS_CATALOG[0];
@@ -46,7 +56,7 @@ describe("开始页", () => {
   });
 
   it("展示模板、进程与探测通道，不出现机器类型 ID", () => {
-    render(<StartPage />);
+    renderStart();
     expect(screen.getByRole("heading", { name: "选择任务" })).toBeInTheDocument();
     expect(screen.getAllByText("记事本多行输入").length).toBeGreaterThan(0);
     expect(screen.getAllByText("对选定窗口跑模板").length).toBeGreaterThan(0);
@@ -59,7 +69,7 @@ describe("开始页", () => {
   });
 
   it("可以取消勾选步骤，并改识别方式", () => {
-    render(<StartPage />);
+    renderStart();
     const step = screen.getByRole("checkbox", { name: "稍等片刻" });
     expect(step).toHaveAttribute("aria-checked", "true");
     fireEvent.click(step);
@@ -78,7 +88,7 @@ describe("开始页", () => {
       filePath: "/tmp/demo.flow.json",
       dirty: false,
     });
-    render(<StartPage />);
+    renderStart();
     expect(screen.getByText("已关联文件")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("checkbox", { name: "稍等片刻" }));
     expect(useEditorStore.getState().dirty).toBe(true);

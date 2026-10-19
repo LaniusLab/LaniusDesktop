@@ -36,7 +36,7 @@ export async function gateFlowRun(
 
   const lines = destructive.map((s) => `· ${s.label}（${s.type}）`).join("\n");
   const message =
-    `此流程未标记为可信，且包含危险步骤：\n${lines}\n\n确认仍要运行？`;
+    `此流程未标记为可信，且包含危险步骤：\n${lines}\n\n确认仍要运行？\n（也可先在横幅中「标记为可信」）`;
   if (!confirmFn(message)) {
     return {
       ok: false,

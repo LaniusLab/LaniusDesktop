@@ -159,4 +159,4 @@
 
 事件通道命名（目标）：`execution://event`、`engine://status`、`shell://notification`、`updater://progress`。UI 只通过 `src/lib/bridge/` 的封装访问，不散落裸 `invoke` 调用。
 
-应用内更新说明：版本真源是 **GitHub Release tag**（非 `CHANGELOG.md`）。默认只列 published；draft（如未发布的 `v0.2.0`）需在 GitHub 上 Publish 后才会出现。安装模式为交互式启动 NSIS/MSI，**不是** M5 签名静默通道（ADR-0011）。
+应用内更新说明：版本真源是 **GitHub Release tag**（非 `CHANGELOG.md`）。默认只列 published；draft（如未发布的 `v0.2.0`）需在 GitHub 上 Publish 后才会出现。安装模式为交互式启动 NSIS/MSI（ADR-0011）。**M5 签名静默通道阻塞于发布密钥与 updater 插件 ADR**，见 SECURITY.md §7。
