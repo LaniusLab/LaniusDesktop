@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/rpc/execution.get.json",
+  "title": "execution.get",
+  "$defs": {
+    "params": {
+      "type": "object",
+      "required": ["executionId"],
+      "properties": {
+        "executionId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "result": {
+      "type": "object",
+      "required": ["record"],
+      "properties": {
+        "record": {
+          "type": "object",
+          "required": ["executionId", "state", "mode"],
+          "properties": {
+            "executionId": { "type": "string" },
+            "state": { "type": "string" },
+            "mode": { "type": "string" },
+            "nodeRuns": { "type": "array" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -106,7 +106,12 @@
         },
         "body": {
           "type": "array",
-          "description": "flow.loop 的循环体",
+          "description": "flow.loop / flow.subflow / flow.tryCatch 的主体",
+          "items": { "$ref": "#/$defs/step" }
+        },
+        "catch": {
+          "type": "array",
+          "description": "flow.tryCatch 的捕获分支",
           "items": { "$ref": "#/$defs/step" }
         }
       }

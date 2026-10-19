@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/rpc/execution.list.json",
+  "title": "execution.list",
+  "$defs": {
+    "params": {
+      "type": "object",
+      "properties": {
+        "limit": { "type": "integer", "minimum": 0 },
+        "offset": { "type": "integer", "minimum": 0 },
+        "filter": { "type": "object" }
+      }
+    },
+    "result": {
+      "type": "object",
+      "required": ["records", "total"],
+      "properties": {
+        "records": { "type": "array" },
+        "total": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

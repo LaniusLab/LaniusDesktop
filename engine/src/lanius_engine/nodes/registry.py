@@ -23,6 +23,7 @@ class NodeRegistry:
 
 def default_registry() -> NodeRegistry:
     """内置节点在此装配；自定义节点经 entry points 发现（M1）。"""
+    from lanius_engine.nodes.core.assert_node import AssertNode
     from lanius_engine.nodes.core.data import SetVarNode, TemplateNode
     from lanius_engine.nodes.core.fs import ExistsNode, ReadTextNode, WriteTextNode
     from lanius_engine.nodes.core.log import LogNode
@@ -35,6 +36,7 @@ def default_registry() -> NodeRegistry:
     registry = NodeRegistry()
     registry.register(LogNode)
     registry.register(WaitNode)
+    registry.register(AssertNode)
     registry.register(PressNode)
     registry.register(TypeTextNode)
     registry.register(ClickNode)

@@ -43,8 +43,10 @@ export interface Step {
   "then"?: Array<Step>;
   /** flow.if 的否则分支 */
   "else"?: Array<Step>;
-  /** flow.loop 的循环体 */
+  /** flow.loop / flow.subflow / flow.tryCatch 的主体 */
   "body"?: Array<Step>;
+  /** flow.tryCatch 的捕获分支 */
+  "catch"?: Array<Step>;
 }
 
 export interface Node {

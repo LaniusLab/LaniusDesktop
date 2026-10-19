@@ -23,7 +23,7 @@ engine/src/lanius_engine/
 ├── nodes/
 │   ├── base.py        # Node 协议：inputs/outputs/config schema/execute
 │   ├── registry.py    # 节点注册表（type → 类）
-│   └── core/          # 已落地：log、wait、press、mouse、data.*、fs.read/write/exists；（规划）assert / subflow |
+│   └── core/          # 已落地：log、wait、assert、press、mouse、data.*、fs.*；控制：if/loop/wait/subflow/tryCatch |
 ├── drivers/
 │   ├── base.py        # Driver 抽象接口
 │   ├── mock.py        # Mock driver（CI/测试/dry-run 用）
@@ -94,13 +94,14 @@ class Node(Protocol):
 
 ### 4.3 内置节点清单（V1）
 
-- 流程控制：`flow.if`、`flow.loop`、`flow.wait`、`flow.subflow`、`flow.tryCatch`（嵌套进 steps，属 M1+）
+- 流程控制：`flow.if`、`flow.loop`、`flow.wait`、`flow.subflow`、`flow.tryCatch`（嵌套进 steps；已落地）
 - 按键：`keyboard.press`（`kind: binding`）
 - 鼠标：`mouse.click`、`mouse.dblclick`、`mouse.move`
-- 诊断：`core.log`、`core.wait`、`core.assert`（assert 规划）
-- 数据：`data.setVar`、`data.template`（已落地）
+- 诊断：`core.log`、`core.wait`、`core.assert`
+- 数据：`data.setVar`、`data.template`
+- 文件：`fs.readText`、`fs.writeText`、`fs.exists`
 - 窗口绑定在模板 `target`，不作为默认步骤
-- 元素 / 文件 / HTTP 等仍按里程碑补节点，以 preset 步骤接入
+- 元素 / HTTP 等仍按里程碑补节点，以 preset 步骤接入
 
 ## 5. 执行器与状态机
 

@@ -118,10 +118,10 @@
 ## 7. Schema 同步
 
 - 真源：`schemas/` 下的 JSON Schema（draft 2020-12）。
-- 当前落地：`flow.schema.json`、`error.schema.json`、`shell-prefs.schema.json`、`shell-debug.schema.json`；`pnpm codegen` / `pnpm codegen:check` 生成并校验 `src/lib/gen/`。
-- **尚未落地**：`schemas/rpc/` 分方法 schema、Python 字段漂移自动比对；M1 起补齐。
+- 当前落地：`flow.schema.json`、`error.schema.json`、`shell-prefs.schema.json`、`shell-debug.schema.json`、`shell-updater.schema.json`；`pnpm codegen` / `pnpm codegen:check` 生成并校验 `src/lib/gen/`。
+- **`schemas/rpc/`**：分方法 schema + `engine/tests/golden/rpc` 必填键 golden（`test_rpc_golden.py`）；全量 JSON Schema 校验器与 Python 字段漂移自动比对仍待补。
 - 新增/变更跨层类型的流程：改 schema → `pnpm codegen` → 实现引擎端 → 实现壳封装 → UI 接入 → 补协议测试。
-- 协议测试：`engine/tests/test_rpc.py` 覆盖已注册方法的正常/错误路径；壳侧 Rust 集成测试用 mock 引擎（M1）。
+- 协议测试：`engine/tests/test_rpc.py` 覆盖已注册方法的正常/错误路径；壳侧 Rust 集成测试用 mock 引擎（后续）。
 
 ## 8. UI ↔ 壳 invoke 约定
 
