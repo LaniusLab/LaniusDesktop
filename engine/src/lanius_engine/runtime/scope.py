@@ -28,6 +28,10 @@ class ScopeChain:
     def set(self, name: str, value: Any) -> None:
         self.frames[-1][name] = value
 
+    def set_global(self, name: str, value: Any) -> None:
+        """写入流程全局帧（frames[0]）；供 data.setVar 等跨步骤共享。"""
+        self.frames[0][name] = value
+
     def resolve(self, path: str) -> Any:
         """按点分路径自内向外查找；找不到即错误，不静默返回空。"""
         head, *rest = path.split(".")

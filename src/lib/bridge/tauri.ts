@@ -13,7 +13,8 @@ import type {
   UpdaterProgress,
 } from "@/lib/gen/shell-updater";
 
-import type { Bridge, EngineEvent, EngineInfo, FlowRunResult } from "./types";
+import { normalizeEngineEvent } from "./normalize-engine-event";
+import type { Bridge, EngineInfo, FlowRunResult } from "./types";
 
 // 真实桥接：UI → Rust invoke → JSON-RPC → Python 引擎，见 docs/PROTOCOL.md §8
 export function createTauriBridge(): Bridge {
@@ -31,7 +32,10 @@ export function createTauriBridge(): Bridge {
     },
 
     onEngineEvent(handler) {
-      const unlisten = listen<EngineEvent>("engine://event", (e) => handler(e.payload));
+      const unlisten = listen<unknown>("engine://event", (e) => {
+        const event = normalizeEngineEvent(e.payload);
+        if (event) handler(event);
+      });
       return () => {
         void unlisten.then((f) => f());
       };

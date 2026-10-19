@@ -8,6 +8,7 @@ const isTauri = "__TAURI_INTERNALS__" in window;
 export const bridge: Bridge = isTauri ? createTauriBridge() : createMockBridge();
 
 export { isTauri };
+export { normalizeEngineEvent } from "./normalize-engine-event";
 export type {
   Bridge,
   EngineEvent,
