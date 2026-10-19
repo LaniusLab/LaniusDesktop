@@ -151,9 +151,35 @@ const ordered = serializeParallelBranches(graph);
 - 引擎 ping P95 < 50ms；千节点流程打开/校验 < 1s
 - 超预算的 PR 需要 ADR 级理由
 
+## 分支策略
+
+| 分支 | 用途 | 合并方式 |
+| --- | --- | --- |
+| `main` | 日常开发集成；跑代码检查 CI | **仅允许 PR 合并**（禁止直接 push 工作流） |
+| `release` | 发布集成线；**满足 Changelog 门禁时**才打 Windows 包 | **仅允许 PR 合并**（禁止直接 push 工作流） |
+
+推荐路径：功能分支 → PR → `main`（CI）→ 发版 PR → `release`。模式对齐 [Lexcubia/Minecraft-Utilities](https://github.com/Lexcubia/Minecraft-Utilities) 的 `desktop-release` detect（分支改为 `release`，平台仅 Windows）。
+
+### GitHub 分支保护（须在仓库 Settings 配置）
+
+Actions 无法代替 branch protection。请在 GitHub → Settings → Branches 为 `main` 与 `release` 分别启用：
+
+1. **Require a pull request before merging**（禁止直推；可按需 Require approvals）
+2. **Require status checks to pass**（`main` 至少勾选 CI 的 `frontend` / `engine` / `shell`）
+3. **Do not allow bypassing the above settings**（管理员也不绕过，除非应急）
+4. **Restrict force pushes** / **Restrict deletions**
+
+`release` 可不强制要求与 `main` 相同的 status checks，但仍须 **Require a pull request before merging**。
+
 ## 发布流程
 
-1. 根 `package.json` 改版本 → `pnpm version:sync`
-2. 更新发布说明（M5 起维护根目录 `CHANGELOG.md`，Keep a Changelog；此前可用 GitHub Release 正文）
-3. `git tag vX.Y.Z` 触发打包流水线（三平台 + 引擎 PyInstaller + 签名；流水线属 M5）
-4. 发布页附校验和与 SBOM（M5 起）
+**触发（须同时满足）**：`push`/`merge` 到 `release`，且 `CHANGELOG.md` 含与 `package.json` version 对应的 `## [x.y.z]` 小节，且该小节含 `<!-- release:publish -->`，且尚无 git tag `v{x.y.z}`。缺任一条件则 **跳过打包**（不失败）。**不要用 tag push 当触发器**；tag 由打包成功后的 GitHub Release 创建（发布产物）。
+
+1. 在 `main`：改根 `package.json` version → `pnpm version:sync` → 更新 [`CHANGELOG.md`](CHANGELOG.md)（把 `[Unreleased]` 迁到 `## [x.y.z]`，并在该节写入一行 `<!-- release:publish -->`）
+2. PR 合并进 `release`（打开 PR 本身不打包）
+3. `.github/workflows/release.yml` detect 通过后：构建 **Windows** 包 → Changelog 写入 Release 正文 → 创建草稿 GitHub Release（含 tag）并上传 **assets**；另保留 workflow artifact 30 天
+4. 人工校验草稿后发布；校验和 / SBOM / 签名见 ROADMAP M5
+
+产物：GitHub Release 附件（MSI/NSIS 等）+ Actions Artifacts `lanius-windows-vX.Y.Z`。
+
+macOS / Linux 当前不构建。本地：`pnpm changelog:release`；门禁预检：`node scripts/assert-changelog-release.mjs`。

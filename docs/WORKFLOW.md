@@ -1,7 +1,7 @@
 # 工作开发流
 
-> 状态：已落地 · 最后更新：2026-09-12
-> 实现进度：与 M0 脚手架对齐；门禁命令与当前 `package.json` / CI 一致
+> 状态：已落地 · 最后更新：2026-10-19
+> 实现进度：与 M0 脚手架对齐；门禁命令与当前 `package.json` / CI 一致；`main` 跑检查、`release` 跑 Windows 打包
 > 规范细节见 [CONTRIBUTING.md](../CONTRIBUTING.md)；红线见 [AGENTS.md](../AGENTS.md)；范围见 [ROADMAP.md](ROADMAP.md)
 
 本文档回答「今天改哪一层、按什么顺序改、改完怎么验」。编码风格、命名、测试金字塔仍以 CONTRIBUTING 为准，不在此重复。
@@ -115,7 +115,9 @@ echo {"jsonrpc":"2.0","id":1,"method":"engine.ping","params":{}} | python -m lan
 
 `pnpm check` **不含**引擎与 cargo，只适合纯前端改动的中环。跨层或准备推送时用 `pnpm verify`。
 
-CI（`.github/workflows/ci.yml`）按 job 拆成 frontend / engine / shell，本地外环应对齐这三块。跨层改动用 `pnpm verify`，不要只跑 `pnpm check`。
+CI（`.github/workflows/ci.yml`）在 **`main` 的 push** 与 **面向 `main` 的 PR** 上按 job 跑 frontend / engine / shell；本地外环应对齐这三块。跨层改动用 `pnpm verify`，不要只跑 `pnpm check`。
+
+打包不在 CI 里做：`.github/workflows/release.yml` 在 **merge/push 到 `release`** 时跑 detect——仅当 `CHANGELOG.md` 含当前 `package.json` 版本章节且带 `<!-- release:publish -->`（且尚无对应 tag）才打 **Windows** 包并上传 Release assets。对齐 Minecraft-Utilities `desktop-release`；见 [CONTRIBUTING.md](../CONTRIBUTING.md#分支策略)。
 
 ## 6. IDE 任务与调试
 
@@ -145,7 +147,7 @@ CI（`.github/workflows/ci.yml`）按 job 拆成 frontend / engine / shell，本
 
 ## 7. 提交门禁
 
-M0 直接在 `main` 快进；一个逻辑变更一次提交。信息遵循 Conventional Commits（见 CONTRIBUTING）。
+经 PR 合并进 `main`（及发版时进 `release`）；一个逻辑变更一次提交。信息遵循 Conventional Commits（见 CONTRIBUTING）。勿假设可直推受保护分支。
 
 提交前按序全绿（或等价地跑 `pnpm verify` + 可选 `pnpm verify:shell`）：
 

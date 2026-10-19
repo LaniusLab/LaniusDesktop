@@ -1,7 +1,7 @@
 # 总体架构
 
-> 状态：已评审 · 最后更新：2026-09-12
-> 实现进度：目标架构如下；落地范围以 [ROADMAP.md](ROADMAP.md) 当前里程碑为准（现为 **M0**）
+> 状态：已评审 · 最后更新：2026-10-19
+> 实现进度：目标架构如下；落地范围以 [ROADMAP.md](ROADMAP.md) 当前里程碑为准（现为 **M0**）；现行打包门禁为 Windows / `release` 分支
 
 ## 1. 进程拓扑
 
@@ -165,7 +165,10 @@ LaniusDesktop/
 │   └── sync-version.mjs        # 根 package.json → 三端版本号
 │
 ├── docs/                       # 本文档集（索引见 docs/README.md；日常回路见 WORKFLOW.md）
-└── .github/workflows/ci.yml
+├── CHANGELOG.md                # Keep a Changelog；release 流水线写入 GitHub Release
+└── .github/workflows/
+    ├── ci.yml                  # main：代码检查
+    └── release.yml             # release 分支 + Changelog 门禁：Windows 打包 + assets
 ```
 
 ## 5. 关键机制
@@ -213,8 +216,9 @@ CI 执行 `pnpm codegen --check`：产物与仓库不一致则失败。手改 `s
 ### 5.5 打包与分发
 
 - 引擎：PyInstaller onefile，输出名按 Tauri 规范 `lanius-engine-<target-triple>[.exe]`，置于 `src-tauri/binaries/`。
-- 应用：Tauri bundler（msi/dmg/deb+AppImage）。
+- 应用：当前 CI 打包门禁为 **Windows only**（`.github/workflows/release.yml`：merge 到 `release` + Changelog 含当前版本节与 `<!-- release:publish -->`；tag 为发布产物而非触发器）；macOS / Linux 目标态见 ROADMAP M5。
 - 更新：Tauri updater + 签名校验；引擎随应用同包更新，不独立下发。
+- 发布说明：根目录 `CHANGELOG.md`；`scripts/release-changelog.mjs` 提取版本章节写入 GitHub Release；安装包作为 Release assets（并保留 workflow artifact）。
 
 ## 6. 关键约束（架构红线）
 

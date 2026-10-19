@@ -1,0 +1,22 @@
+# Changelog
+
+本文件遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
+发布流水线（`.github/workflows/release.yml`）在合并进 `release` 分支后，会把对应版本章节写入 GitHub Release 正文。
+
+## [Unreleased]
+
+## [0.2.0] - 2026-10-19
+
+<!-- release:publish -->
+
+### Added
+
+- GitHub Actions Release 工作流（Tauri 打包）。
+- 开始页指令条、插入菜单、思维导图视图、记事本多行输入预设。
+- 引擎 schema v3：嵌套控制流、文本类型、mock vision 能力。
+
+### Changed
+
+- 版本同步至 `0.2.0`（根 `package.json` → 三端）。
+- CI：代码检查仅在 `main`（及面向 `main` 的 PR）运行。
+- Release：仅 Windows。触发 = merge/push 到 `release` 且本小节含 `<!-- release:publish -->`（尚无对应 tag）；tag/Release 为产物。模式对齐 Minecraft-Utilities `desktop-release`。

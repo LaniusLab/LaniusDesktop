@@ -1,9 +1,16 @@
 name: CI
 
+# 代码检查挂在 main：push 到 main，以及面向 main 的 PR。
+# 不在此流水线做安装包；打包见 release.yml（release 分支 + Changelog 门禁）。
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   frontend:
