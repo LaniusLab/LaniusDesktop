@@ -5,6 +5,8 @@ export type UpdaterAssetKind = "setupExe" | "msi" | "other";
 
 export type UpdaterStatus = "idle" | "checking" | "upToDate" | "available" | "unavailable";
 
+export type UpdaterChecksumStatus = "verified" | "unavailable";
+
 export interface UpdaterReleaseAsset {
   "name": string;
   /** browser_download_url */
@@ -45,6 +47,7 @@ export interface UpdaterDownloadResult {
   "path": string;
   "bytes": number;
   "kind": UpdaterAssetKind;
+  "checksumStatus": UpdaterChecksumStatus;
 }
 
 export interface UpdaterInstallResult {
@@ -66,6 +69,7 @@ export interface UpdaterApplyResult {
   "mode"?: "interactiveInstaller" | null;
   /** 未启动安装时的原因，如 unsupportedPlatform */
   "installSkippedReason"?: string | null;
+  "checksumStatus": UpdaterChecksumStatus;
 }
 
 export interface UpdaterProgress {

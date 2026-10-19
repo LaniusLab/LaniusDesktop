@@ -358,6 +358,7 @@ function DesktopSection() {
         path: result.path,
         bytes: result.bytes,
         kind: result.kind,
+        checksumStatus: result.checksumStatus,
       });
       setBusyTag(null);
       if (result.installSkippedReason) {

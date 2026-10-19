@@ -555,6 +555,7 @@ export function createMockBridge(): Bridge {
         path: "(browser)/updates/Lanius.Desktop_0.2.0_x64-setup.exe",
         bytes: 1024,
         kind: "setupExe" as const,
+        checksumStatus: "unavailable" as const,
       };
     },
 
