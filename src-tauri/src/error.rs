@@ -115,6 +115,8 @@ impl Serialize for TracedError {
             ShellError::UpdaterNoAsset(_) => ("warning", false),
             ShellError::UpdaterUnsupported => ("warning", false),
             ShellError::UpdaterInvalidPath(_) => ("error", false),
+            ShellError::InvalidSecret(_) => ("warning", false),
+            ShellError::SecretBackend(_) => ("error", true),
         };
         ErrorPayload {
             code: self.error.code().to_string(),
