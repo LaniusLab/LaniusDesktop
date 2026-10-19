@@ -54,7 +54,7 @@
 | `flow.validate` | `{ flow }` 或 `{ path }` | `{ ok, issues[] }` | 已实现 | 静态校验，不执行 |
 | `flow.migrate` | `{ flow }` | `{ flow, migratedFrom, migratedTo }` | M2 | 迁移到当前 schemaVersion |
 | `flow.start` | `{ path \| flow, mode, inputs? }` | 见下 | 已实现（同步） | UI 传入当前模板 `flow`；`inputs.target` / `inputs.locate` 覆盖绑定；全局互斥 |
-| `flow.pause` / `flow.resume` | `{ executionId }` | `{}` | M1（未接通） | 状态机已有 `paused`；执行器未接线 |
+| `flow.pause` / `flow.resume` | `{ executionId }` | `{}` | 已实现 | 协作式暂停；在步骤/等待安全点生效 |
 | `flow.cancel` | `{ executionId, reason? }` | `{}` | 已实现 | 协作式取消 |
 | `execution.get` | `{ executionId }` | `{ record }` | 已实现 | 查询单条执行记录 |
 | `execution.list` | `{ limit, offset, filter? }` | `{ records[], total }` | 已实现 | 历史分页 |
@@ -69,7 +69,7 @@
 | `execution.nodeStarted` | `{ executionId, nodeId, traceId }` | 已实现 | 节点进入执行 |
 | `execution.nodeFinished` | `{ executionId, nodeId, status, durationMs, outputsSummary }` | 已实现 | 节点结束 |
 | `execution.log` | `{ executionId, level, message, fields, traceId }` | 已实现 | 结构化日志流 |
-| `engine.heartbeat` | `{ uptimeMs, activeExecutions }` | M1（未接通） | 每 30s |
+| `engine.heartbeat` | `{ uptimeMs, activeExecutions }` | 已实现 | 每 30s（`serve` 后台任务） |
 ## 4. 错误模型
 
 所有层的错误统一为下述结构（JSON Schema 见 `schemas/error.schema.json`）：

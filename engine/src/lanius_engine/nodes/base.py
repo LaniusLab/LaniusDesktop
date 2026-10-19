@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import builtins
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, ClassVar, Protocol, runtime_checkable
 
@@ -18,12 +18,18 @@ from pydantic import BaseModel
 from lanius_engine.drivers.base import Driver
 from lanius_engine.runtime.scope import ScopeChain
 
+PauseCheckpoint = Callable[[], Awaitable[None]]
+
 
 @dataclass(frozen=True)
 class Port:
     type: str  # string | number | boolean | handle | any
     required: bool = False
     default: Any = None
+
+
+async def _noop_pause() -> None:
+    return None
 
 
 @dataclass
@@ -38,6 +44,8 @@ class NodeContext:
     # 节点剩余超时预算（毫秒）：min(节点 timeoutMs, 流程剩余)；长等待必须尊重它
     timeout_ms: int = 30_000
     emit: Callable[[str, dict[str, Any]], None] = field(default=lambda _e, _p: None)
+    # 长等待循环内调用：若已 pause 则挂起至 resume / cancel
+    await_pause: PauseCheckpoint = field(default=_noop_pause)
 
     def check_cancelled(self) -> None:
         """安全点：driver 调用前后与循环迭代边界必须调用。"""
@@ -45,6 +53,11 @@ class NodeContext:
             from lanius_engine.runtime.cancel import FlowCancelled
 
             raise FlowCancelled()
+
+    async def checkpoint(self) -> None:
+        """安全点：检查取消 + 协作式暂停。"""
+        self.check_cancelled()
+        await self.await_pause()
 
 
 @dataclass

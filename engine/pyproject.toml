@@ -60,5 +60,5 @@ branch = true
 [tool.coverage.report]
 show_missing = true
 skip_empty = true
-# Engine is still a thin M0 scaffold; track coverage without failing the frontend milestone.
-fail_under = 0
+# M1：整体 ≥80%（ROADMAP）；runtime/ 另以 --cov=lanius_engine.runtime --cov-fail-under=90 抽查
+fail_under = 80

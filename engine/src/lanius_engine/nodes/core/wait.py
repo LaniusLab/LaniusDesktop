@@ -43,7 +43,7 @@ class WaitNode:
                 node_id=ctx.node_id,
             )
         while remaining > 0:
-            ctx.check_cancelled()
+            await ctx.checkpoint()
             tick = min(_TICK_MS, remaining)
             await asyncio.sleep(tick / 1000)
             remaining -= tick

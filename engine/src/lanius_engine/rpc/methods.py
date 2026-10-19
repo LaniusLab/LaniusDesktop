@@ -38,6 +38,8 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
                 "locate.a11y",
                 "vision.mock",
                 "execution.history",
+                "execution.pause",
+                "fs.readWrite",
             ],
             "nodeTypes": registry.types(),
         }
@@ -49,6 +51,8 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
         server.stop()
         store.close()
         return {}
+
+    server.active_executions_fn = lambda: executor.active_count
 
     async def flow_validate(params: dict[str, Any]) -> dict[str, Any]:
         flow = migrate_to_current(_parse_flow(params))
@@ -100,7 +104,38 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
         }
 
     async def flow_cancel(params: dict[str, Any]) -> dict[str, Any]:
+        execution_id = params.get("executionId")
+        if isinstance(execution_id, str) and execution_id:
+            active = executor.active_execution_id
+            if active is not None and execution_id != active:
+                raise LaniusError.of(
+                    "engine.runtime.notFound",
+                    f"执行实例不匹配: {execution_id}",
+                    details={"executionId": execution_id, "active": active},
+                )
         executor.cancel()
+        return {}
+
+    async def flow_pause(params: dict[str, Any]) -> dict[str, Any]:
+        execution_id = params.get("executionId")
+        if not isinstance(execution_id, str) or not execution_id:
+            raise LaniusError.of(
+                "engine.flow.validationFailed",
+                "params.executionId 必须是非空字符串",
+                details={"missing": ["executionId"]},
+            )
+        executor.pause(execution_id)
+        return {}
+
+    async def flow_resume(params: dict[str, Any]) -> dict[str, Any]:
+        execution_id = params.get("executionId")
+        if not isinstance(execution_id, str) or not execution_id:
+            raise LaniusError.of(
+                "engine.flow.validationFailed",
+                "params.executionId 必须是非空字符串",
+                details={"missing": ["executionId"]},
+            )
+        executor.resume(execution_id)
         return {}
 
     async def execution_get(params: dict[str, Any]) -> dict[str, Any]:
@@ -132,6 +167,8 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
     server.register("engine.shutdown", shutdown)
     server.register("flow.validate", flow_validate)
     server.register("flow.start", flow_start)
+    server.register("flow.pause", flow_pause)
+    server.register("flow.resume", flow_resume)
     server.register("flow.cancel", flow_cancel)
     server.register("execution.get", execution_get)
     server.register("execution.list", execution_list)

@@ -19,7 +19,7 @@
     "version:sync": "node scripts/sync-version.mjs",
     "version:sync:check": "node scripts/sync-version.mjs --check",
     "changelog:release": "node scripts/release-changelog.mjs",
-    "engine:test": "pytest engine/tests",
+    "engine:test": "pytest engine/tests --cov=lanius_engine --cov-report=term-missing --cov-fail-under=80",
     "engine:lint": "ruff check engine && mypy engine/src",
     "engine:pack": "node scripts/pack-engine.mjs",
     "check": "pnpm codegen:check && pnpm lint && pnpm typecheck && pnpm test",
