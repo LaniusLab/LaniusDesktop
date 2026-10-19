@@ -18,6 +18,7 @@
     "codegen:check": "node scripts/codegen-schema.mjs --check",
     "version:sync": "node scripts/sync-version.mjs",
     "version:sync:check": "node scripts/sync-version.mjs --check",
+    "changelog:release": "node scripts/release-changelog.mjs",
     "engine:test": "pytest engine/tests",
     "engine:lint": "ruff check engine && mypy engine/src",
     "check": "pnpm codegen:check && pnpm lint && pnpm typecheck && pnpm test",

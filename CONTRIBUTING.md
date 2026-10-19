@@ -151,9 +151,31 @@ const ordered = serializeParallelBranches(graph);
 - 引擎 ping P95 < 50ms；千节点流程打开/校验 < 1s
 - 超预算的 PR 需要 ADR 级理由
 
+## 分支策略
+
+| 分支 | 用途 | 合并方式 |
+| --- | --- | --- |
+| `main` | 日常开发集成；跑代码检查 CI | **仅允许 PR 合并**（禁止直接 push 工作流） |
+| `release` | 发布集成；合并后触发 Windows 打包 | **仅允许 PR 合并**（禁止直接 push 工作流） |
+
+推荐路径：功能分支 → PR → `main`（CI：lint / typecheck / test / engine / shell）→ 发版时再 PR → `release`（打包：仅 Windows）。
+
+### GitHub 分支保护（须在仓库 Settings 配置）
+
+Actions 无法代替 branch protection。请在 GitHub → Settings → Branches 为 `main` 与 `release` 分别启用：
+
+1. **Require a pull request before merging**（禁止直推；可按需 Require approvals）
+2. **Require status checks to pass**（`main` 至少勾选 CI 的 `frontend` / `engine` / `shell`）
+3. **Do not allow bypassing the above settings**（管理员也不绕过，除非应急）
+4. **Restrict force pushes** / **Restrict deletions**
+
+`release` 可不强制要求与 `main` 相同的 status checks（打包本身是门禁），但仍须 **Require a pull request before merging**，避免未审直推触发安装包。
+
 ## 发布流程
 
-1. 根 `package.json` 改版本 → `pnpm version:sync`
-2. 更新发布说明（M5 起维护根目录 `CHANGELOG.md`，Keep a Changelog；此前可用 GitHub Release 正文）
-3. `git tag vX.Y.Z` 触发打包流水线（三平台 + 引擎 PyInstaller + 签名；流水线属 M5）
-4. 发布页附校验和与 SBOM（M5 起）
+1. 在 `main` 上：根 `package.json` 改版本 → `pnpm version:sync` → 更新根目录 [`CHANGELOG.md`](CHANGELOG.md)（Keep a Changelog；把 `[Unreleased]` 迁到新版本章节）
+2. 开 PR 将待发布提交合并进 `release`（**不要**指望「打开 PR」就打包；只有 **merge/push 到 `release`** 才触发）
+3. `.github/workflows/release.yml` 在 `release` 上构建 **Windows** 安装包，并用 `scripts/release-changelog.mjs` 从 `CHANGELOG.md` 生成 GitHub Release 正文（草稿；tag = `v` + `package.json` version）
+4. 校验草稿 Release 后手动发布；校验和与 SBOM、签名通道属后续里程碑（见 ROADMAP M5）
+
+macOS / Linux 安装包当前**不**在流水线中构建。本地预览发布说明：`pnpm changelog:release`。
