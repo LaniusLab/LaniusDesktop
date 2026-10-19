@@ -150,6 +150,7 @@
 | `prefs_set` | `{ prefs }` | `ShellPrefs` | 写盘 + 同步开机自启 | 已实现 |
 | `shell_debug_info` | — | `ShellDebugInfo` | 系统 / 路径 | 已实现 |
 | `logs_tail` | — | `string` | 壳日志末 200 行 | 已实现 |
+| `shell_export_diagnostics` | — | `DiagnosticsExportResult`（`schemas/shell-diagnostics.schema.json`） | 本机诊断包（日志/元数据；无遥测、无凭据明文；可选 tar.gz/zip） | 已实现 |
 | `updater_list` | — | `UpdaterListResult`（见 `schemas/shell-updater.schema.json`） | 公开 GitHub Releases（published；draft 不可见） | 已实现 |
 | `updater_check` | — | `UpdaterCheckResult` | 相对当前版本是否有带 Windows 包的更新 | 已实现 |
 | `updater_download` | `{ tag, assetName? }` | `UpdaterDownloadResult` | 下载该 tag 的 preferred 或指定 Windows 包 | 已实现 |

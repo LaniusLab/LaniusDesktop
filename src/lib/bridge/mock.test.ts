@@ -72,6 +72,11 @@ describe("mockBridge", () => {
     await expect(bridge.secretDelete("demo")).resolves.toEqual({ key: "demo", removed: true });
     await expect(bridge.debugInfo()).resolves.toMatchObject({ appVersion: expect.any(String) });
     await expect(bridge.logsTail()).resolves.toEqual(expect.any(String));
+    await expect(bridge.exportDiagnostics()).resolves.toMatchObject({
+      path: expect.any(String),
+      filesIncluded: expect.arrayContaining(["debug_info.json", "secret_names.json"]),
+      archived: false,
+    });
     await expect(bridge.updaterList()).resolves.toMatchObject({
       draftsOmitted: true,
       releases: expect.arrayContaining([expect.objectContaining({ tag: "v0.2.0" })]),

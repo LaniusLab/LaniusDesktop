@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
+import type { DiagnosticsExportResult } from "@/lib/gen/shell-diagnostics";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
 import type {
   SecretDeleteResult,
@@ -174,6 +175,10 @@ export function createTauriBridge(): Bridge {
 
     logsTail() {
       return invoke<string>("logs_tail");
+    },
+
+    exportDiagnostics() {
+      return invoke<DiagnosticsExportResult>("shell_export_diagnostics");
     },
 
     updaterList() {

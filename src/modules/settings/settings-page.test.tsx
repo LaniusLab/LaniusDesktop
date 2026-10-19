@@ -108,4 +108,15 @@ describe("设置弹窗", () => {
       expect(screen.getByText("LaniusLab")).toBeInTheDocument();
     });
   });
+
+  it("调试页可导出本机诊断包", async () => {
+    renderSettings();
+    fireEvent.click(screen.getByRole("tab", { name: "调试" }));
+    expect(screen.getByText(/不会自动上传|Nothing is uploaded/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /导出诊断包|Export diagnostics/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/已导出到|Exported to/i)).toBeInTheDocument();
+      expect(screen.getByText(/lanius-diagnostics-mock/)).toBeInTheDocument();
+    });
+  });
 });

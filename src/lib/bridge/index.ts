@@ -52,3 +52,4 @@ export type {
   TrustMarkResult,
   TrustRevokeResult,
 } from "@/lib/gen/shell-trust";
+export type { DiagnosticsExportResult } from "@/lib/gen/shell-diagnostics";

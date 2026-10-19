@@ -9,6 +9,7 @@ use std::time::Duration;
 use serde_json::{json, Value};
 use tauri::{AppHandle, State};
 
+use crate::diagnostics;
 use crate::error::{ShellError, TracedError};
 use crate::prefs::{self, ShellPrefs};
 use crate::secrets;
@@ -313,6 +314,13 @@ pub async fn shell_debug_info(app: AppHandle) -> Result<Value, TracedError> {
 pub async fn logs_tail(app: AppHandle) -> Result<String, TracedError> {
     let trace_id = new_trace_id();
     prefs::tail_log(&app).map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+/// 导出本机诊断包（日志 / 调试信息 / 名称级元数据；无遥测、无凭据明文）。
+pub async fn shell_export_diagnostics(app: AppHandle) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    diagnostics::export(&app).map_err(|e| e.with_trace(trace_id))
 }
 
 #[tauri::command]

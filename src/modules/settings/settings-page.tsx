@@ -631,9 +631,19 @@ function DebugSection() {
   const t = useT();
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [exportMessage, setExportMessage] = useState<string | null>(null);
   const debug = useQuery({ queryKey: ["shellDebug"], queryFn: () => bridge.debugInfo() });
   const logs = useQuery({ queryKey: ["shellLogs"], queryFn: () => bridge.logsTail() });
   const engine = useQuery({ queryKey: ["engineInfo"], queryFn: () => bridge.engineInfo() });
+
+  const exportDiag = useMutation({
+    mutationFn: () => bridge.exportDiagnostics(),
+    onSuccess: (result) => {
+      const shown = result.archivePath ?? result.path;
+      setExportMessage(t("settings.debug.exportDone", { path: shown }));
+    },
+    onError: () => setExportMessage(t("settings.debug.exportFailed")),
+  });
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["shellDebug"] });
@@ -654,14 +664,35 @@ function DebugSection() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" onClick={refresh}>
           {t("settings.debug.refresh")}
         </Button>
         <Button variant="ghost" size="sm" onClick={() => void copy()}>
           {copied ? t("settings.debug.copied") : t("settings.debug.copy")}
         </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={exportDiag.isPending}
+          onClick={() => {
+            setExportMessage(null);
+            exportDiag.mutate();
+          }}
+        >
+          {t("settings.debug.export")}
+        </Button>
       </div>
+      <p className="text-xs text-fg-muted">{t("settings.debug.exportHint")}</p>
+      {exportMessage ? (
+        <p
+          className={
+            exportDiag.isError ? "text-xs text-danger" : "break-all text-xs text-fg-muted"
+          }
+        >
+          {exportMessage}
+        </p>
+      ) : null}
 
       <SectionLabel title={t("settings.debug.system")}>
         {debug.isPending || engine.isPending ? (
