@@ -69,4 +69,40 @@ describe("运行记录页", () => {
     expect(useEditorStore.getState().selectedStepId).toBe("step-bad");
     expect(navigate).toHaveBeenCalledWith({ to: "/edit" });
   });
+
+  it("同时有预演与试一次轨迹时展示对照", () => {
+    const nodeRuns = [
+      { nodeId: "a", status: "done" as const, durationMs: 1, label: "A" },
+    ];
+    useExecutionStore.setState({
+      runs: [
+        {
+          executionId: "r1",
+          startedAt: Date.UTC(2026, 0, 1, 12, 1, 0),
+          mode: "run",
+          finalState: "done",
+          exe: "notepad.exe",
+          channel: "a11y",
+          doneCount: 1,
+          skippedCount: 0,
+          failedCount: 0,
+          nodeRuns,
+        },
+        {
+          executionId: "d1",
+          startedAt: Date.UTC(2026, 0, 1, 12, 0, 0),
+          mode: "dryRun",
+          finalState: "done",
+          exe: "notepad.exe",
+          channel: "a11y",
+          doneCount: 1,
+          skippedCount: 0,
+          failedCount: 0,
+          nodeRuns,
+        },
+      ],
+    });
+    render(<HistoryPage />);
+    expect(screen.getByLabelText(/预演对照|Preview vs run/)).toBeInTheDocument();
+  });
 });
