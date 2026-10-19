@@ -5,12 +5,9 @@
 
 ## [Unreleased]
 
-### Changed
-
-- CI：代码检查仅在 `main`（及面向 `main` 的 PR）运行。
-- Release：仅 Windows。触发 = **merge/push 到 `release`** 且 Changelog 含当前 `package.json` 版本节 + `<!-- release:publish -->`（尚无对应 tag）；tag/Release 为产物。模式对齐 Minecraft-Utilities `desktop-release`。
-
 ## [0.2.0] - 2026-10-19
+
+<!-- release:publish -->
 
 ### Added
 
@@ -21,3 +18,5 @@
 ### Changed
 
 - 版本同步至 `0.2.0`（根 `package.json` → 三端）。
+- CI：代码检查仅在 `main`（及面向 `main` 的 PR）运行。
+- Release：仅 Windows。触发 = merge/push 到 `release` 且本小节含 `<!-- release:publish -->`（尚无对应 tag）；tag/Release 为产物。模式对齐 Minecraft-Utilities `desktop-release`。
