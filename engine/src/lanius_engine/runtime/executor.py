@@ -70,6 +70,8 @@ class Executor:
         *,
         mode: Literal["run", "dryRun"] = "run",
         on_event: EventHook | None = None,
+        execution_id: str | None = None,
+        on_started: Callable[[str], None] | None = None,
     ) -> ExecutionRecord:
         if self._lock.locked():
             raise LaniusError.of(
@@ -80,8 +82,17 @@ class Executor:
         async with self._lock:
             self._cancel = asyncio.Event()
             self._pause_gate.set()
+            assigned = execution_id or f"exec-{uuid.uuid4().hex[:12]}"
+            self._execution_id = assigned
+            if on_started is not None:
+                on_started(assigned)
             try:
-                return await self._run(flow, mode=mode, on_event=on_event or (lambda _e, _p: None))
+                return await self._run(
+                    flow,
+                    mode=mode,
+                    on_event=on_event or (lambda _e, _p: None),
+                    execution_id=assigned,
+                )
             finally:
                 self._cancel = None
                 self._machine = None
@@ -154,13 +165,17 @@ class Executor:
             emit("execution.stateChanged", {"from": "paused", "to": "running"})
 
     async def _run(
-        self, flow: FlowFile, *, mode: Literal["run", "dryRun"], on_event: EventHook
+        self,
+        flow: FlowFile,
+        *,
+        mode: Literal["run", "dryRun"],
+        on_event: EventHook,
+        execution_id: str,
     ) -> ExecutionRecord:
         assert self._cancel is not None
         cancel_event = self._cancel
         machine = ExecutionStateMachine()
         self._machine = machine
-        execution_id = f"exec-{uuid.uuid4().hex[:12]}"
         self._execution_id = execution_id
         self._emit = on_event
         logger = get_logger(executionId=execution_id)

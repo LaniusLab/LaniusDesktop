@@ -53,13 +53,13 @@
 | --- | --- | --- | --- | --- |
 | `flow.validate` | `{ flow }` 或 `{ path }` | `{ ok, issues[] }` | 已实现 | 静态校验，不执行 |
 | `flow.migrate` | `{ flow }` | `{ flow, migratedFrom, migratedTo }` | M2 | 迁移到当前 schemaVersion |
-| `flow.start` | `{ path \| flow, mode, inputs? }` | 见下 | 已实现（同步） | UI 传入当前模板 `flow`；`inputs.target` / `inputs.locate` 覆盖绑定；全局互斥 |
+| `flow.start` | `{ path \| flow, mode, inputs? }` | `{ executionId }` | 已实现（异步） | 立即返回；进度经 §3.3；终态 `execution.get`；全局互斥 |
 | `flow.pause` / `flow.resume` | `{ executionId }` | `{}` | 已实现 | 协作式暂停；在步骤/等待安全点生效 |
 | `flow.cancel` | `{ executionId, reason? }` | `{}` | 已实现 | 协作式取消 |
 | `execution.get` | `{ executionId }` | `{ record }` | 已实现 | 查询单条执行记录 |
 | `execution.list` | `{ limit, offset, filter? }` | `{ records[], total }` | 已实现 | 历史分页 |
 
-**`flow.start` 现实（M1 切片）**：调用仍同步跑完后返回（含 `executionId`、`finalState`、`nodeRuns` 等摘要）；执行中途经 §3.3 通知推送进度；终态落 SQLite。目标态（后续）：立即返回 `{ executionId }`，壳侧对长调用放开 RPC 超时（见 §6）。
+**`flow.start` 现实（M1）**：立即返回 `{ executionId }`；执行在后台继续，进度经 §3.3 通知；终态落 SQLite，客户端用 `execution.get` 取摘要。UI bridge 在 `flowRun` 内等待终态后拼出 `FlowRunResult`，对命令层保持原契约。
 
 ### 3.3 通知（引擎 → 壳 → UI）
 

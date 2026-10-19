@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lanius.dev/schemas/rpc/flow.start.json",
   "title": "flow.start",
-  "description": "M1 仍为同步跑完后返回摘要；进度经通知推送",
+  "description": "立即返回 executionId；进度经通知；终态查 execution.get",
   "$defs": {
     "params": {
       "type": "object",
@@ -16,16 +16,11 @@
     },
     "result": {
       "type": "object",
-      "required": ["executionId", "finalState", "nodeRuns"],
+      "required": ["executionId"],
       "properties": {
-        "executionId": { "type": "string" },
-        "finalState": {
-          "type": "string",
-          "enum": ["done", "failed", "cancelled", "paused", "running", "validating", "idle"]
-        },
-        "nodeRuns": { "type": "array" },
-        "error": { "type": ["object", "null"] }
-      }
+        "executionId": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
     }
   }
 }
