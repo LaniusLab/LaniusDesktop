@@ -108,8 +108,10 @@ export function AppLayout() {
         appendLog({
           ts: Date.now(),
           message: event.message,
+          level: event.level ?? "info",
           traceId: event.traceId,
           executionId: event.executionId,
+          nodeId: event.nodeId,
         });
       }
     });

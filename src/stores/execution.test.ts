@@ -43,4 +43,25 @@ describe("execution store", () => {
     useExecutionStore.getState().noteStep("b", "running");
     expect(useExecutionStore.getState().activeStepId).toBe("b");
   });
+
+  it("ingestRunResult 记录首个失败步骤与错误文案", () => {
+    useExecutionStore.getState().setPhase("running", "exec-fail", "trace-fail");
+    useExecutionStore.getState().ingestRunResult({
+      executionId: "exec-fail",
+      finalState: "failed",
+      mode: "run",
+      nodeRuns: [
+        { nodeId: "ok", status: "done", durationMs: 1, label: "ok" },
+        { nodeId: "bad", status: "failed", durationMs: 2, label: "崩了" },
+        { nodeId: "later", status: "failed", durationMs: 1, label: "也崩" },
+      ],
+      error: { code: "engine.run.failed", message: "步骤失败" },
+    });
+    const run = useExecutionStore.getState().runs[0];
+    expect(run?.failedStepId).toBe("bad");
+    expect(run?.failedCount).toBe(2);
+    expect(run?.errorMessage).toBe("步骤失败");
+    expect(run?.traceId).toBe("trace-fail");
+    expect(useExecutionStore.getState().logLines.some((line) => line.level === "error")).toBe(true);
+  });
 });

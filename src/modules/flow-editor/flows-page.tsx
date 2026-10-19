@@ -11,6 +11,7 @@ import { TemplatePalette } from "@/modules/flow-editor/palette";
 import { TemplateSequence } from "@/modules/flow-editor/sequence";
 import { MigrationBanner } from "@/modules/flow-editor/migration-banner";
 import { ValidationIssueList } from "@/modules/flow-editor/validation-issues";
+import { ExecutionLogPanel } from "@/modules/runner/execution-log-panel";
 import { redoEdit, undoEdit, useEditorStore } from "@/stores/editor";
 import { useExecutionStore } from "@/stores/execution";
 import { useT, useUiStore } from "@/stores/ui";
@@ -32,7 +33,6 @@ export function FlowsPage() {
   const setEditorInspectorWidth = useUiStore((s) => s.setEditorInspectorWidth);
   const editorLogHeight = useUiStore((s) => s.editorLogHeight);
   const setEditorLogHeight = useUiStore((s) => s.setEditorLogHeight);
-  const logLines = useExecutionStore((s) => s.logLines);
   const phase = useExecutionStore((s) => s.phase);
   const t = useT();
   const [centerTab, setCenterTab] = useState<CenterTab>("strip");
@@ -154,23 +154,7 @@ export function FlowsPage() {
                 {centerTab === "strip" ? <TemplateSequence /> : <MindMapPreview />}
               </div>
             </div>
-            <section className="glass-card flex h-full min-h-0 flex-col rounded-none px-4 py-3">
-              <p className="font-display text-sm text-fg">{t("start.log")}</p>
-              {logLines.length === 0 ? (
-                <p className="m-auto text-sm text-fg-faint">{t("start.logEmpty")}</p>
-              ) : (
-                <ol className="mt-2 min-h-0 flex-1 overflow-auto">
-                  {logLines.map((line, index) => (
-                    <li
-                      key={`${String(line.ts)}-${String(index)}`}
-                      className="border-b border-line/70 py-1.5 text-xs text-fg-muted last:border-b-0"
-                    >
-                      {line.message}
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </section>
+            <ExecutionLogPanel className="rounded-none" />
           </SplitPane>
           <TemplateInspector />
         </SplitPane>

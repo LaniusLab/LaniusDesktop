@@ -1,14 +1,16 @@
 import { create } from "zustand";
 
-import type { EngineStatus, ExecutionPhase, FlowRunResult } from "@/lib/bridge";
+import type { EngineStatus, ExecutionPhase, FlowRunResult, LogLevel } from "@/lib/bridge";
 
 export type StepRunStatus = "pending" | "running" | "done" | "failed" | "skipped" | "cancelled";
 
 export interface LogLine {
   ts: number;
   message: string;
+  level?: LogLevel;
   traceId?: string;
   executionId?: string;
+  nodeId?: string;
 }
 
 export interface RunRecord {
@@ -21,6 +23,10 @@ export interface RunRecord {
   doneCount: number;
   skippedCount: number;
   failedCount: number;
+  /** 首个失败步骤，供历史页跳回模板 */
+  failedStepId?: string;
+  traceId?: string;
+  errorMessage?: string;
 }
 
 interface BeginRunInput {
@@ -40,7 +46,10 @@ interface ExecutionState {
   stepStatuses: Record<string, StepRunStatus>;
   logLines: LogLine[];
   runs: RunRecord[];
-  pendingRun?: Omit<RunRecord, "finalState" | "doneCount" | "skippedCount" | "failedCount">;
+  pendingRun?: Omit<
+    RunRecord,
+    "finalState" | "doneCount" | "skippedCount" | "failedCount" | "failedStepId" | "errorMessage"
+  >;
   setEngineStatus: (status: EngineStatus, uptimeMs?: number) => void;
   setPhase: (phase: ExecutionPhase, executionId?: string, traceId?: string) => void;
   noteStep: (nodeId: string, status: StepRunStatus) => void;
@@ -51,6 +60,12 @@ interface ExecutionState {
 
 const MAX_LOG_LINES = 500;
 const MAX_RUNS = 50;
+
+function levelForStatus(status: string): LogLevel {
+  if (status === "failed") return "error";
+  if (status === "skipped" || status === "cancelled") return "warning";
+  return "info";
+}
 
 export const useExecutionStore = create<ExecutionState>()((set) => ({
   engineStatus: "starting",
@@ -102,8 +117,12 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
       const stepStatuses: Record<string, StepRunStatus> = { ...s.stepStatuses };
       const extra: LogLine[] = [];
       const alreadyLogged = s.logLines.some((line) => line.executionId === result.executionId);
+      let failedStepId: string | undefined;
       for (const run of nodeRuns) {
         stepStatuses[run.nodeId] = run.status;
+        if (run.status === "failed" && !failedStepId) {
+          failedStepId = run.nodeId;
+        }
         if (alreadyLogged) continue;
         const name = run.label || run.nodeId;
         const suffix =
@@ -118,6 +137,9 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
           ts: Date.now(),
           message: `${name}：${suffix}`,
           executionId: result.executionId,
+          nodeId: run.nodeId,
+          level: levelForStatus(run.status),
+          traceId: s.lastTraceId,
         });
       }
       if (result.error?.message || result.error?.code) {
@@ -125,6 +147,8 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
           ts: Date.now(),
           message: result.error.message ?? result.error.code ?? "执行失败",
           executionId: result.executionId,
+          level: "error",
+          traceId: s.lastTraceId,
         });
       }
       const finalState = result.finalState ?? s.phase;
@@ -141,6 +165,9 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
         doneCount,
         skippedCount,
         failedCount,
+        failedStepId,
+        traceId: s.lastTraceId,
+        errorMessage: result.error?.message ?? result.error?.code ?? undefined,
       };
       return {
         phase: finalState,

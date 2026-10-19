@@ -19,6 +19,7 @@ export type {
   FlowRunResult,
   FlowValidateResult,
   FlowValidationIssue,
+  LogLevel,
   UpdaterResult,
   UpdaterStatus,
 } from "./types";

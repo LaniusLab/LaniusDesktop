@@ -47,6 +47,8 @@ export interface FlowRunResult {
   error?: { code?: string; message?: string } | null;
 }
 
+export type LogLevel = "debug" | "info" | "warning" | "error";
+
 export interface EngineEvent {
   kind: "status" | "execution" | "log";
   status?: EngineStatus;
@@ -56,6 +58,7 @@ export interface EngineEvent {
   nodeStatus?: "running" | "done" | "failed" | "skipped";
   traceId?: string;
   message?: string;
+  level?: LogLevel;
   uptimeMs?: number;
 }
 
