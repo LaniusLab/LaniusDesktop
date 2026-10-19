@@ -82,6 +82,7 @@ export const useExecutionStore = create<ExecutionState>()((set) => ({
     }
     set((s) => ({
       phase: "validating",
+      activeExecutionId: undefined,
       activeStepId: undefined,
       stepStatuses,
       pendingRun: {

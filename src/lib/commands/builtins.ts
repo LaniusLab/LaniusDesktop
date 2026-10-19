@@ -129,7 +129,8 @@ export function registerBuiltinCommands(): void {
       ctx.engine.status === "ready" &&
       ctx.editor.hasTarget &&
       ctx.execution.phase !== "running" &&
-      ctx.execution.phase !== "validating",
+      ctx.execution.phase !== "validating" &&
+      ctx.execution.phase !== "paused",
     run: async (ctx) => {
       const flow = ctx.editor.toFlowFile();
       ctx.execution.beginRun({
@@ -152,7 +153,8 @@ export function registerBuiltinCommands(): void {
       ctx.engine.status === "ready" &&
       ctx.editor.hasTarget &&
       ctx.execution.phase !== "running" &&
-      ctx.execution.phase !== "validating",
+      ctx.execution.phase !== "validating" &&
+      ctx.execution.phase !== "paused",
     run: async (ctx) => {
       const flow = ctx.editor.toFlowFile();
       ctx.execution.beginRun({
@@ -163,6 +165,49 @@ export function registerBuiltinCommands(): void {
       });
       const result = await ctx.bridge.flowRun(flow, "dryRun");
       ctx.execution.ingestRunResult(result);
+    },
+  });
+
+  registry.register({
+    id: "flow.pause",
+    title: "暂停",
+    scope: "editor",
+    when: (ctx) =>
+      Boolean(ctx.execution.activeExecutionId) && ctx.execution.phase === "running",
+    run: async (ctx) => {
+      const id = ctx.execution.activeExecutionId;
+      if (!id) return;
+      await ctx.bridge.flowPause(id);
+    },
+  });
+
+  registry.register({
+    id: "flow.resume",
+    title: "继续",
+    scope: "editor",
+    when: (ctx) =>
+      Boolean(ctx.execution.activeExecutionId) && ctx.execution.phase === "paused",
+    run: async (ctx) => {
+      const id = ctx.execution.activeExecutionId;
+      if (!id) return;
+      await ctx.bridge.flowResume(id);
+    },
+  });
+
+  registry.register({
+    id: "flow.cancel",
+    title: "取消",
+    scope: "editor",
+    shortcut: "Escape",
+    when: (ctx) =>
+      Boolean(ctx.execution.activeExecutionId) &&
+      (ctx.execution.phase === "running" ||
+        ctx.execution.phase === "paused" ||
+        ctx.execution.phase === "validating"),
+    run: async (ctx) => {
+      const id = ctx.execution.activeExecutionId;
+      if (!id) return;
+      await ctx.bridge.flowCancel(id);
     },
   });
 }

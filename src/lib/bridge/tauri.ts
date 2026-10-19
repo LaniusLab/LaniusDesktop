@@ -69,6 +69,20 @@ export function createTauriBridge(): Bridge {
       await invoke("flow_cancel", { executionId });
     },
 
+    async flowPause(executionId) {
+      await invoke("engine_call", {
+        method: "flow.pause",
+        params: { executionId },
+      });
+    },
+
+    async flowResume(executionId) {
+      await invoke("engine_call", {
+        method: "flow.resume",
+        params: { executionId },
+      });
+    },
+
     flowOpen(path) {
       return invoke("flow_open", { path });
     },

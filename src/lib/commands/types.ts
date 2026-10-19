@@ -7,6 +7,7 @@ export interface CommandContext {
   engine: { status: EngineStatus };
   execution: {
     phase: ExecutionPhase;
+    activeExecutionId?: string;
     beginRun: (input: {
       mode: "run" | "dryRun";
       exe: string;

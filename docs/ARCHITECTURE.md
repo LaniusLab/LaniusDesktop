@@ -117,7 +117,7 @@ LaniusDesktop/
 │   │   ├── settings/           # 设置 Dialog（侧栏底部 + 顶栏入口）
 │   │   ├── search/             # 全局搜索（Overlay，替代命令面板）
 │   │   ├── dev/                # 组件页（侧栏「组件」）
-│   │   └── runner/             # （规划 · M3）执行控制条 + 日志面板
+│   │   └── runner/             # 执行控制条（M3）；日志面板后续 |
 │   ├── lib/
 │   │   ├── bridge/             # invoke/event 类型安全封装
 │   │   ├── commands/           # 命令注册表

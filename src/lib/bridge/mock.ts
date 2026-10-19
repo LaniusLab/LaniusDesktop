@@ -131,6 +131,26 @@ export function createMockBridge(): Bridge {
 
   let uptime = 0;
   let traceSeq = 0;
+  /** 当前 mock 执行的协作式暂停/取消门闩 */
+  let activeRun:
+    | {
+        executionId: string;
+        traceId: string;
+        cancelled: boolean;
+        paused: boolean;
+        resumeWaiters: Array<() => void>;
+      }
+    | undefined;
+
+  const tick = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  const waitIfPaused = async () => {
+    const run = activeRun;
+    if (!run || !run.paused || run.cancelled) return;
+    await new Promise<void>((resolve) => {
+      run.resumeWaiters.push(resolve);
+    });
+  };
 
   setTimeout(() => emit({ kind: "status", status: "ready" }), 600);
   setInterval(() => {
@@ -150,10 +170,21 @@ export function createMockBridge(): Bridge {
       const exe = flow.target?.match?.exe || "window";
       const channel = flow.target?.locate?.channel === "vision" ? "画面" : "控件";
       const prefix = mode === "dryRun" ? "演练：" : "";
-      const tick = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+      activeRun = {
+        executionId,
+        traceId,
+        cancelled: false,
+        paused: false,
+        resumeWaiters: [],
+      };
 
       emit({ kind: "execution", executionId, phase: "validating", traceId });
-      await tick(12);
+      await tick(40);
+      if (activeRun?.cancelled) {
+        emit({ kind: "execution", executionId, phase: "cancelled", traceId });
+        activeRun = undefined;
+        return { executionId, finalState: "cancelled", mode, nodeRuns: [] };
+      }
       emit({ kind: "execution", executionId, phase: "running", traceId });
       emit({
         kind: "log",
@@ -164,6 +195,12 @@ export function createMockBridge(): Bridge {
 
       const nodeRuns: FlowNodeRun[] = [];
       for (const step of steps) {
+        await waitIfPaused();
+        if (activeRun?.cancelled) {
+          emit({ kind: "execution", executionId, phase: "cancelled", traceId });
+          activeRun = undefined;
+          return { executionId, finalState: "cancelled", mode, nodeRuns };
+        }
         if (step.disabled) {
           nodeRuns.push({
             nodeId: step.id,
@@ -189,7 +226,19 @@ export function createMockBridge(): Bridge {
           nodeStatus: "running",
           traceId,
         });
-        await tick(24);
+        await tick(80);
+        await waitIfPaused();
+        if (activeRun?.cancelled) {
+          nodeRuns.push({
+            nodeId: step.id,
+            status: "cancelled",
+            durationMs: 0,
+            label: step.label,
+          });
+          emit({ kind: "execution", executionId, phase: "cancelled", traceId });
+          activeRun = undefined;
+          return { executionId, finalState: "cancelled", mode, nodeRuns };
+        }
         emit({
           kind: "log",
           executionId,
@@ -208,18 +257,47 @@ export function createMockBridge(): Bridge {
         nodeRuns.push({
           nodeId: step.id,
           status: "done" as const,
-          durationMs: 24,
+          durationMs: 80,
           label: step.label,
         });
       }
       emit({ kind: "execution", executionId, phase: "done", traceId });
-      await tick(12);
+      await tick(20);
       emit({ kind: "execution", executionId, phase: "idle", traceId });
+      activeRun = undefined;
       return { executionId, finalState: "done", mode, nodeRuns };
     },
 
-    async flowCancel() {
-      // mock 执行太短，取消通常赶不上；契约保留
+    async flowCancel(executionId) {
+      if (!activeRun || activeRun.executionId !== executionId) return;
+      activeRun.cancelled = true;
+      activeRun.paused = false;
+      for (const wake of activeRun.resumeWaiters) wake();
+      activeRun.resumeWaiters = [];
+    },
+
+    async flowPause(executionId) {
+      if (!activeRun || activeRun.executionId !== executionId) return;
+      activeRun.paused = true;
+      emit({
+        kind: "execution",
+        executionId,
+        phase: "paused",
+        traceId: activeRun.traceId,
+      });
+    },
+
+    async flowResume(executionId) {
+      if (!activeRun || activeRun.executionId !== executionId) return;
+      activeRun.paused = false;
+      emit({
+        kind: "execution",
+        executionId,
+        phase: "running",
+        traceId: activeRun.traceId,
+      });
+      for (const wake of activeRun.resumeWaiters) wake();
+      activeRun.resumeWaiters = [];
     },
 
     async flowOpen(path) {

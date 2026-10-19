@@ -16,6 +16,9 @@ function ctx(partial: Partial<CommandContext> = {}): CommandContext {
   return {
     bridge: {
       flowRun: vi.fn().mockResolvedValue({ executionId: "e1" }),
+      flowPause: vi.fn().mockResolvedValue(undefined),
+      flowResume: vi.fn().mockResolvedValue(undefined),
+      flowCancel: vi.fn().mockResolvedValue(undefined),
       flowOpen: vi.fn().mockResolvedValue({
         path: "/tmp/a.flow.json",
         flow: sampleFlow,
@@ -25,7 +28,12 @@ function ctx(partial: Partial<CommandContext> = {}): CommandContext {
       flowSave: vi.fn().mockResolvedValue({ path: "/tmp/a.flow.json" }),
     } as unknown as CommandContext["bridge"],
     engine: { status: "ready" },
-    execution: { phase: "idle", beginRun: vi.fn(), ingestRunResult: vi.fn() },
+    execution: {
+      phase: "idle",
+      activeExecutionId: undefined,
+      beginRun: vi.fn(),
+      ingestRunResult: vi.fn(),
+    },
     editor: {
       dirty: false,
       hasTarget: true,
@@ -79,10 +87,43 @@ describe("内置命令", () => {
     expect(ready.execution.ingestRunResult).toHaveBeenCalledTimes(2);
 
     const busy = ctx({
-      execution: { phase: "running", beginRun: vi.fn(), ingestRunResult: vi.fn() },
+      execution: {
+        phase: "running",
+        activeExecutionId: "e1",
+        beginRun: vi.fn(),
+        ingestRunResult: vi.fn(),
+      },
     });
     const listed = registry.list(busy).filter((cmd) => cmd.id === "flow.run" || cmd.id === "flow.dryRun");
     expect(listed.every((cmd) => !cmd.enabled)).toBe(true);
+  });
+
+  it("running 时可暂停/取消，paused 时可继续", async () => {
+    const running = ctx({
+      execution: {
+        phase: "running",
+        activeExecutionId: "e9",
+        beginRun: vi.fn(),
+        ingestRunResult: vi.fn(),
+      },
+    });
+    expect(registry.list(running).find((cmd) => cmd.id === "flow.pause")?.enabled).toBe(true);
+    expect(registry.list(running).find((cmd) => cmd.id === "flow.cancel")?.enabled).toBe(true);
+    await registry.run("flow.pause", running);
+    expect(running.bridge.flowPause).toHaveBeenCalledWith("e9");
+
+    const paused = ctx({
+      execution: {
+        phase: "paused",
+        activeExecutionId: "e9",
+        beginRun: vi.fn(),
+        ingestRunResult: vi.fn(),
+      },
+    });
+    await registry.run("flow.resume", paused);
+    expect(paused.bridge.flowResume).toHaveBeenCalledWith("e9");
+    await registry.run("flow.cancel", paused);
+    expect(paused.bridge.flowCancel).toHaveBeenCalledWith("e9");
   });
 
   it("未选目标窗口时不能试一次，仍可保存草稿", async () => {
