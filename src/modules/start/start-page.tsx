@@ -8,6 +8,7 @@ import { PROCESS_CATALOG, processById } from "@/lib/targets";
 import { findStepById } from "@/lib/template";
 import { cn } from "@/lib/utils";
 import { MigrationBanner } from "@/modules/flow-editor/migration-banner";
+import { LocatorTester } from "@/modules/locator/locator-tester";
 import { ExecutionLogPanel } from "@/modules/runner/execution-log-panel";
 import { JOB_PRESETS } from "@/modules/start/presets";
 import { useEditorStore } from "@/stores/editor";
@@ -31,6 +32,7 @@ export function StartPage() {
   const preset = JOB_PRESETS.find((item) => item.id === presetId) ?? JOB_PRESETS[0];
   const templateSteps = useEditorStore((s) => s.steps);
   const processId = useEditorStore((s) => s.processId);
+  const match = useEditorStore((s) => s.match);
   const locate = useEditorStore((s) => s.locate);
   const dirty = useEditorStore((s) => s.dirty);
   const filePath = useEditorStore((s) => s.filePath);
@@ -219,6 +221,8 @@ export function StartPage() {
               </Select>
             </label>
           ) : null}
+
+          {locate.channel === "a11y" ? <LocatorTester match={match} locate={locate} /> : null}
 
           <ol className="mt-4 min-h-0 flex-1 overflow-auto">
             {liveSteps.map((step, index) => {

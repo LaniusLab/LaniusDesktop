@@ -24,7 +24,7 @@ const MOCK_SCHEMA_VERSION = 3;
 const MOCK_INFO: EngineInfo = {
   protocolVersion: "0.1.0",
   engineVersion: "0.1.0-mock",
-  capabilities: ["dryRun", "template.steps", "locate.a11y"],
+  capabilities: ["dryRun", "template.steps", "locate.a11y", "driver.elementFind"],
   nodeTypes: [
     "core.log",
     "core.wait",
@@ -336,6 +336,26 @@ export function createMockBridge(): Bridge {
 
     async flowValidate(flow) {
       return validateMockFlow(flow);
+    },
+
+    async elementFind(params) {
+      const match = params.match ?? {};
+      const locator = params.locator ?? {};
+      const name = String(locator.name ?? "").trim();
+      const automationId = String(locator.automationId ?? "").trim();
+      const controlType = String(locator.controlType ?? "").trim();
+      if (!name && !automationId && !controlType) {
+        throw new Error("locator 至少填写一项");
+      }
+      if (!match.exe && !match.title && !match.className) {
+        throw new Error("match 至少填写一项");
+      }
+      return {
+        found: true,
+        handle: "hwnd-mock",
+        elementId: "el-mock",
+        summary: { name, automationId, controlType },
+      };
     },
 
     onEngineEvent(handler) {

@@ -33,6 +33,7 @@ const ALLOWED_METHODS: &[&str] = &[
     "flow.cancel",
     "execution.get",
     "execution.list",
+    "driver.elementFind",
 ];
 
 pub struct EngineClient {

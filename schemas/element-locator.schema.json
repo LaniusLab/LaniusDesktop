@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/element-locator.schema.json",
+  "title": "DriverElementFindResult",
+  "description": "元素定位器探测：绑窗后 find_element，供选择器测试器（M4）。不含点击副作用。",
+  "type": "object",
+  "required": ["found", "handle", "elementId", "summary"],
+  "properties": {
+    "found": { "type": "boolean" },
+    "handle": { "type": "string", "description": "已绑定窗口句柄" },
+    "elementId": { "type": "string", "description": "引擎侧元素句柄（平台相关）" },
+    "summary": { "$ref": "#/$defs/elementSummary" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "locator": {
+      "type": "object",
+      "description": "a11y 元素定位条件；至少填一项",
+      "properties": {
+        "name": { "type": "string", "description": "控件 Name / title" },
+        "automationId": { "type": "string", "description": "AutomationId" },
+        "controlType": { "type": "string", "description": "如 Button、Edit" }
+      },
+      "additionalProperties": false
+    },
+    "elementSummary": {
+      "type": "object",
+      "required": ["name", "automationId", "controlType"],
+      "properties": {
+        "name": { "type": "string" },
+        "automationId": { "type": "string" },
+        "controlType": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "driverElementFindParams": {
+      "type": "object",
+      "required": ["match", "locator"],
+      "properties": {
+        "match": {
+          "type": "object",
+          "description": "窗口匹配（与 flow target.match 同构）",
+          "properties": {
+            "exe": { "type": "string" },
+            "title": { "type": "string" },
+            "className": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "locate": {
+          "type": "object",
+          "description": "定位通道；默认 a11y",
+          "properties": {
+            "channel": { "type": "string", "enum": ["a11y", "vision"] },
+            "source": { "type": "string", "enum": ["probe", "user"] },
+            "capture": { "type": "string", "enum": ["client", "screen"] },
+            "visionPack": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "locator": { "$ref": "#/$defs/locator" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

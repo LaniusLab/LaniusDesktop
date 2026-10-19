@@ -39,3 +39,8 @@ export type {
   SecretListResult,
   SecretSetResult,
 } from "@/lib/gen/shell-secret";
+export type {
+  DriverElementFindParams,
+  DriverElementFindResult,
+  Locator,
+} from "@/lib/gen/element-locator";

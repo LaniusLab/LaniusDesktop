@@ -49,6 +49,7 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
                 "execution.pause",
                 "fs.readWrite",
                 "secrets.env",
+                "driver.elementFind",
                 f"driver.{driver_name}",
             ],
             "nodeTypes": registry.types(),
@@ -214,6 +215,76 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
             )
         return store.list(limit=limit, offset=offset, filter=hist_filter)
 
+    async def driver_element_find(params: dict[str, Any]) -> dict[str, Any]:
+        """选择器测试：绑窗后 find_element，不点击。"""
+        raw_match = params.get("match")
+        if not isinstance(raw_match, dict):
+            raise LaniusError.of(
+                "engine.flow.validationFailed",
+                "driver.elementFind 需要 match 对象",
+                details={"missing": ["match"]},
+            )
+        raw_locator = params.get("locator")
+        if not isinstance(raw_locator, dict):
+            raise LaniusError.of(
+                "engine.flow.validationFailed",
+                "driver.elementFind 需要 locator 对象",
+                details={"missing": ["locator"]},
+            )
+        name = str(raw_locator.get("name", "")).strip()
+        auto_id = str(raw_locator.get("automationId", "")).strip()
+        control_type = str(raw_locator.get("controlType", "")).strip()
+        if not name and not auto_id and not control_type:
+            raise LaniusError.of(
+                "engine.flow.validationFailed",
+                "locator 至少填写 name、automationId 或 controlType 之一",
+                details={"locator": raw_locator},
+            )
+        locator = {
+            "name": name,
+            "automationId": auto_id,
+            "controlType": control_type,
+        }
+        raw_locate = params.get("locate")
+        locate: dict[str, Any] = {
+            "channel": "a11y",
+            "source": "user",
+            "capture": "client",
+            "visionPack": "template",
+        }
+        if isinstance(raw_locate, dict):
+            for key in ("channel", "source", "capture", "visionPack"):
+                value = raw_locate.get(key)
+                if isinstance(value, str) and value:
+                    locate[key] = value
+
+        query = {
+            "exe": str(raw_match.get("exe", "")),
+            "title": str(raw_match.get("title", "")),
+            "className": str(raw_match.get("className", "")),
+        }
+        if not any(query.values()):
+            raise LaniusError.of(
+                "engine.flow.validationFailed",
+                "match 至少填写 exe、title 或 className 之一",
+                details={"match": query},
+            )
+
+        handle = await driver.find_window(query)
+        await driver.activate(handle)
+        await driver.set_locate(locate)
+        element_id = await driver.find_element(locator)
+        return {
+            "found": True,
+            "handle": handle,
+            "elementId": element_id,
+            "summary": {
+                "name": name,
+                "automationId": auto_id,
+                "controlType": control_type,
+            },
+        }
+
     server.register("engine.hello", hello)
     server.register("engine.ping", ping)
     server.register("engine.shutdown", shutdown)
@@ -225,6 +296,7 @@ def register_all(server: RpcServer, history: ExecutionHistory | None = None) -> 
     server.register("flow.cancel", flow_cancel)
     server.register("execution.get", execution_get)
     server.register("execution.list", execution_list)
+    server.register("driver.elementFind", driver_element_find)
 
 
 def _validate_steps(

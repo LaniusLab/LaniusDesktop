@@ -65,6 +65,41 @@ async def test_hello_reports_registered_node_types(server: RpcServer) -> None:
     assert "template.steps" in result["capabilities"]
     assert "execution.history" in result["capabilities"]
     assert "secrets.env" in result["capabilities"]
+    assert "driver.elementFind" in result["capabilities"]
+
+
+async def test_driver_element_find_ok(server: RpcServer) -> None:
+    response = await server.handle_frame(
+        frame(
+            "driver.elementFind",
+            {
+                "match": {"exe": "notepad.exe", "title": "", "className": "Notepad"},
+                "locate": {"channel": "a11y", "source": "user"},
+                "locator": {"name": "确定", "automationId": "btnOk", "controlType": "Button"},
+            },
+        )
+    )
+    assert response is not None
+    assert "error" not in response
+    result = response["result"]
+    assert result["found"] is True
+    assert result["handle"]
+    assert result["elementId"]
+    assert result["summary"]["name"] == "确定"
+
+
+async def test_driver_element_find_requires_locator_fields(server: RpcServer) -> None:
+    response = await server.handle_frame(
+        frame(
+            "driver.elementFind",
+            {
+                "match": {"exe": "notepad.exe"},
+                "locator": {},
+            },
+        )
+    )
+    assert response is not None
+    assert response["error"]["data"]["code"] == "engine.flow.validationFailed"
 
 
 async def test_flow_validate_requires_binding_keys(server: RpcServer) -> None:

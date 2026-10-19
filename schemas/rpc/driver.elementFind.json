@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lanius.dev/schemas/rpc/driver.elementFind.json",
+  "title": "driver.elementFind",
+  "description": "探测：find_window → activate → set_locate → find_element（只读，不点击）",
+  "$defs": {
+    "params": {
+      "type": "object",
+      "required": ["match", "locator"],
+      "properties": {
+        "match": { "type": "object" },
+        "locate": { "type": "object" },
+        "locator": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "required": ["found", "handle", "elementId", "summary"],
+      "properties": {
+        "found": { "type": "boolean" },
+        "handle": { "type": "string" },
+        "elementId": { "type": "string" },
+        "summary": { "type": "object" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
