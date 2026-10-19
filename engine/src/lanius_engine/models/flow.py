@@ -4,11 +4,13 @@
 打开时不丢失，迁移链负责语义升级而非字段清洗。
 """
 
+from __future__ import annotations
+
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-CURRENT_SCHEMA_VERSION = 2
+CURRENT_SCHEMA_VERSION = 3
 
 
 class FlowVariable(BaseModel):
@@ -56,7 +58,7 @@ class FlowStep(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     id: str
-    kind: Literal["binding", "mouse", "preset"]
+    kind: Literal["binding", "mouse", "preset", "control"]
     type: str = ""
     mapping_id: str = Field(default="", alias="mappingId")
     profile_id: str = Field(default="", alias="profileId")
@@ -64,10 +66,15 @@ class FlowStep(BaseModel):
     label: str = ""
     config: dict[str, Any] = Field(default_factory=dict)
     disabled: bool = False
+    then: list[FlowStep] = Field(default_factory=list)
+    else_: list[FlowStep] = Field(default_factory=list, alias="else")
+    body: list[FlowStep] = Field(default_factory=list)
 
     def node_type(self) -> str:
         if self.kind == "binding":
             return self.type or "keyboard.press"
+        if self.kind == "control":
+            return self.type or ""
         if self.type:
             return self.type
         return ""
@@ -111,3 +118,6 @@ class FlowFile(BaseModel):
     nodes: list[FlowNode] = Field(default_factory=list)
     edges: list[FlowEdge] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+FlowStep.model_rebuild()

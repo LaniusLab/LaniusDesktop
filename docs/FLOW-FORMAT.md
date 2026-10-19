@@ -2,7 +2,7 @@
 
 > 状态：已评审 · 最后更新：2026-09-18
 > 真源 schema：[`schemas/flow.schema.json`](../schemas/flow.schema.json)
-> 实现进度：schemaVersion **2** 已落地（有序 `steps` + `target`）。v1 `nodes`/`edges` 打开时迁移。
+> 实现进度：schemaVersion **3** 已落地（有序 `steps` + 嵌套 `control` + `target`）。v1 `nodes`/`edges`、v2 扁平 `steps` 打开时迁移。
 
 ## 1. 设计目标
 
@@ -16,7 +16,7 @@
 
 ```jsonc
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "id": "flow_01J8ZEXAMPLE",
   "name": "对选定窗口跑模板",
   "description": "选进程后按方案里的键鼠与预设操作执行",
@@ -48,7 +48,7 @@
 
 规则：
 
-- `schemaVersion` 必填，整数，单调递增。当前写入版本为 2。
+- `schemaVersion` 必填，整数，单调递增。当前写入版本为 3。
 - `id` 在创建时分配（ULID），复制模板时重新生成。
 - **禁止**把 pid 写入文件；目标只用 `exe` / 标题模式 / 窗口类名。当次 pid 只出现在 `flow.start` 的 `inputs`。
 - `keymapProfileId` 是编排调色板默认方案；步骤里的按键仍带 `profileId` + `mappingId`，并冗余 `keys` 给引擎（引擎不读 UI localStorage）。
@@ -61,7 +61,7 @@
 ```jsonc
 {
   "id": "press_enter",
-  "kind": "binding",                 // binding | mouse | preset
+  "kind": "binding",                 // binding | mouse | preset | control
   "type": "keyboard.press",
   "profileId": "default",
   "mappingId": "d-enter",
@@ -76,7 +76,10 @@
 | --- | --- | --- |
 | `binding` | 按键方案中的一条 | 默认 `keyboard.press`；`keys` 为发出的键 |
 | `mouse` | 鼠标预设 | `mouse.click` / `mouse.dblclick` / `mouse.move` |
-| `preset` | 引擎注册表中的操作 | 如 `core.wait`、`core.log`；`vision.wait` 属后续 |
+| `preset` | 引擎注册表中的操作 | 如 `core.wait`、`core.log`、`keyboard.type`、`vision.ocr`、`vision.wait` |
+| `control` | 控制流（可嵌套） | `flow.if`（`then`/`else`）· `flow.loop`（`body`） |
+
+`flow.if` / `flow.loop` 的子步骤仍是 `steps` 同构数组，UI 指令条按缩进展示，思维导图为只读投影。
 
 - `config` 的合法性由该 `type` 的 `config_schema` 决定。
 - 字符串值中的 `{{ variables.who }}` 为模板插值（无 eval，见 ENGINE.md 5.5）。

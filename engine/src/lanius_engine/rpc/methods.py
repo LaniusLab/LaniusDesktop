@@ -7,6 +7,7 @@ from lanius_engine.drivers.mock import MockDriver
 from lanius_engine.models import (
     FlowFile,
     FlowLocate,
+    FlowStep,
     FlowTargetMatch,
     LaniusError,
     migrate_to_current,
@@ -25,7 +26,13 @@ def register_all(server: RpcServer) -> None:
         return {
             "protocolVersion": PROTOCOL_VERSION,
             "engineVersion": __version__,
-            "capabilities": ["dryRun", "template.steps", "locate.a11y"],
+            "capabilities": [
+                "dryRun",
+                "template.steps",
+                "template.control",
+                "locate.a11y",
+                "vision.mock",
+            ],
             "nodeTypes": registry.types(),
         }
 
@@ -39,30 +46,8 @@ def register_all(server: RpcServer) -> None:
     async def flow_validate(params: dict[str, Any]) -> dict[str, Any]:
         flow = migrate_to_current(_parse_flow(params))
         issues: list[dict[str, Any]] = []
-        known = set(registry.types())
-        for step in flow.steps:
-            node_type = step.node_type()
-            if not node_type or node_type not in known:
-                issues.append(
-                    {
-                        "severity": "error",
-                        "code": "engine.flow.unknownNodeType",
-                        "nodeId": step.id,
-                        "message": f"未知节点类型: {node_type or step.kind}",
-                    }
-                )
-                continue
-            if step.kind == "binding":
-                keys = step.keys or str(step.config.get("keys", "")).strip()
-                if not keys:
-                    issues.append(
-                        {
-                            "severity": "error",
-                            "code": "engine.flow.validationFailed",
-                            "nodeId": step.id,
-                            "message": f"步骤 {step.id} 缺少按键 keys",
-                        }
-                    )
+        known = set(registry.types()) | {"flow.if", "flow.loop"}
+        _validate_steps(flow.steps, known, issues)
         return {"ok": not any(i["severity"] == "error" for i in issues), "issues": issues}
 
     async def flow_start(params: dict[str, Any]) -> dict[str, Any]:
@@ -102,6 +87,39 @@ def register_all(server: RpcServer) -> None:
     server.register("flow.validate", flow_validate)
     server.register("flow.start", flow_start)
     server.register("flow.cancel", flow_cancel)
+
+
+def _validate_steps(
+    steps: list[FlowStep], known: set[str], issues: list[dict[str, Any]]
+) -> None:
+    for step in steps:
+        node_type = step.node_type()
+        if not node_type or node_type not in known:
+            issues.append(
+                {
+                    "severity": "error",
+                    "code": "engine.flow.unknownNodeType",
+                    "nodeId": step.id,
+                    "message": f"未知节点类型: {node_type or step.kind}",
+                }
+            )
+        elif step.kind == "binding":
+            keys = step.keys or str(step.config.get("keys", "")).strip()
+            if not keys:
+                issues.append(
+                    {
+                        "severity": "error",
+                        "code": "engine.flow.validationFailed",
+                        "nodeId": step.id,
+                        "message": f"步骤 {step.id} 缺少按键 keys",
+                    }
+                )
+        if step.then:
+            _validate_steps(step.then, known, issues)
+        if step.else_:
+            _validate_steps(step.else_, known, issues)
+        if step.body:
+            _validate_steps(step.body, known, issues)
 
 
 def _parse_flow(params: dict[str, Any]) -> FlowFile:

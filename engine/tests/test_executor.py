@@ -193,3 +193,96 @@ def test_state_machine_rejects_illegal_transition() -> None:
         raise AssertionError("idle → running 应被拒绝")
     except LaniusError as err:
         assert err.error.code == "engine.runtime.illegalTransition"
+
+
+async def test_notepad_multiline_types_text_on_bound_window() -> None:
+    driver = MockDriver()
+    executor = Executor(default_registry(), driver)
+    flow = make_template(
+        steps=[
+            {"id": "wait_focus", "kind": "preset", "type": "core.wait", "config": {"ms": 1}},
+            {
+                "id": "type_body",
+                "kind": "preset",
+                "type": "keyboard.type",
+                "label": "输入多行文本",
+                "config": {"text": "Lanius 记事本测试\n第二行：自动化写入\n第三行：结束。"},
+            },
+            {
+                "id": "log_done",
+                "kind": "preset",
+                "type": "core.log",
+                "config": {"message": "多行文本已写入记事本"},
+            },
+        ],
+        target={
+            "match": {"exe": "notepad.exe", "title": "无标题 - 记事本", "className": "Notepad"},
+            "locate": {"channel": "a11y", "source": "probe"},
+        },
+    )
+    record = await executor.start(flow, mode="dryRun")
+    assert record.state == ExecutionState.DONE
+    methods = [call.method for call in driver.calls]
+    assert "type_text" in methods
+    typed = next(call.args[0] for call in driver.calls if call.method == "type_text")
+    assert "第二行：自动化写入" in typed
+    assert "\n" in typed
+
+
+async def test_v3_if_and_loop_nesting() -> None:
+    flow = FlowFile.model_validate(
+        {
+            "schemaVersion": 3,
+            "id": "ctrl",
+            "name": "控制流",
+            "steps": [
+                {
+                    "id": "ocr",
+                    "kind": "preset",
+                    "type": "vision.ocr",
+                    "config": {"fakeText": "确认"},
+                },
+                {
+                    "id": "branch",
+                    "kind": "control",
+                    "type": "flow.if",
+                    "label": "若确认",
+                    "config": {"when": "ocr.contains", "text": "确认", "source": "{{ocr.text}}"},
+                    "then": [
+                        {
+                            "id": "loop",
+                            "kind": "control",
+                            "type": "flow.loop",
+                            "config": {"max": 2},
+                            "body": [
+                                {
+                                    "id": "log_ok",
+                                    "kind": "preset",
+                                    "type": "core.log",
+                                    "config": {"message": "ok-{{index}}"},
+                                }
+                            ],
+                        }
+                    ],
+                    "else": [
+                        {
+                            "id": "log_no",
+                            "kind": "preset",
+                            "type": "core.log",
+                            "config": {"message": "no"},
+                        }
+                    ],
+                },
+            ],
+        }
+    )
+    messages: list[str] = []
+    record = await make_executor().start(
+        flow,
+        mode="dryRun",
+        on_event=lambda e, p: messages.append(p["message"]) if e == "execution.log" else None,
+    )
+    assert record.state == ExecutionState.DONE
+    assert any("ok-0" in m for m in messages)
+    assert any("ok-1" in m for m in messages)
+    assert not any(m == "no" for m in messages)

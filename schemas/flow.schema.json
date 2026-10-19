@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://lanius.dev/schemas/flow.schema.json",
   "title": "FlowFile",
-  "description": "Lanius 作业模板（docs/FLOW-FORMAT.md）。schemaVersion 2 起以有序 steps 为真源。",
+  "description": "Lanius 作业模板（docs/FLOW-FORMAT.md）。schemaVersion 3 起支持嵌套 control（条件/循环）。",
   "type": "object",
   "required": ["schemaVersion", "id", "name"],
   "properties": {
@@ -22,7 +22,7 @@
     "settings": { "$ref": "#/$defs/settings" },
     "steps": {
       "type": "array",
-      "description": "有序步骤（schemaVersion ≥ 2 的执行真源）",
+      "description": "有序步骤（schemaVersion ≥ 2 的执行真源；≥ 3 可嵌套）",
       "items": { "$ref": "#/$defs/step" }
     },
     "nodes": {
@@ -83,14 +83,32 @@
       "required": ["id", "kind"],
       "properties": {
         "id": { "type": "string", "minLength": 1 },
-        "kind": { "type": "string", "enum": ["binding", "mouse", "preset"] },
+        "kind": {
+          "type": "string",
+          "enum": ["binding", "mouse", "preset", "control"]
+        },
         "type": { "type": "string" },
         "mappingId": { "type": "string" },
         "profileId": { "type": "string" },
         "keys": { "type": "string" },
         "label": { "type": "string" },
         "config": { "type": "object" },
-        "disabled": { "type": "boolean", "default": false }
+        "disabled": { "type": "boolean", "default": false },
+        "then": {
+          "type": "array",
+          "description": "flow.if 的则分支",
+          "items": { "$ref": "#/$defs/step" }
+        },
+        "else": {
+          "type": "array",
+          "description": "flow.if 的否则分支",
+          "items": { "$ref": "#/$defs/step" }
+        },
+        "body": {
+          "type": "array",
+          "description": "flow.loop 的循环体",
+          "items": { "$ref": "#/$defs/step" }
+        }
       }
     },
     "node": {

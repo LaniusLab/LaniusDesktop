@@ -31,7 +31,7 @@ export interface Locate {
 
 export interface Step {
   "id": string;
-  "kind": "binding" | "mouse" | "preset";
+  "kind": "binding" | "mouse" | "preset" | "control";
   "type"?: string;
   "mappingId"?: string;
   "profileId"?: string;
@@ -39,6 +39,12 @@ export interface Step {
   "label"?: string;
   "config"?: Record<string, unknown>;
   "disabled"?: boolean;
+  /** flow.if 的则分支 */
+  "then"?: Array<Step>;
+  /** flow.if 的否则分支 */
+  "else"?: Array<Step>;
+  /** flow.loop 的循环体 */
+  "body"?: Array<Step>;
 }
 
 export interface Node {
@@ -70,7 +76,7 @@ export interface FlowFile {
   "target"?: Target;
   "variables"?: Record<string, Variable>;
   "settings"?: Settings;
-  /** 有序步骤（schemaVersion ≥ 2 的执行真源） */
+  /** 有序步骤（schemaVersion ≥ 2 的执行真源；≥ 3 可嵌套） */
   "steps"?: Array<Step>;
   /** v1 DAG 节点；打开时迁移为 steps */
   "nodes"?: Array<Node>;

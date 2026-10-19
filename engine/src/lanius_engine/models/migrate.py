@@ -20,6 +20,8 @@ def migrate_to_current(flow: FlowFile) -> FlowFile:
         )
     if current.schema_version == 1:
         current = _migrate_v1_to_v2(current)
+    if current.schema_version == 2:
+        current = _migrate_v2_to_v3(current)
     return current
 
 
@@ -40,3 +42,8 @@ def _migrate_v1_to_v2(flow: FlowFile) -> FlowFile:
         for node in order
     ]
     return flow.model_copy(update={"schema_version": 2, "steps": steps, "nodes": [], "edges": []})
+
+
+def _migrate_v2_to_v3(flow: FlowFile) -> FlowFile:
+    # v3 只扩展 kind=control 与嵌套字段；旧文件升版本即可
+    return flow.model_copy(update={"schema_version": 3})
