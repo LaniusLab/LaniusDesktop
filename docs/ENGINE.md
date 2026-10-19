@@ -23,7 +23,7 @@ engine/src/lanius_engine/
 ├── nodes/
 │   ├── base.py        # Node 协议：inputs/outputs/config schema/execute
 │   ├── registry.py    # 节点注册表（type → 类）
-│   └── core/          # 已落地：log、wait、press、mouse、data.setVar/template；（规划）flow 嵌套控制扩展 / fs
+│   └── core/          # 已落地：log、wait、press、mouse、data.*、fs.read/write/exists；（规划）assert / subflow |
 ├── drivers/
 │   ├── base.py        # Driver 抽象接口
 │   ├── mock.py        # Mock driver（CI/测试/dry-run 用）

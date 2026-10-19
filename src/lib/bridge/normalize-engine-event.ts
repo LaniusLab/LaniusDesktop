@@ -77,6 +77,10 @@ export function normalizeEngineEvent(raw: unknown): EngineEvent | null {
         kind: "status",
         status: "ready",
         uptimeMs: typeof params.uptimeMs === "number" ? params.uptimeMs : undefined,
+        message:
+          typeof params.activeExecutions === "number"
+            ? `active=${params.activeExecutions}`
+            : undefined,
       };
     default:
       return null;
