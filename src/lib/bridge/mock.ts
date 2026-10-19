@@ -11,6 +11,8 @@ import type {
   FlowValidateResult,
 } from "./types";
 
+const mockSecrets = new Map<string, string>();
+
 const MOCK_SCHEMA_VERSION = 3;
 
 /*
@@ -349,6 +351,30 @@ export function createMockBridge(): Bridge {
     async prefsSet(next) {
       prefs = mergePrefs(next);
       return prefs;
+    },
+
+    async secretList() {
+      return { keys: [...mockSecrets.keys()].sort() };
+    },
+
+    async secretSet(key, value) {
+      if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(key) || !value) {
+        throw new Error("invalid secret");
+      }
+      mockSecrets.set(key, value);
+      return { key };
+    },
+
+    async secretGet(key) {
+      const value = mockSecrets.get(key);
+      return value === undefined
+        ? { key, found: false, value: null }
+        : { key, found: true, value };
+    },
+
+    async secretDelete(key) {
+      const removed = mockSecrets.delete(key);
+      return { key, removed };
     },
 
     async debugInfo() {

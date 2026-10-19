@@ -65,6 +65,11 @@ describe("mockBridge", () => {
     });
     const prefs = await bridge.prefsGet();
     await expect(bridge.prefsSet(prefs)).resolves.toMatchObject({ theme: prefs.theme });
+    await expect(bridge.secretList()).resolves.toEqual({ keys: [] });
+    await expect(bridge.secretSet("demo", "silent")).resolves.toEqual({ key: "demo" });
+    await expect(bridge.secretList()).resolves.toEqual({ keys: ["demo"] });
+    await expect(bridge.secretGet("demo")).resolves.toMatchObject({ found: true, value: "silent" });
+    await expect(bridge.secretDelete("demo")).resolves.toEqual({ key: "demo", removed: true });
     await expect(bridge.debugInfo()).resolves.toMatchObject({ appVersion: expect.any(String) });
     await expect(bridge.logsTail()).resolves.toEqual(expect.any(String));
     await expect(bridge.updaterList()).resolves.toMatchObject({

@@ -5,6 +5,12 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { ShellDebugInfo } from "@/lib/gen/shell-debug";
 import type { ShellPrefs } from "@/lib/gen/shell-prefs";
 import type {
+  SecretDeleteResult,
+  SecretGetResult,
+  SecretListResult,
+  SecretSetResult,
+} from "@/lib/gen/shell-secret";
+import type {
   UpdaterApplyResult,
   UpdaterCheckResult,
   UpdaterDownloadResult,
@@ -114,6 +120,22 @@ export function createTauriBridge(): Bridge {
 
     prefsSet(prefs) {
       return invoke<ShellPrefs>("prefs_set", { prefs });
+    },
+
+    secretList() {
+      return invoke<SecretListResult>("secret_list");
+    },
+
+    secretSet(key, value) {
+      return invoke<SecretSetResult>("secret_set", { key, value });
+    },
+
+    secretGet(key) {
+      return invoke<SecretGetResult>("secret_get", { key });
+    },
+
+    secretDelete(key) {
+      return invoke<SecretDeleteResult>("secret_delete", { key });
     },
 
     debugInfo() {

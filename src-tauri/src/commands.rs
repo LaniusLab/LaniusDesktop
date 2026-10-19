@@ -11,6 +11,7 @@ use tauri::{AppHandle, State};
 
 use crate::error::{ShellError, TracedError};
 use crate::prefs::{self, ShellPrefs};
+use crate::secrets;
 use crate::sidecar::EngineClient;
 use crate::updater;
 
@@ -214,6 +215,33 @@ pub async fn prefs_get(state: State<'_, ShellState>) -> Result<Value, TracedErro
     let prefs = lock_prefs(&state).clone();
     serde_json::to_value(prefs)
         .map_err(|e| ShellError::Io(e.to_string()).with_trace(new_trace_id()))
+}
+
+#[tauri::command]
+pub async fn secret_list(app: AppHandle) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    secrets::list(&app).map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+pub async fn secret_set(app: AppHandle, key: String, value: String) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    // 不把 value 写入日志
+    prefs::append_log(&app, &format!("secret.set key={key}"));
+    secrets::set(&app, key, value).map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+pub async fn secret_get(key: String) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    secrets::get(key).map_err(|e| e.with_trace(trace_id))
+}
+
+#[tauri::command]
+pub async fn secret_delete(app: AppHandle, key: String) -> Result<Value, TracedError> {
+    let trace_id = new_trace_id();
+    prefs::append_log(&app, &format!("secret.delete key={key}"));
+    secrets::delete(&app, key).map_err(|e| e.with_trace(trace_id))
 }
 
 #[tauri::command]
