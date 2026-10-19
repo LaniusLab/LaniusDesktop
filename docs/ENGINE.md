@@ -79,9 +79,9 @@ engine/src/lanius_engine/
 | keyboard.press / type | mock | full | subset | subset |
 | window.find / activate | mock | full | subset | subset |
 | clipboard | mock | full | subset | subset |
-| element.find / click | planned | full | subset | subset |
+| element.find / click | mock | full | subset | subset |
 | screen.capture | planned | full | planned | planned |
-| process.launch / terminate | planned | full | subset | subset |
+| process.launch / terminate | mock | full | subset | subset |
 
 缺失或未接线调用的错误码：
 
@@ -92,6 +92,7 @@ engine/src/lanius_engine/
 | `engine.driver.notImplemented` | 后端已装，具体绑定尚未合入 |
 | `engine.driver.unknownBackend` | `LANIUS_DRIVER` 非法值 |
 | `engine.driver.windowNotFound` | mock/真实查找窗口失败（已有） |
+| `engine.driver.elementNotFound` | 元素定位失败 |
 
 ### 3.3 Mock driver 契约
 

@@ -76,4 +76,5 @@ def test_capability_matrix_covers_platforms() -> None:
             "planned",
         }
     assert support_level("windows", "element.find") == "full"
-    assert support_level("mock", "element.find") == "planned"
+    assert support_level("mock", "element.find") == "mock"
+    assert support_level("mock", "process.launch") == "mock"

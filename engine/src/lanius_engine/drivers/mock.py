@@ -22,9 +22,12 @@ class MockDriver(Driver):
     calls: list[MockCall] = field(default_factory=list)
     clipboard: str = ""
     windows: dict[str, dict[str, Any]] = field(default_factory=dict)
+    elements: dict[str, dict[str, Any]] = field(default_factory=dict)
+    processes: dict[int, str | list[str]] = field(default_factory=dict)
     cursor: tuple[int, int] = (0, 0)
     bound_handle: str | None = None
     locate: dict[str, Any] | None = None
+    _next_pid: int = 1000
 
     def _record(self, method: str, *args: Any, **kwargs: Any) -> None:
         self.calls.append(MockCall(method=method, args=args, kwargs=kwargs))
@@ -81,3 +84,55 @@ class MockDriver(Driver):
     async def clipboard_set(self, text: str) -> None:
         self._record("clipboard_set", text)
         self.clipboard = text
+
+    async def launch(self, cmd: str | list[str]) -> int:
+        self._record("launch", cmd)
+        self._next_pid += 1
+        pid = self._next_pid
+        self.processes[pid] = cmd
+        # 记事本类启动：登记一个可查找窗口，便于 e2e
+        exe = cmd[0] if isinstance(cmd, list) else str(cmd).split()[0]
+        bare = exe.rsplit("\\", maxsplit=1)[-1].rsplit("/", maxsplit=1)[-1]
+        handle = f"hwnd-{pid}"
+        self.windows[handle] = {
+            "title": "无标题 - 记事本" if "notepad" in bare.casefold() else bare,
+            "exe": bare,
+            "className": "Notepad" if "notepad" in bare.casefold() else "",
+            "pid": pid,
+        }
+        return pid
+
+    async def terminate(self, pid: int) -> None:
+        self._record("terminate", pid)
+        self.processes.pop(pid, None)
+        gone = [h for h, info in self.windows.items() if info.get("pid") == pid]
+        for handle in gone:
+            self.windows.pop(handle, None)
+
+    async def find_element(self, locator: dict[str, Any]) -> str:
+        self._record("find_element", locator)
+        name = str(locator.get("name", locator.get("title", "")))
+        auto_id = str(locator.get("automationId", locator.get("auto_id", "")))
+        for eid, info in self.elements.items():
+            if name and name == str(info.get("name", "")):
+                return eid
+            if auto_id and auto_id == str(info.get("automationId", "")):
+                return eid
+        if self.elements:
+            raise LaniusError.of(
+                "engine.driver.elementNotFound",
+                f"未找到元素: {locator}",
+                details={"locator": locator},
+                retryable=True,
+            )
+        eid = "el-mock"
+        self.elements[eid] = {
+            "name": name,
+            "automationId": auto_id,
+            "controlType": locator.get("controlType", ""),
+        }
+        return eid
+
+    async def element_click(self, locator: dict[str, Any]) -> None:
+        eid = await self.find_element(locator)
+        self._record("element_click", locator, element_id=eid)
