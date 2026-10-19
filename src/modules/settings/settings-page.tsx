@@ -465,21 +465,28 @@ function DesktopSection() {
         </p>
       ) : null}
       {downloaded ? (
-        <div className="flex flex-wrap items-center gap-3 px-1">
-          <p className="text-xs text-fg-muted">
-            {t("settings.updateDownloaded", { file: downloaded.fileName })}
-          </p>
-          <Button
-            size="sm"
-            disabled={installPackage.isPending || !installSupported}
-            onClick={() => installPackage.mutate(downloaded.path)}
-          >
-            {t("settings.updateInstall")}
-          </Button>
+        <div className="flex flex-col gap-2 px-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-xs text-fg-muted">
+              {t("settings.updateDownloaded", { file: downloaded.fileName })}
+            </p>
+            <Button
+              size="sm"
+              disabled={installPackage.isPending || !installSupported}
+              onClick={() => installPackage.mutate(downloaded.path)}
+            >
+              {t("settings.updateInstall")}
+            </Button>
+            <p className="text-xs text-fg-faint">
+              {installSupported
+                ? t("settings.updateInstallHint")
+                : t("settings.updateInstallWindowsOnly")}
+            </p>
+          </div>
           <p className="text-xs text-fg-faint">
-            {installSupported
-              ? t("settings.updateInstallHint")
-              : t("settings.updateInstallWindowsOnly")}
+            {downloaded.checksumStatus === "verified"
+              ? t("settings.updateChecksumVerified")
+              : t("settings.updateChecksumUnavailable")}
           </p>
         </div>
       ) : null}
