@@ -66,6 +66,20 @@ async def test_explicit_linux_driver_backend_or_not_implemented() -> None:
     }
 
 
+@pytest.mark.asyncio
+async def test_explicit_macos_driver_backend_or_not_implemented() -> None:
+    driver = create_driver("macos")
+    with pytest.raises(LaniusError) as err:
+        await driver.click(1, 2)
+    assert err.value.error.code in {
+        "engine.driver.backendMissing",
+        "engine.driver.unsupportedPlatform",
+        "engine.driver.notImplemented",
+    }
+    assert err.value.error.details is not None
+    assert err.value.error.details["platform"] == "macos"
+
+
 def test_capability_matrix_covers_platforms() -> None:
     for platform in ("mock", "windows", "macos", "linux"):
         assert platform in PLATFORM_MATRIX

@@ -30,9 +30,10 @@ engine/src/lanius_engine/
 │   ├── capabilities.py  # 三平台能力矩阵
 │   ├── factory.py       # LANIUS_DRIVER / create_driver
 │   ├── windows.py           # pywinauto UIA 绑定（可注入 backend 测路径）
-│   ├── windows_backend.py   # PywinautoBackend + RecordingWindowsBackend
-│   ├── macos.py             # pyobjc 子集占位
-│   └── linux.py             # pyatspi 子集占位
+│   ├── windows_backend.py   # PywinautoBackend；Recording 别名
+│   ├── recording_backend.py # 三平台共用 RecordingDesktopBackend（CI）
+│   ├── macos.py / macos_backend.py   # pyobjc 骨架 + Recording；AX 真绑定后续
+│   └── linux.py / linux_backend.py   # pyatspi 骨架 + Recording；真绑定后续
 ├── runtime/
 │   ├── executor.py    # 执行器：有序 steps + 状态机
 │   ├── state.py       # 执行状态机定义
@@ -66,8 +67,8 @@ engine/src/lanius_engine/
 | 平台 | 库 | 状态 |
 | --- | --- | --- |
 | Windows | pywinauto（UIA 后端） | M4：`WindowsDriver` 已绑键鼠/窗口/剪贴板；`asyncio.to_thread`；optional `[windows]` |
-| macOS | pyobjc（AX API） | M4 能力子集占位（需辅助功能授权引导） |
-| Linux | pyatspi（AT-SPI2） | M4 能力子集占位 |
+| macOS | pyobjc（AX API） | M4：`MacosDriver` + 可注入 Recording；真 AX 后续；需辅助功能授权 |
+| Linux | pyatspi（AT-SPI2） | M4：`LinuxDriver` + 可注入 Recording；真 AT-SPI 后续 |
 | 任意 | mock | 默认；CI 与 dry-run |
 
 选择：`create_driver()` / 环境变量 `LANIUS_DRIVER=mock|windows|macos|linux|auto`（默认 `mock`；`auto` 在 win32→windows，darwin→macos，其余→mock）。
@@ -90,10 +91,12 @@ engine/src/lanius_engine/
 | --- | --- |
 | `engine.driver.unsupportedPlatform` | 强制指定了非本机平台的 driver |
 | `engine.driver.backendMissing` | 本机平台正确但未装 optional extra |
-| `engine.driver.notImplemented` | 后端已装，具体绑定尚未合入 |
+| `engine.driver.notImplemented` | 后端已装，具体绑定尚未合入（当前 macOS/Linux 真 AX/AT-SPI） |
 | `engine.driver.unknownBackend` | `LANIUS_DRIVER` 非法值 |
 | `engine.driver.windowNotFound` | mock/真实查找窗口失败（已有） |
 | `engine.driver.elementNotFound` | 元素定位失败 |
+
+macOS 授权（真 AX 接线后）：系统设置 → 隐私与安全性 → 辅助功能，为应用开启；修改后需重启引擎。错误 `details.settingsPath` 已预留。
 
 ### 3.3 Mock driver 契约
 
