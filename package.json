@@ -24,7 +24,7 @@
     "engine:pack": "node scripts/pack-engine.mjs",
     "check": "pnpm codegen:check && pnpm lint && pnpm typecheck && pnpm test",
     "verify": "pnpm check && pnpm engine:lint && pnpm engine:test",
-    "verify:shell": "cargo check --manifest-path src-tauri/Cargo.toml"
+    "verify:shell": "node scripts/ensure-sidecar-stub.mjs && cargo check --manifest-path src-tauri/Cargo.toml"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
